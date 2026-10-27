@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Beam Book control</title>
+<link rel="icon" href="/assets/brand/beam-icon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+<style>
+  body.admin { --sign: #1670C2; --on-sign: #fff; --sign-hover: #0f5aa0; --gold: #1670C2; --gold-bright: #1265B8; --sign-dark: #1265B8; --soft: #e8f2fc; }
+  .shell { max-width: 1100px; margin: 0 auto; padding: 0 20px 80px; }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 68px; border-bottom: 1px solid var(--line); margin-bottom: 28px; }
+  .bar img { height: 30px; width: auto; }
+  .bar .who { font-size: .9375rem; color: var(--graphite); display: flex; gap: 14px; align-items: center; }
+  .shops { width: 100%; border-collapse: collapse; }
+  .shops th, .shops td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .shops th { font-size: .8125rem; text-transform: uppercase; letter-spacing: .06em; color: var(--graphite); }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: .8125rem; font-weight: 600; background: #e2f2e6; color: #23633a; }
+  .pill.off { background: #f3e3e1; color: #8f2a20; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } .shops .hide-sm { display: none; } }
+  fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 18px 18px 6px; margin: 0 0 22px; background: var(--white); }
+  legend { font: 700 1.25rem var(--head); padding: 0 6px; }
+  .hours-row { display: grid; grid-template-columns: 110px auto 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .hours-row input[type=time] { padding: 6px 8px; }
+  .linkbox { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 12px; word-break: break-all; }
+  .linkbox code { flex: 1 1 280px; font-size: .875rem; }
+  .logo-prev { width: 72px; height: 72px; border-radius: 12px; border: 1px solid var(--line); object-fit: contain; background: #fff; }
+  .swatch { width: 48px; height: 40px; padding: 2px; border-radius: 6px; }
+  .note { font-size: .875rem; color: var(--graphite); margin: -4px 0 14px; }
+</style>
+</head>
+<body class="admin">
+<div class="shell">
+  <div class="bar">
+    <a href="/platform" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink)"><img src="/assets/brand/beam-logo-dark-text.svg" alt="Beam"><strong style="font:700 1.375rem var(--head)">Book · Control</strong></a>
+    <div class="who" id="who" hidden><a href="/platform" id="toList">All shops</a><button class="linkbtn" id="logout" type="button">Log out</button></div>
+  </div>
+  <main id="app"></main>
+</div>
+
+<script src="/assets/common.js"></script>
+<script src="/assets/formbuilder.js"></script>
+<script>
+(() => {
+  const { api, el } = BW;
+  const app = document.getElementById("app");
+  const $ = (id) => document.getElementById(id);
+  let D = null;
+  const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const TZS = (Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : ["America/Anchorage"]).filter((z) => /^(America|Pacific|US)\//.test(z));
+  function toast(msg) { const t = el("div", { class: "toast", role: "status" }, msg); document.body.append(t); setTimeout(() => t.remove(), 2800); }
+  const field = (label, input, hint) => el("div", { class: "field" }, el("label", {}, label), input, hint ? el("p", { class: "hint" }, hint) : null);
+  const inp = (name, value = "", attrs = {}) => el("input", { type: "text", name, value: value ?? "", ...attrs });
+  const copyBtn = (text) => el("button", { class: "btn sm", type: "button", onclick: async () => { try { await navigator.clipboard.writeText(text); toast("Copied"); } catch { toast("Select the link and copy it"); } } }, "Copy");
+
+  async function start() {
+    const me = await api("/api/platform");
+    if (!me.loggedIn) return showLogin(me.ready);
+    D = me; $("who").hidden = false;
+    const slug = new URLSearchParams(location.search).get("shop");
+    if (slug) return showShop(slug);
+    if (location.hash === "#new") return showNew();
+    showList();
+  }
+
+  function showLogin(ready) {
+    $("who").hidden = true;
+    const err = el("p", { class: "form-error", role: "alert", hidden: true });
+    const f = el("form", { class: "authbox panel", style: "max-width:420px;margin:60px auto" },
+      el("h1", { style: "font-size:2.5rem;margin-bottom:8px" }, "Beam Book control"),
+      el("p", { class: "muted" }, "Add and manage the shops on Beam Book."),
+      ready === false ? el("p", { class: "notice small" }, "Set PLATFORM_PASSWORD and SESSION_SECRET in Vercel, then redeploy.") : null,
+      field("Password", el("input", { type: "password", name: "password", autocomplete: "current-password", required: true })),
+      err, el("button", { class: "btn sign", type: "submit" }, "Log in"));
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault(); err.hidden = true;
+      try { await api("/api/platform", { body: { action: "login", password: new FormData(f).get("password") } }); start(); }
+      catch (x) { err.textContent = x.message; err.hidden = false; }
+    });
+    app.replaceChildren(f); f.querySelector("input").focus();
+  }
+
+  function showList() {
+    history.replaceState(null, "", "/platform");
+    const rows = D.shops.map((s) => el("tr", {},
+      el("td", {}, el("a", { href: `/platform?shop=${encodeURIComponent(s.slug)}` }, el("strong", {}, s.name)), el("div", { class: "small muted" }, s.slug)),
+      el("td", { class: "hide-sm" }, s.city || "—"),
+      el("td", {}, s.url ? el("a", { href: s.url, target: "_blank", rel: "noopener" }, s.url.replace(/^https?:\/\//, "")) : el("span", { class: "muted small" }, "No web address yet")),
+      el("td", {}, el("span", { class: `pill${s.active ? "" : " off"}` }, s.active ? "Live" : "Off"))));
+    app.replaceChildren(
+      el("div", { style: "display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:18px" },
+        el("h1", { style: "font-size:2.75rem;margin:0" }, "Shops"),
+        el("a", { class: "btn sign", href: "#new", onclick: (e) => { e.preventDefault(); showNew(); } }, "Add a shop")),
+      D.shops.length ? el("table", { class: "shops" }, el("thead", {}, el("tr", {}, el("th", {}, "Shop"), el("th", { class: "hide-sm" }, "City"), el("th", {}, "Booking page"), el("th", {}, ""))), el("tbody", {}, rows))
+        : el("p", { class: "muted" }, "No shops yet. Add the first one."));
+  }
+
+  // ---------- add a shop ----------
+  function showNew() {
+    history.replaceState(null, "", "/platform#new");
+    const err = el("p", { class: "form-error", role: "alert", hidden: true });
+    const slugIn = inp("slug", "", { required: true, pattern: "[a-z0-9-]{1,40}", autocapitalize: "off", spellcheck: "false", placeholder: "e.g. blackwolf" });
+    const nameIn = inp("name", "", { required: true, placeholder: "Black Wolf Tattoo Club" });
+    let slugTouched = false;
+    slugIn.addEventListener("input", () => { slugTouched = true; });
+    nameIn.addEventListener("input", () => { if (!slugTouched) slugIn.value = nameIn.value.toLowerCase().replace(/tattoo|club|studio|shop|the\b/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30); updateUrl(); });
+    const urlHint = el("p", { class: "hint" });
+    const updateUrl = () => { urlHint.textContent = D.domain ? `Their booking page: https://${slugIn.value || "shortname"}.${D.domain} (you can add their own address later).` : "Add a web address for them below, or set BEAMBOOK_DOMAIN in Vercel for automatic addresses."; };
+    slugIn.addEventListener("input", updateUrl); updateUrl();
+    const tz = el("select", { name: "timeZone" }, TZS.map((z) => el("option", { value: z, selected: z === "America/Anchorage" }, z.replace("_", " "))));
+    const f = el("form", { class: "form", style: "max-width:760px" },
+      el("h1", { style: "font-size:2.75rem;margin-bottom:6px" }, "Add a shop"),
+      el("p", { class: "muted", style: "margin-top:0" }, "Takes a minute. The owner gets a link to set their password, then adds their own artists and front desk."),
+      el("fieldset", {}, el("legend", {}, "Business"),
+        field("Type of business", el("select", { name: "kind" }, Object.entries(D.kinds).map(([k, v]) => el("option", { value: k, selected: k === "blank" }, v.label))),
+          "Sets the starting questions, words and negotiation rules. Everything can be changed after."),
+        field("Business name", nameIn),
+        field("Short name", slugIn, ""), urlHint,
+        el("div", { class: "grid2" }, field("City", inp("city", "", { placeholder: "Fairbanks, Alaska" })), field("Phone", inp("phone", "", { type: "tel" }))),
+        field("Street address", inp("address")),
+        el("div", { class: "grid2" }, field("Instagram", inp("instagram", "", { placeholder: "@shophandle" })), field("Time zone", tz)),
+        field("Their own web address (optional)", inp("hosts", "", { placeholder: "book.theirshop.com", autocapitalize: "off" }), "Only if they'll point a subdomain of their own site at Beam Book. You can add it later.")),
+      el("fieldset", {}, el("legend", {}, "Owner"),
+        el("div", { class: "grid2" }, field("Owner's name", inp("ownerName", "", { required: true })), field("Owner's email", inp("ownerEmail", "", { type: "email", required: true }))),
+        field("First artist's name", inp("artistName", "", { placeholder: "Same as the owner, if they tattoo" }), "More artists are added by the owner in their inbox (Team).")),
+      el("fieldset", {}, el("legend", {}, "Look"),
+        el("div", { class: "grid2" },
+          field("Background", el("select", { name: "mode" }, el("option", { value: "dark" }, "Dark"), el("option", { value: "light" }, "Light"))),
+          field("Accent color", el("input", { type: "color", name: "accent", value: "#d08a3c", class: "swatch" }), "Buttons and highlights.")),
+        el("label", { class: "check" }, el("input", { type: "checkbox", name: "deco" }), "Thin gold corner ornaments")),
+      err, el("div", { class: "actions" }, el("button", { class: "btn sign", type: "submit" }, "Create shop"), el("a", { class: "btn line", href: "/platform", onclick: (e) => { e.preventDefault(); showList(); } }, "Cancel")));
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault(); err.hidden = true; const fd = new FormData(f); const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
+      try {
+        const r = await api("/api/platform", { body: { action: "create", kind: fd.get("kind"), slug: fd.get("slug").trim(), ownerName: fd.get("ownerName"), ownerEmail: fd.get("ownerEmail"), artistName: fd.get("artistName"),
+          hosts: fd.get("hosts") ? [fd.get("hosts")] : [],
+          studio: { name: fd.get("name"), city: fd.get("city"), phone: fd.get("phone"), address: fd.get("address"), instagram: fd.get("instagram"), timeZone: fd.get("timeZone") },
+          theme: { mode: fd.get("mode"), accent: fd.get("accent"), deco: fd.has("deco") } } });
+        D = await api("/api/platform");
+        showCreated(r, fd.get("ownerName"), fd.get("ownerEmail"));
+      } catch (x) { err.textContent = x.message; err.hidden = false; btn.disabled = false; }
+    });
+    app.replaceChildren(f); nameIn.focus();
+  }
+
+  function showCreated(r, ownerName, ownerEmail) {
+    const first = ownerName.split(" ")[0];
+    const msg = `Hi ${first}, your Beam Book booking page is ready: ${r.shop.url}\n\nSet your password here (link works once, for 7 days): ${r.ownerLink}\n\nYou'll log in at ${r.shop.url}/admin with ${ownerEmail}. From there you can add your artists and front desk under Team.`;
+    app.replaceChildren(el("div", { class: "panel", style: "max-width:760px" },
+      el("h1", { style: "font-size:2.5rem;margin-bottom:8px" }, `${r.shop.studio.name} is set up`),
+      el("p", {}, "Send the owner this link to choose their password. It works once and lasts 7 days."),
+      el("div", { class: "linkbox" }, el("code", {}, r.ownerLink), copyBtn(r.ownerLink)),
+      el("div", { class: "actions" },
+        el("a", { class: "btn", href: `mailto:${ownerEmail}?subject=${encodeURIComponent("Your Beam Book booking page")}&body=${encodeURIComponent(msg)}` }, "Email it from my phone"),
+        el("a", { class: "btn line", href: `sms:?&body=${encodeURIComponent(msg)}` }, "Text it"),
+        r.shop.url ? el("a", { class: "btn line", href: r.shop.url, target: "_blank", rel: "noopener" }, "Open their booking page") : null,
+        el("a", { class: "btn line", href: `/platform?shop=${encodeURIComponent(r.shop.slug)}` }, "Shop settings"))));
+  }
+
+  // "Put it on your website": copy-and-paste code for the business's own site.
+  function embedPanel(base) {
+    const { el } = BW;
+    const row = (label, code, help) => {
+      const ta = el("textarea", { class: "embedcode", rows: code.split("\n").length + 1, readonly: true, onfocus: (e) => e.target.select() }, code);
+      return el("div", { class: "field" }, el("label", {}, label), ta, el("p", { class: "hint" }, help),
+        el("button", { class: "btn sm line", type: "button", onclick: async () => { try { await navigator.clipboard.writeText(code); toast("Copied"); } catch { ta.select(); } } }, "Copy"));
+    };
+    return el("fieldset", {}, el("legend", {}, "Put it on your website"),
+      el("p", { class: "note" }, "Paste one of these into any website (Squarespace, Wix, WordPress, GoDaddy and others all have a spot for code). The form takes on your colors and sends requests here."),
+      row("The form, right on a page", `<div data-beambook></div>\n<script src="${base}/embed.js" async><\/script>`, "Put it where the form should appear."),
+      row("A button that opens the form", `<a href="#" data-beambook-button>Book now</a>\n<script src="${base}/embed.js" async><\/script>`, "Change \"Book now\" to anything. Works on any link or button you already have; just add data-beambook-button to it."),
+      row("A floating button on every page", `<script src="${base}/embed.js" data-floating="Book now" data-color="#1670C2" async><\/script>`, "Put it once in your site's footer or header code. Change the label and color to suit."),
+      el("p", { class: "small" }, "Or just link to it: ", el("a", { href: base, target: "_blank", rel: "noopener" }, base)));
+  }
+  // ---------- one shop ----------
+  async function showShop(slug) {
+    let S;
+    try { S = (await api(`/api/platform?shop=${encodeURIComponent(slug)}`)).shop; } catch (x) { app.replaceChildren(el("p", {}, x.message)); return; }
+    const st = S.studio || {}, th = S.theme || {}, cal = S.calendarDefaults || D.defaults.calendarDefaults;
+    const err = el("p", { class: "form-error", role: "alert", hidden: true });
+    const tz = el("select", { name: "timeZone" }, TZS.map((z) => el("option", { value: z, selected: z === st.timeZone }, z.replace("_", " "))));
+    const kindSel = el("select", {}, Object.entries(D.kinds).map(([k, v]) => el("option", { value: k, selected: k === S.kind }, v.label)));
+    const fbBox = el("div");
+    const fb = BW.formBuilder(fbBox, { words: S.words || D.defaults.words, form: S.form || [], negotiate: S.negotiate || D.defaults.negotiate,
+      ageCheck: S.ageCheck, policyCheck: S.policyCheck, sessionLengths: S.sessionLengths || D.defaults.sessionLengths });
+    const hoursRows = DAYS.map((d, i) => {
+      const h = cal.hours?.[i];
+      const on = el("input", { type: "checkbox", name: `on${i}`, checked: Boolean(h) });
+      return el("div", { class: "hours-row" }, el("strong", {}, d), el("label", { class: "check", style: "margin:0" }, on, "Open"),
+        el("input", { type: "time", name: `open${i}`, value: h?.open || "10:00", step: 900 }), el("input", { type: "time", name: `close${i}`, value: h?.close || "18:00", step: 900 }));
+    });
+    const logoPrev = el("img", { class: "logo-prev", alt: "", src: th.logo ? `${S.url}/api/artists?logo=1&v=${th.logoV || 1}` : "", hidden: !th.logo });
+    const logoIn = el("input", { type: "file", accept: "image/*", id: "logoFile", hidden: true });
+    logoIn.addEventListener("change", async () => {
+      const file = logoIn.files[0]; logoIn.value = ""; if (!file) return;
+      try { const image = await BW.shrink(file, 600); const r = await api("/api/platform", { body: { action: "logo", slug: S.slug, image } }); toast("Logo saved"); showShop(S.slug); }
+      catch (x) { toast(x.message); }
+    });
+    const f = el("form", { class: "form", style: "max-width:820px" },
+      el("div", { style: "display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap" },
+        el("div", {}, el("h1", { style: "font-size:2.75rem;margin:0" }, st.name || S.slug),
+          el("p", { class: "muted", style: "margin:6px 0 0" }, `${S.slug} · ${S.people ?? "?"} login${S.people === 1 ? "" : "s"} · ${S.requests ?? "?"} request${S.requests === 1 ? "" : "s"}`)),
+        el("span", { class: `pill${S.active === false ? " off" : ""}` }, S.active === false ? "Off" : "Live")),
+      S.url ? el("p", {}, "Booking page: ", el("a", { href: S.url, target: "_blank", rel: "noopener" }, S.url), " · Inbox: ", el("a", { href: `${S.url}/admin`, target: "_blank", rel: "noopener" }, `${S.url.replace(/^https?:\/\//, "")}/admin`)) : null,
+      el("fieldset", {}, el("legend", {}, "Business"),
+        field("Business name", inp("name", st.name, { required: true })),
+        field("Tagline", inp("tagline", st.tagline, { placeholder: "e.g. Custom tattoos in downtown Fairbanks" })),
+        el("div", { class: "grid2" }, field("City", inp("city", st.city)), field("Phone", inp("phone", st.phone, { type: "tel" }))),
+        field("Street address", inp("address", st.address)),
+        el("div", { class: "grid2" }, field("Instagram", inp("instagram", st.instagram)), field("Their website", inp("website", st.website, { placeholder: "theirshop.com" }))),
+        el("div", { class: "grid2" }, field("Business email (gets request alerts)", inp("contactEmail", st.contactEmail, { type: "email" })), field("Time zone", tz)),
+        field("Minimum age", inp("minAge", st.minAge || 18, { type: "number", min: 16, max: 21, style: "max-width:120px" }))),
+      el("fieldset", {}, el("legend", {}, "Web addresses"),
+        el("p", { class: "note" }, D.domain ? `Always reachable at https://${S.slug}.${D.domain}. Add their own address here (one per line), then add the same address to the Beam Book project in Vercel → Domains.` : "One per line. Each one also has to be added to the Beam Book project in Vercel → Domains."),
+        el("textarea", { name: "hosts", rows: 2, spellcheck: "false" }, (S.hosts || []).join("\n"))),
+      el("fieldset", {}, el("legend", {}, "Look"),
+        el("div", { class: "grid2" },
+          field("Background", el("select", { name: "mode" }, el("option", { value: "dark", selected: th.mode !== "light" }, "Dark"), el("option", { value: "light", selected: th.mode === "light" }, "Light"))),
+          field("Accent color", el("input", { type: "color", name: "accent", value: th.accent || "#d08a3c", class: "swatch" }))),
+        el("label", { class: "check" }, el("input", { type: "checkbox", name: "deco", checked: Boolean(th.deco) }), "Thin gold corner ornaments"),
+        el("div", { style: "display:flex;gap:14px;align-items:center;margin:8px 0 14px" }, logoPrev,
+          el("label", { class: "btn sm line", for: "logoFile" }, th.logo ? "Change logo" : "Upload logo"), logoIn,
+          th.logo ? el("button", { class: "linkbtn", type: "button", onclick: async () => { await api("/api/platform", { body: { action: "logo", slug: S.slug, remove: true } }); toast("Logo removed"); showShop(S.slug); } }, "Remove") : null)),
+      el("fieldset", {}, el("legend", {}, "Business type"),
+        el("p", { class: "note" }, `Now: ${(D.kinds[S.kind] || D.kinds.blank).label}. Starting over replaces the words, questions and negotiation rules below with that type's.`),
+        el("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" }, kindSel,
+          el("button", { class: "btn sm line", type: "button", onclick: async () => {
+            try { await api("/api/platform", { body: { action: "update", slug: S.slug, applyKind: kindSel.value } }); toast("Started over from the template"); showShop(S.slug); } catch (x) { toast(x.message); } } }, "Start over from this type"))),
+      S.url ? embedPanel(S.url) : null,
+      fbBox,
+      el("fieldset", {}, el("legend", {}, "Deposit wording"),
+        el("textarea", { name: "depositPolicy", rows: 3 }, S.depositPolicy || D.defaults.depositPolicy)),
+      el("fieldset", {}, el("legend", {}, "Starting hours"),
+        el("p", { class: "note" }, "Used until the shop sets its own hours in the inbox (Calendar)."), ...hoursRows),
+      err,
+      el("div", { class: "actions" }, el("button", { class: "btn sign", type: "submit" }, "Save"),
+        el("button", { class: "btn line", type: "button", onclick: ownerLink }, "New owner password link"),
+        el("button", { class: "btn danger", type: "button", onclick: async () => {
+          const turnOn = S.active === false;
+          if (!turnOn && !confirmBox.hidden) return;
+          if (turnOn) { await api("/api/platform", { body: { action: "active", slug: S.slug, active: true } }); toast("Shop is live again"); return showShop(S.slug); }
+          confirmBox.hidden = false; } }, S.active === false ? "Turn back on" : "Turn off")),
+    );
+    const confirmBox = el("div", { class: "panel", hidden: true, style: "margin-top:14px" },
+      el("p", { style: "margin-top:0" }, "Turning the shop off hides its booking page and inbox. Nothing is deleted, and you can turn it back on."),
+      el("div", { class: "actions", style: "margin:0" },
+        el("button", { class: "btn danger", type: "button", onclick: async () => { await api("/api/platform", { body: { action: "active", slug: S.slug, active: false } }); toast("Shop turned off"); showShop(S.slug); } }, "Turn it off"),
+        el("button", { class: "btn line", type: "button", onclick: () => { confirmBox.hidden = true; } }, "Keep it on")));
+    const linkOut = el("div", { hidden: true, style: "margin-top:14px" });
+    async function ownerLink() {
+      try {
+        const r = await api("/api/platform", { body: { action: "ownerLink", slug: S.slug } });
+        linkOut.replaceChildren(el("p", {}, `New password link for ${r.name} (${r.email}). Works once, for 7 days:`), el("div", { class: "linkbox" }, el("code", {}, r.link), copyBtn(r.link)));
+        linkOut.hidden = false;
+      } catch (x) { toast(x.message); }
+    }
+    f.append(confirmBox, linkOut);
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault(); err.hidden = true; const fd = new FormData(f);
+      const hours = {}; for (let d = 0; d < 7; d++) hours[d] = fd.has(`on${d}`) ? { open: fd.get(`open${d}`), close: fd.get(`close${d}`) } : null;
+      try {
+        await api("/api/platform", { body: { action: "update", slug: S.slug,
+          studio: { name: fd.get("name"), tagline: fd.get("tagline"), city: fd.get("city"), phone: fd.get("phone"), address: fd.get("address"), instagram: fd.get("instagram"),
+            website: fd.get("website"), contactEmail: fd.get("contactEmail"), timeZone: fd.get("timeZone"), minAge: Number(fd.get("minAge")) },
+          hosts: String(fd.get("hosts") || "").split(/\s+/).filter(Boolean),
+          theme: { mode: fd.get("mode"), accent: fd.get("accent"), deco: fd.has("deco") },
+          depositPolicy: fd.get("depositPolicy"), calendarDefaults: { hours }, ...fb.value() } });
+        toast("Saved"); D = await api("/api/platform"); showShop(S.slug);
+      } catch (x) { err.textContent = x.message; err.hidden = false; }
+    });
+    app.replaceChildren(f);
+  }
+
+  $("logout").addEventListener("click", async () => { await api("/api/platform", { body: { action: "logout" } }); location.href = "/platform"; });
+  $("toList").addEventListener("click", (e) => { e.preventDefault(); showList(); });
+  start().catch((e) => { app.textContent = e.message; });
+})();
+</script>
+</body>
+</html>

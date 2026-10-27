@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d1014">
+<link rel="icon" href="/assets/brand/beam-icon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+<script src="/assets/shop.js"></script>
+<title>Request | %SHOP%</title>
+<meta name="description" content="Send your request with details and photos. You'll get a reply with an offer you can accept, counter or ask about.">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="page header-inner">
+    <a class="brand" href="/"><img data-shop="logo" src="" alt="" width="46" height="46" hidden><span class="brand-mono" hidden></span><span data-shop="name"></span></a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
+    <nav class="nav" id="nav" aria-label="Main">
+      <a href="/artists">Team</a>
+      <a data-shop="website" data-shop-if="website" href="#" rel="noopener" hidden>Shop website</a>
+      <a class="btn sign sm" href="/booking" data-word="cta" aria-current="page">Request a booking</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="page">
+    <header class="page-head">
+      <h1 data-word="title">Request a booking</h1>
+      <p class="intro" data-word="intro">Tell us what you need. You'll get a reply with questions or an offer.</p>
+    </header>
+
+    <div class="split top booking-split">
+      <div>
+        <form id="form" class="form" novalidate>
+          <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+
+          <div class="form-part" id="artistPart">
+            <h2 id="artistHead">Who</h2>
+            <div class="field" data-f="artist"><label for="artist" id="artistLabel">Who would you like?</label><select id="artist" name="artist" required></select><p class="hint" id="artistStyles"></p><div class="err"></div></div>
+            <div id="waitlist" hidden></div>
+          </div>
+
+          <div id="rest">
+          <div class="form-part">
+            <h2>The details</h2>
+            <div class="field" data-f="idea">
+              <label for="idea"><span id="summaryLabel">What do you need?</span> <span class="hint" id="summaryHint"></span></label>
+              <textarea id="idea" name="idea" maxlength="2000" required></textarea>
+              <div class="err"></div>
+            </div>
+            <div id="custom"></div>
+          </div>
+
+          <div class="form-part" id="offerPart" hidden>
+            <h2>Your offer</h2>
+            <p class="muted" style="margin-top:0" id="offerIntro">Name your price and when you'd like it. They can accept, counter or ask you about it.</p>
+            <div class="field" data-f="offer"><div class="err"></div></div>
+            <div class="row">
+              <div class="field" id="offerPriceF"><label for="offerPrice">Your price <span class="opt">(optional)</span></label><input id="offerPrice" type="text" inputmode="decimal" maxlength="40" placeholder="e.g. 400 or 300-500"></div>
+              <div class="field" id="offerLenF"><label for="offerLen">How long <span class="opt">(optional)</span></label><select id="offerLen"><option value="">Choose</option></select></div>
+            </div>
+            <div class="row" id="offerWhen">
+              <div class="field"><label for="offerDate">Date <span class="opt">(optional)</span></label><input id="offerDate" type="date"></div>
+              <div class="field"><label for="offerTime">Start time <span class="opt">(optional)</span></label><input id="offerTime" type="time" step="900"></div>
+            </div>
+            <div class="field" id="offerScopeF"><label for="offerScope">What's included <span class="opt">(optional)</span></label><textarea id="offerScope" rows="3" maxlength="1500"></textarea></div>
+          </div>
+
+          <div class="form-part">
+            <h2>How to reach you</h2>
+            <div class="row">
+              <div class="field" data-f="name"><label for="name">Name</label><input id="name" name="name" type="text" autocomplete="name" maxlength="80" required><div class="err"></div></div>
+              <div class="field" data-f="email"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" maxlength="120" required><div class="err"></div></div>
+            </div>
+            <div class="row">
+              <div class="field" data-f="phone"><label for="phone">Phone <span class="opt">(optional)</span></label><input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="30">
+                <label class="check" style="margin-top:10px"><input type="checkbox" name="smsOk" id="smsOk"> <span>Text me updates about this request (offers, booking link, confirmation). Msg &amp; data rates may apply. Reply STOP to opt out.</span></label><div class="err"></div></div>
+              <div class="field" data-f="instagram"><label for="instagram">Instagram <span class="opt">(optional)</span></label><input id="instagram" name="instagram" type="text" maxlength="60" placeholder="@yourhandle"></div>
+            </div>
+          </div>
+
+          <div class="form-part">
+            <h2 id="beforeHead">Before you send</h2>
+            <div id="policyPart" hidden>
+              <p class="policy" id="policy"></p>
+              <div class="field" data-f="agreePolicy"><label class="check"><input type="checkbox" name="agreePolicy"> I understand a deposit holds my date</label><div class="err"></div></div>
+            </div>
+            <div class="field" data-f="age18" id="agePart" hidden><label class="check"><input type="checkbox" name="age18"> <span id="ageText">I'm 18 or older and will bring government photo ID</span></label><div class="err"></div></div>
+            <button class="btn sign" type="submit" id="submit">Send request</button>
+            <p class="form-error" id="formError" role="alert" hidden></p>
+          </div>
+          </div>
+        </form>
+        <div id="done" hidden></div>
+      </div>
+
+      <aside>
+        <div class="panel" data-shop-if="phone|instagram|address" hidden>
+          <h3>Rather talk it through?</h3>
+          <ul class="aside-list">
+            <li data-shop-if="phone" hidden>Call <a data-shop="phone" href="#"></a></li>
+            <li data-shop-if="instagram" hidden>DM <a data-shop="instagram" href="#" rel="noopener"></a></li>
+            <li data-shop-if="address" hidden><a data-shop="address" href="#" rel="noopener"></a></li>
+          </ul>
+        </div>
+        <ul class="ticks small" style="margin-top:24px">
+          <li>You'll get a private link to follow your request</li>
+          <li>Offers can go back and forth until it works for both of you</li>
+          <li>Nothing is booked until you both agree</li>
+        </ul>
+      </aside>
+    </div>
+  </div>
+<p class="poweredby"><a href="https://beam.nealmedia.app" rel="noopener" target="_blank">Powered by: <img class="pb-on-dark" src="/assets/brand/beam-book-logo-white.svg" alt="Beam Book" width="123" height="22"><img class="pb-on-light" src="/assets/brand/beam-book-logo.svg" alt="Beam Book" width="123" height="22"></a></p></main>
+
+<footer class="site-footer">
+  <div class="page">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="/"><img data-shop="logo" src="" alt="" width="46" height="46" hidden><span class="brand-mono" hidden></span><span data-shop="name"></span></a>
+        <p class="muted" style="margin-top:14px;max-width:30ch" data-shop="tagline"></p>
+      </div>
+      <div data-shop-if="address" hidden>
+        <h4>Visit</h4>
+        <ul><li><a data-shop="address" href="#" rel="noopener"></a></li></ul>
+      </div>
+      <div data-shop-if="phone|instagram|website" hidden>
+        <h4>Contact</h4>
+        <ul>
+          <li data-shop-if="phone" hidden><a data-shop="phone" href="#"></a></li>
+          <li data-shop-if="instagram" hidden><a data-shop="instagram" href="#" rel="noopener"></a></li>
+          <li data-shop-if="website" hidden><a data-shop="website" href="#" rel="noopener"></a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span data-shop="year"></span> <span data-shop="name"></span></span>
+    </div>
+  </div>
+</footer>
+<script src="/assets/site.js" defer></script>
+<script src="/assets/common.js"></script>
+<script src="/assets/booking.js"></script>
+</body>
+</html>
