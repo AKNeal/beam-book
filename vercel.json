@@ -7,6 +7,11 @@
       "source": "/book",
       "destination": "/booking",
       "permanent": true
+    },
+    {
+      "source": "/book-now",
+      "destination": "/appointment",
+      "permanent": false
     }
   ],
   "headers": [
@@ -75,12 +80,20 @@
     {
       "source": "/instagram/daily",
       "destination": "/api/artists?ig=cron"
+    },
+    {
+      "source": "/reminders/daily",
+      "destination": "/api/calendar?cron=reminders"
     }
   ],
   "crons": [
     {
       "path": "/instagram/daily",
       "schedule": "17 13 * * *"
+    },
+    {
+      "path": "/reminders/daily",
+      "schedule": "7 19 * * *"
     }
   ]
 }

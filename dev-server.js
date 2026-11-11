@@ -26,6 +26,7 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   let p = decodeURIComponent(url.pathname);
   // Same rewrite as vercel.json: Instagram sends people back to /instagram/callback.
+  if (p === "/reminders/daily") { req.url = "/api/calendar?cron=reminders"; p = "/api/calendar"; }
   if (p === "/instagram/daily") { req.url = "/api/artists?ig=cron"; p = "/api/artists"; }
   if (p === "/instagram/callback") { url.searchParams.set("ig", "callback"); req.url = "/api/artists?" + url.searchParams; p = "/api/artists"; }
 

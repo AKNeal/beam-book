@@ -146,7 +146,9 @@ async function create(req, res, b) {
   const kind = T.KINDS[b.kind] ? b.kind : "blank";
   const tpl = T.template(kind);
   const rec = await tenant.saveRecord({
-    slug, active: true, kind, words: tpl.words, form: tpl.form, negotiate: tpl.negotiate, ageCheck: tpl.ageCheck, policyCheck: tpl.policyCheck, ...set,
+    slug, active: true, kind, words: tpl.words, form: tpl.form, negotiate: tpl.negotiate, ageCheck: tpl.ageCheck, policyCheck: tpl.policyCheck,
+    instant: Boolean(tpl.instant), services: T.cleanServices(tpl.services || []), ...set,
+    calendarDefaults: { ...tenantDefaultsCal(), ...(tpl.calendar || {}), ...(set.calendarDefaults || {}) },
     artists: [{ slug: artistSlug, name: artistName, styles: [], bio: "", photo: "", sample: "", instagram: set.studio.instagram || "", email: "", booksOpenDefault: true }],
   }, { isNew: true });
   // The Owner's login, with a one-time link to choose their password.
@@ -168,7 +170,8 @@ async function update(req, res, b) {
     const T = require("../lib/templates");
     if (!T.KINDS[b.applyKind]) throw new Error("Unknown business type.");
     const tpl = T.template(b.applyKind);
-    Object.assign(set, { kind: b.applyKind, words: tpl.words, form: tpl.form, negotiate: tpl.negotiate, ageCheck: tpl.ageCheck, policyCheck: tpl.policyCheck });
+    Object.assign(set, { kind: b.applyKind, words: tpl.words, form: tpl.form, negotiate: tpl.negotiate, ageCheck: tpl.ageCheck, policyCheck: tpl.policyCheck,
+      instant: Boolean(tpl.instant), ...(tpl.services ? { services: T.cleanServices(tpl.services) } : {}) });
   }
   const next = { ...rec, ...set, studio: { ...rec.studio, ...(set.studio || {}) }, theme: { ...rec.theme, ...(set.theme || {}) },
     calendarDefaults: { ...rec.calendarDefaults, ...(set.calendarDefaults || {}) } };
@@ -211,3 +214,5 @@ async function active(req, res, b) {
   const saved = await tenant.saveRecord({ ...rec, active: b.active !== false });
   return send(res, 200, { shop: { ...saved, url: urlFor(saved) } });
 }
+
+function tenantDefaultsCal() { return JSON.parse(JSON.stringify(require("../lib/tenant").DEFAULTS.calendarDefaults)); }

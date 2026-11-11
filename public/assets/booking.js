@@ -11,6 +11,8 @@
     form.prepend(el("p", { class: "form-error" }, "The form couldn't load. Refresh, or call the shop instead."));
     return;
   }
+  // Barbershop mode: this shop books instantly, so send clients to the pick-a-time page.
+  if (data.instant) { location.replace("/appointment" + location.search); return; }
 
   const W = data.words || {};
   const $ = (id) => document.getElementById(id);

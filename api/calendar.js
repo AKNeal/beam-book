@@ -48,5 +48,14 @@ module.exports = async function handler(req, res) {
   res.end(req.method === "HEAD" ? "" : cal.icsCalendar(calName, events));
 };
 
-// Beam Book: run this endpoint for the shop at this web address.
-module.exports = require("../lib/tenant").handler(module.exports);
+// Beam Book: run this endpoint for the shop at this web address — except the daily reminder job
+// (/reminders/daily, Vercel cron), which comes in on the main address and goes through every shop.
+const forShop = require("../lib/tenant").handler(module.exports);
+module.exports = async function (req, res) {
+  if (new URL(req.url, "http://x").searchParams.get("cron") === "reminders") {
+    const secret = process.env.CRON_SECRET;
+    if (secret && req.headers.authorization !== `Bearer ${secret}`) return send(res, 401, { error: "Not allowed." });
+    return send(res, 200, await require("../lib/reminders").daily());
+  }
+  return forShop(req, res);
+};

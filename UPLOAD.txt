@@ -1,0 +1,12 @@
+Beam Book: barbershop mode. Upload to github.com/AKNeal/beam-book -> Add file -> Upload files.
+Unzip first, then drag the FOLDERS (api, lib, public, src, test) and the loose files in together,
+so files land in the same folders they're in here. Skip this file.
+
+New:      lib/clients.js, lib/instant.js, lib/reminders.js, public/appointment.html,
+          public/assets/appointment.js, public/assets/clients.js, src/pages/appointment.html
+Changed:  api/admin/books.js, api/admin/inbox.js, api/artists.js, api/calendar.js, api/platform.js,
+          api/schedule.js, lib/calendar.js, lib/store.js, lib/templates.js, lib/tenant.js,
+          public/admin.html, public/assets/booking.js, vercel.json, dev-server.js, test/smoke.js, README.md
+
+After it deploys: Vercel -> beam-book -> Settings -> Environment Variables -> add CRON_SECRET (any long random text).
+Still no new Vercel functions (stays at 12).

@@ -2,6 +2,10 @@
 //   GET  /api/schedule?id=&t=          → open times for this client's session length
 //   GET  /api/schedule?id=&t=&ics=1    → "add to my calendar" file for a booked appointment
 //   POST /api/schedule {id, t, start}  → book that time
+// Instant booking (barbershop mode, shops with `instant` on):
+//   GET  /api/schedule?instant=1                         → services and barbers
+//   GET  /api/schedule?instant=1&service=&barber=        → open times (barber "any" = whoever is free)
+//   POST /api/schedule {instant:true, service, barber, start, name, phone, email, textOk, note}  → booked right away
 
 const config = require("../config/studio");
 const store = require("../lib/store");
@@ -17,6 +21,8 @@ const NOT_FOUND = "We couldn't find that booking link. Use the link from your em
 const artistSlug = (r) => (r.artist && r.artist !== "any" ? r.artist : config.artists[0].slug);
 
 module.exports = async function handler(req, res) {
+  const isInstant = req.method === "GET" ? new URL(req.url, "http://x").searchParams.get("instant") : body(req).instant;
+  if (isInstant) return require("../lib/instant").handle(req, res);
   if (req.method === "GET") return get(req, res);
   if (req.method === "POST") return post(req, res);
   res.setHeader("Allow", "GET, POST");

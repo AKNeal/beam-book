@@ -15,6 +15,15 @@ It's a separate product from the Black Wolf Tattoo Club site. Black Wolf keeps i
 
 The control page (Neal) and the business's own inbox (**Booking form**, for the Owner and Site admins) can change all of it: the words ("Book a gig", "performer", "set"), the questions (short or long answer, number, date, time, pick one, pick several, tick box, address, amount, photos), the age and deposit tick boxes, the lengths offered, and which terms clients may counter.
 
+## Barbershop mode (instant booking and the client list)
+- **Business type "Barbershop / salon"** turns on instant booking: clients pick a service (fixed price and length), a barber or "First available", and an open time, and they're booked at once. No request or approval. Any shop can switch it on or off under **Booking form → Instant booking**, where the services are edited. `/booking` sends clients to `/appointment` while it's on.
+- **Clients** (inbox): every shop's own list. Search by name, phone (or last 4 digits) or email; profile with preferred barber, notes and visits; add, edit, delete. Online bookings add or update the client automatically (matched by phone or email).
+- **Import** (Owner / Site admin): a CSV from Squire or anything else. The file is read in the browser; only name, phone, email, barber, last visit, last service and notes are uploaded. Payment method, tips and every other column never leave the owner's computer, and the server ignores them if sent. Duplicates merge; running it again is safe. **Remove every client** undoes an import.
+- **Texts need consent.** Imported clients get email reminders only, unless the owner confirms they opted in to texts. Online bookers tick a box. Nothing sends marketing.
+- **Reminders:** a daily job (`/reminders/daily`, about 10 am Alaska time) emails, and texts if allowed, everyone booked for tomorrow, once per appointment. Set `CRON_SECRET` in Vercel so only Vercel can run it.
+- **Inbox** loads the newest 300 requests in one go, with **Load older requests** for the rest.
+- Payments are not handled: the shop keeps its card reader for checkout.
+
 ## Offers
 - Either side can send an offer: price, date, start time, length, what's included, terms and deposit, plus a note. A new offer replaces the open one, which is marked "countered". The full history shows on both sides.
 - Clients can counter only the terms the business allows. Anything else is copied from the business's last offer.

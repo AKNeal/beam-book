@@ -96,7 +96,7 @@
 <body class="admin">
 <header class="top"><div class="shell adminbar">
   <div><a class="brand" href="/admin"><span><b id="shopName" style="font-weight:inherit">Shop</b> · Inbox</span></a><div class="whoami" id="whoami"></div></div>
-  <nav id="nav" hidden><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
+  <nav id="nav" hidden><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
 </div></header>
 
 <main class="shell" id="app">
@@ -143,6 +143,7 @@
   <div id="teamView" hidden></div>
   <div id="acctView" hidden></div>
   <div id="formView" hidden></div>
+  <div id="clientsView" hidden></div>
 </main>
 
 <script>
@@ -162,6 +163,7 @@
 <script src="/assets/common.js"></script>
 <script src="/assets/shop.js"></script>
 <script src="/assets/formbuilder.js"></script>
+<script src="/assets/clients.js"></script>
 <script>
 (() => {
   const { api, el, datetime, date } = BW;
@@ -253,7 +255,8 @@
   $("viewTeam").addEventListener("click", (e) => { e.preventDefault(); showTeam(); });
   $("viewAcct").addEventListener("click", (e) => { e.preventDefault(); showAccount(); });
   $("viewForm").addEventListener("click", (e) => { e.preventDefault(); showForm(); });
-  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView"];
+  $("viewClients").addEventListener("click", (e) => { e.preventDefault(); window.BBClients.show({ only, toast, D }); });
+  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView"];
   function only(v) { for (const x of views) $(x).hidden = x !== v; window.scrollTo({ top: 0 }); }
 
   // ---------- Requests ----------
@@ -295,13 +298,20 @@
   function renderList() {
     const list = $("list"); list.textContent = "";
     const rows = visible();
-    if (!rows.length) { list.append(el("p", { class: "empty" }, tab === "new" ? "No new requests. New ones show up here and in your email." : `Nothing in ${STATUS_NAMES[tab]}.`)); return; }
+    const older = D.olderFrom ? el("button", { class: "btn sm line", type: "button", style: "margin:12px 0", onclick: async (e) => {
+      e.target.disabled = true; e.target.textContent = "Loading…";
+      try { const r = await api(`/api/admin/inbox?before=${D.olderFrom}`); const have = new Set(D.requests.map((x) => x.id));
+        D.requests.push(...r.requests.filter((x) => !have.has(x.id))); D.olderFrom = r.olderFrom; renderInbox(); }
+      catch (x) { toast(x.message); e.target.disabled = false; e.target.textContent = "Load older requests"; }
+    } }, "Load older requests") : null;
+    if (!rows.length) { if (older) list.append(older); list.append(el("p", { class: "empty" }, tab === "new" ? "No new requests. New ones show up here and in your email." : `Nothing in ${STATUS_NAMES[tab]}.`)); return; }
     for (const r of rows) {
       list.append(el("button", { class: "item", type: "button", "aria-current": String(r.id === selected), onclick: () => select(r.id) },
         el("div", { class: "who" }, r.client.name, r.openToAll ? el("span", { class: "pill open" }, "Open to all") : null, r.unread ? el("span", { class: "pill new" }, newLabel(r)) : null),
         el("div", { class: "what" }, r.details.idea),
         el("div", { class: "meta" }, `${artistName(r.artist)}${r.details.answers?.[0] ? ` · ${ansText(r.details.answers[0])}` : r.details.placement ? ` · ${r.details.placement}` : ""}${offerTag(r)} · ${date(r.createdAt)}${r.images.length ? ` · ${r.images.length} photo${r.images.length > 1 ? "s" : ""}` : ""}`)));
     }
+    if (older) list.append(older);
   }
 
   function newLabel(r) {
@@ -879,6 +889,7 @@
     only("formView"); const v = $("formView"); v.textContent = "";
     v.append(el("h1", { style: "font-size:44px;margin:28px 0 6px" }, "Booking form"),
       el("p", { class: "muted", style: "margin-top:0" }, "What clients are asked, how your pages talk, and what clients may counter in an offer."));
+    v.append(servicesPanel());
     const box = el("div", { style: "max-width:820px" });
     const fb = BW.formBuilder(box, { words: D.words, form: D.form, negotiate: D.negotiate, ageCheck: D.ageCheck, policyCheck: D.policyCheck, sessionLengths: D.sessionLengths });
     const dep = el("textarea", { rows: 3 }, D.depositPolicy || "");
@@ -890,6 +901,36 @@
         try { await api("/api/admin/books", { body: { action: "bookingSettings", ...fb.value(), depositPolicy: dep.value } }); await load(); toast("Booking form saved"); showForm(); }
         catch (x) { err.textContent = x.message; err.hidden = false; }
       } }, "Save"), el("a", { class: "btn line", href: "/booking", target: "_blank", rel: "noopener" }, "See the form")));
+  }
+
+  // ---------- Instant booking: fixed services (barbershop mode) ----------
+  function servicesPanel() {
+    const p = el("section", { class: "panel", style: "max-width:820px;margin:0 0 24px" }, el("h2", { style: "font-size:1.75rem" }, "Instant booking"));
+    const on = el("input", { type: "checkbox", checked: Boolean(D.instant) });
+    p.append(el("label", { class: "check" }, on, "Clients book a service and time themselves, with no request or approval (best for barbershops and salons)."),
+      el("p", { class: "small muted" }, "When this is on, your booking page shows the services below. When it's off, clients send a request instead. Each barber's hours and time off are on the Calendar page."));
+    const rows = el("div", {});
+    const addRow = (sv = {}) => {
+      const r = el("div", { style: "display:flex;flex-wrap:wrap;align-items:end;gap:8px;margin-bottom:10px" },
+        el("div", { class: "field", style: "flex:3 1 200px;margin:0" }, el("label", { class: "small" }, "Service"), el("input", { type: "text", "data-k": "name", value: sv.name || "", maxlength: 60 })),
+        el("div", { class: "field", style: "flex:1 1 90px;margin:0" }, el("label", { class: "small" }, "Price ($)"), el("input", { type: "text", inputmode: "decimal", "data-k": "price", value: sv.price ?? "" })),
+        el("div", { class: "field", style: "flex:1 1 90px;margin:0" }, el("label", { class: "small" }, "Minutes"), el("input", { type: "number", min: 5, max: 480, step: 5, "data-k": "durationMin", value: sv.durationMin || 30 })),
+        el("button", { class: "btn sm line", type: "button", "aria-label": "Remove service", onclick: () => r.remove() }, "Remove"));
+      r.dataset.id = sv.id || ""; r.dataset.barbers = JSON.stringify(sv.barbers || []);
+      rows.append(r);
+    };
+    (D.services || []).forEach(addRow);
+    const err = el("p", { class: "form-error", role: "alert", hidden: true });
+    p.append(rows, el("button", { class: "btn sm line", type: "button", onclick: () => addRow() }, "Add a service"), err,
+      el("div", { class: "actions", style: "margin-top:14px" }, el("button", { class: "btn sm", type: "button", onclick: async () => {
+        err.hidden = true;
+        const services = [...rows.children].map((r) => ({ id: r.dataset.id || undefined, barbers: JSON.parse(r.dataset.barbers || "[]"),
+          ...Object.fromEntries([...r.querySelectorAll("[data-k]")].map((i) => [i.dataset.k, i.value])) })).filter((x) => x.name.trim());
+        if (on.checked && !services.length) { err.textContent = "Add at least one service before turning instant booking on."; err.hidden = false; return; }
+        try { await api("/api/admin/books", { body: { action: "bookingSettings", instant: on.checked, services } }); await load(); toast("Services saved"); showForm(); }
+        catch (x) { err.textContent = x.message; err.hidden = false; }
+      } }, "Save services"), el("a", { class: "btn sm line", href: "/appointment", target: "_blank", rel: "noopener" }, "See the booking page")));
+    return p;
   }
 
   // ---------- Shop Instagram (Owner / Site admin) ----------

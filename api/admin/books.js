@@ -9,6 +9,10 @@
 //   {action:"listed", slug, listed}                show/hide an added artist on the public booking form (Owner / Site admin)
 //   {action:"igConnect"} -> {url}  · {action:"igSync"} · {action:"igDisconnect"}   the shop's Instagram (Owner / Site admin)
 //   {action:"resetFeed"}                          new private calendar link (old one stops working); artists reset their own
+//   Client list (lib/clients.js) — kept here so the app stays inside Vercel's function limit:
+//   {action:"clients", q?, before?}  list (newest visit first) or search · {action:"client", id}
+//   {action:"clientSave", id?, client} · {action:"clientDelete", id}          (not barbers)
+//   {action:"clientsImport", rows, textOk} · {action:"clientsRemoveAll"}      (Owner / Site admin)
 // Artists can only change their own books, hours and time off.
 
 const artists = require("../../lib/artists");
@@ -26,6 +30,7 @@ module.exports = async function handler(req, res) {
   const slug = str(b.slug, 60);
   if (/^ig[A-Z]/.test(String(b.action || ""))) return instagram(req, res, me, b.action);
   if (b.action === "bookingSettings") return bookingSettings(req, res, me, b);
+  if (/^client/.test(String(b.action || ""))) return clientsApi(req, res, me, b);
   if (b.action !== "resetFeed" && (!auth.canSeeArtist(me, slug) || !(await artists.bySlug(slug)))) return send(res, 400, { error: "Unknown artist." });
   const needArtist = () => true;
 
@@ -101,6 +106,50 @@ async function instagram(req, res, me, action) {
   } catch (e) { return send(res, 400, { error: e.message }); }
 }
 
+// ----- Client list -----
+async function clientsApi(req, res, me, b) {
+  const clients = require("../../lib/clients");
+  const store = require("../../lib/store");
+  const staffOnly = () => { if (!auth.seesAll(me)) { send(res, 403, { error: "Only the Owner, a Site admin or Front desk can change clients." }); return false; } return true; };
+  const ownerOnly = () => { if (!auth.isFull(me)) { send(res, 403, { error: "Only the Owner or a Site admin can do that." }); return false; } return true; };
+  try {
+    switch (b.action) {
+      case "clients": {
+        const q = str(b.q, 80);
+        if (q) return send(res, 200, { clients: await clients.search(q), search: true });
+        return send(res, 200, await clients.list({ before: Number(b.before) || null, limit: 50 }));
+      }
+      case "client": {
+        const c = await clients.get(str(b.id, 20));
+        return c ? send(res, 200, { client: c }) : send(res, 404, { error: "That client isn't on the list." });
+      }
+      case "clientSave": {
+        if (!staffOnly()) return;
+        const c = b.client || {};
+        const saved = await clients.save({ name: c.name, phone: c.phone, email: c.email, barber: c.barber, notes: c.notes, textOk: c.textOk === true }, str(b.id, 20) || null);
+        return send(res, 200, { ok: true, client: saved });
+      }
+      case "clientDelete":
+        if (!staffOnly()) return;
+        return send(res, 200, { ok: await clients.remove(str(b.id, 20)) });
+      case "clientsImport": {
+        if (!ownerOnly()) return;
+        if ((await store.hit(`rl:import:${me.id}`, 3600)) > 200) return send(res, 429, { error: "That's a lot of imports. Try again in an hour." });
+        // Only these fields are read; anything else in a row (payment method, tips, card details) is ignored.
+        const rows = (Array.isArray(b.rows) ? b.rows : []).map((r) => ({ name: r?.name, phone: r?.phone, email: r?.email, barber: r?.barber,
+          lastVisit: r?.lastVisit, lastService: r?.lastService, notes: r?.notes }));
+        return send(res, 200, { ok: true, ...(await clients.importRows(rows, { textOk: b.textOk === true })) });
+      }
+      case "clientsRemoveAll":
+        if (!ownerOnly()) return;
+        if (b.confirm !== "DELETE ALL") return send(res, 400, { error: 'Type DELETE ALL to confirm.' });
+        return send(res, 200, { ok: true, removed: await clients.removeAll() });
+      default:
+        return send(res, 400, { error: "Unknown action." });
+    }
+  } catch (e) { return send(res, 400, { error: e.message }); }
+}
+
 // Beam Book: run this endpoint for the shop at this web address.
 module.exports = require("../../lib/tenant").handler(module.exports);
 
@@ -114,6 +163,6 @@ async function bookingSettings(req, res, me, b) {
     const set = require("../../lib/templates").bookingSettings(b, { words: config.words, negotiate: config.negotiate });
     if (b.depositPolicy !== undefined) set.depositPolicy = String(b.depositPolicy).trim().slice(0, 600);
     const saved = await tenant.saveRecord({ ...rec, ...set });
-    return send(res, 200, { ok: true, words: saved.words, form: saved.form, negotiate: saved.negotiate, ageCheck: saved.ageCheck, policyCheck: saved.policyCheck, sessionLengths: saved.sessionLengths });
+    return send(res, 200, { ok: true, instant: Boolean(saved.instant), services: saved.services || [], words: saved.words, form: saved.form, negotiate: saved.negotiate, ageCheck: saved.ageCheck, policyCheck: saved.policyCheck, sessionLengths: saved.sessionLengths });
   } catch (e) { return send(res, 400, { error: e.message }); }
 }

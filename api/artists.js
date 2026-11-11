@@ -48,6 +48,7 @@ module.exports = async function handler(req, res) {
     // Beam Book: this business's words, request questions and negotiation rules.
     kind: config.kind, words: config.words, form: config.form || [], negotiate: config.negotiate,
     ageCheck: Boolean(config.ageCheck), policyCheck: Boolean(config.policyCheck), sessionLengths: config.sessionLengths,
+    instant: Boolean(config.instant),
   });
 };
 

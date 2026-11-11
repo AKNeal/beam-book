@@ -10,6 +10,7 @@ const assert = require("assert/strict");
 const PORT = 3999 + Math.floor(Math.random() * 500);
 const BASE = `http://localhost:${PORT}`;
 const DATA = fs.mkdtempSync(path.join(os.tmpdir(), "bw-test-"));
+process.env.DATA_DIR = DATA; // so modules this test loads directly use the same throwaway data as the server
 const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
 let cookie = "";
@@ -690,6 +691,85 @@ const valid = (o = {}) => ({
       ok("negotiation: client offers first, both sides counter, accepting books it; businesses choose what clients can counter and edit their own questions");
       assert.equal((await control({ action: "update", slug: "blackwolf", applyKind: "tattoo" })).status, 200, "start over from a template");
       x = await call("/api/artists"); assert.ok(x.data.form.some((q) => q.key === "placement"));
+      SHOPHOST = "blackwolf.localhost"; cookie = "";
+    }
+
+
+    // ---------- Barbershop mode: client list, private import, instant booking, reminders ----------
+    {
+      const mk = await control({ action: "create", kind: "barbershop", slug: "levelup", ownerName: "Shop Owner", ownerEmail: "levelup@example.com", artistName: "Mike Fade",
+        studio: { name: "Test Barbershop", timeZone: "America/Anchorage", phone: "907-555-0199" } });
+      assert.equal(mk.status, 201, JSON.stringify(mk.data));
+      SHOPHOST = "levelup.localhost"; cookie = "";
+      let x = await call("/api/artists"); assert.equal(x.data.instant, true); assert.equal(x.data.words.provider, "barber");
+      // The browser importer: maps Squire's columns and never includes payment method or tips.
+      {
+        const vm = require("vm"); const win = { BW: {} };
+        vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../public/assets/clients.js"), "utf8"), { window: win, BW: win.BW, document: {} });
+        const rows = win.BBClients._parseCsv('Customer,email,phone,last visit,last service,barber,method of payment,tip amount,notes\r\n"Doe, Jo",jo@example.com,(907) 555-0101,10/02/2026,Skin fade,Mike,Visa,$5,"#2 on sides"\n');
+        const m = win.BBClients._mapHeaders(rows[0]);
+        assert.deepEqual(Object.keys(m.map).sort(), ["barber", "email", "lastService", "lastVisit", "name", "notes", "phone"].sort());
+        assert.deepEqual([...m.dropped], ["method of payment", "tip amount"]);
+        assert.equal(rows[1][0], "Doe, Jo");
+      }
+      const tok = new URL(mk.data.ownerLink).searchParams.get("reset");
+      await call("/api/admin/login", { body: { action: "reset", token: tok, password: "levelup long password" } });
+      const owner = cookie;
+      const rows = [];
+      for (let i = 0; i < 520; i++) rows.push({ name: `Client ${i} Test`, phone: `907555${String(1000 + i)}`, email: i % 2 ? `c${i}@example.com` : "", barber: "mike-fade",
+        lastVisit: Date.now() - i * 86400e3, lastService: "Haircut", notes: "", method: "Visa", tip: "$5", card: "4111111111111111" });
+      rows.push({ name: "Client 3 Test", phone: "9075551003", lastVisit: Date.now(), lastService: "Beard trim" }); // duplicate by phone: merged
+      x = await call("/api/admin/books", { body: { action: "clientsImport", rows: rows.slice(0, 500) } }); assert.equal(x.status, 200, JSON.stringify(x.data)); assert.equal(x.data.added, 500);
+      x = await call("/api/admin/books", { body: { action: "clientsImport", rows: rows.slice(500) } }); assert.equal(x.data.added, 20); assert.equal(x.data.merged, 1);
+      x = await call("/api/admin/books", { body: { action: "clientsImport", rows: rows.slice(0, 10) } }); assert.equal(x.data.merged, 10, "re-importing doesn't duplicate");
+      x = await call("/api/admin/books", { body: { action: "clients" } }); assert.equal(x.data.total, 520); assert.equal(x.data.clients.length, 50); assert.ok(x.data.next);
+      const dbText = fs.readFileSync(path.join(DATA, "db.json"), "utf8");
+      assert.ok(!/4111111111111111|"tip"|"method"|Visa/.test(dbText), "payment details never stored");
+      x = await call("/api/admin/books", { body: { action: "clients", q: "client 3" } }); assert.ok(x.data.clients.some((c) => c.phone === "9075551003"));
+      x = await call("/api/admin/books", { body: { action: "clients", q: "1003" } }); assert.equal(x.data.clients.length, 1);
+      const c3 = x.data.clients[0]; assert.equal(c3.lastService, "Beard trim"); assert.equal(c3.textOk, false, "no texts without consent");
+      x = await call("/api/admin/books", { body: { action: "clients", q: "c5@example" } }); assert.equal(x.data.clients[0].name, "Client 5 Test");
+      // Other shops can't see these clients.
+      SHOPHOST = "blackwolf.localhost"; cookie = bwOwnerCookie();
+      x = await call("/api/admin/books", { body: { action: "clients", q: "client" } }); assert.equal(x.data.clients.length, 0, "clients stay inside their shop");
+      SHOPHOST = "levelup.localhost"; cookie = owner;
+      ok("client list: Squire import keeps only booking fields, merges duplicates, searches by name/phone/email, stays inside the shop");
+
+      // Instant booking
+      cookie = "";
+      x = await call("/api/schedule?instant=1"); assert.ok(x.data.services.length >= 3); const svc = x.data.services[0];
+      x = await call(`/api/schedule?instant=1&service=${svc.id}&barber=any`); assert.ok(x.data.days.length, "open times"); const slot = x.data.days[0].slots[0];
+      assert.equal(slot.barber, "mike-fade");
+      x = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "any", start: slot.start, name: "J", phone: "12" } });
+      assert.equal(x.status, 400); assert.ok(x.data.fields.name && x.data.fields.phone);
+      x = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "any", start: slot.start, name: "Client 3 Test", phone: "907-555-1003", email: "three@example.com", textOk: true } });
+      assert.equal(x.status, 200, JSON.stringify(x.data)); assert.equal(x.data.barber, "Mike Fade");
+      x = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: slot.start, name: "Someone Else", phone: "907-555-2222" } });
+      assert.equal(x.status, 409, "same time can't be booked twice");
+      cookie = owner;
+      x = await call("/api/admin/inbox"); const booked = x.data.requests.find((r) => r.instant); assert.equal(booked.status, "booked"); assert.ok(booked.clientId);
+      assert.ok(x.data.calendar["mike-fade"].appts.some((a) => a.start === slot.start));
+      x = await call("/api/admin/books", { body: { action: "client", id: booked.clientId } });
+      assert.equal(x.data.client.name, "Client 3 Test", "booking matched the imported client by phone"); assert.equal(x.data.client.visits.length, 1); assert.equal(x.data.client.textOk, true);
+      cookie = ""; SHOPHOST = "blackwolf.localhost";
+      assert.equal((await call("/api/schedule?instant=1")).status, 404, "request-style shops don't take instant bookings");
+      SHOPHOST = "levelup.localhost";
+      ok("instant booking: service, barber or first available, time; booked at once, no double-booking, shows in inbox and on the client");
+
+      // Reminders: once, the day before
+      const tenant = require("../lib/tenant"), rem = require("../lib/reminders");
+      let rr = await tenant.runAs("levelup", () => rem.forShop(slot.start - 86400e3));
+      assert.equal(rr.sent, 1, JSON.stringify(rr));
+      rr = await tenant.runAs("levelup", () => rem.forShop(slot.start - 86400e3));
+      assert.equal(rr.sent, 0, "never reminded twice");
+      ok("day-before reminders go out once per appointment");
+
+      // Remove all (Owner only, with confirmation)
+      cookie = owner;
+      x = await call("/api/admin/books", { body: { action: "clientsRemoveAll" } }); assert.equal(x.status, 400);
+      x = await call("/api/admin/books", { body: { action: "clientsRemoveAll", confirm: "DELETE ALL" } }); assert.equal(x.data.removed, 520);
+      x = await call("/api/admin/books", { body: { action: "clients", q: "client" } }); assert.equal(x.data.clients.length, 0);
+      ok("owner can remove every client; search index cleared too");
       SHOPHOST = "blackwolf.localhost"; cookie = "";
     }
 

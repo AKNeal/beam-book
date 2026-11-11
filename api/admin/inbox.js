@@ -17,9 +17,13 @@ module.exports = async function handler(req, res) {
   const me = await auth.currentUser(req);
   if (!me) return send(res, 401, { error: "Log in first." });
 
-  const ids = await store.indexRange("reqs", 500);
+  // The newest 300 requests in one round trip; "Load older" asks for the next 300 (?before=<time>).
+  const PAGE = 300;
+  const before = Number(new URL(req.url, "http://x").searchParams.get("before")) || null;
+  const ids = before ? await store.indexBefore("reqs", before, PAGE) : await store.indexRange("reqs", PAGE);
+  const olderFrom = ids.length === PAGE ? await store.indexScore("reqs", ids[ids.length - 1]) : null;
   // Artists only get requests assigned to them; Owner, Site admin and Front desk get everything.
-  const requests = (await Promise.all(ids.map((id) => store.getJSON(`req:${id}`)))).filter((r) => r && auth.canSeeRequest(me, r));
+  const requests = (await store.getMany(ids.map((id) => `req:${id}`))).filter((r) => r && auth.canSeeRequest(me, r));
   const site = baseUrl(req);
   // The raw token stays server-side; the inbox only gets the client's two ready-made links (admin-only, so Nathan can text them).
   for (const r of requests) {
@@ -30,6 +34,7 @@ module.exports = async function handler(req, res) {
     if (!auth.seesAll(me) && r.artist !== me.artist) { r.client = { name: r.client.name }; delete r.links; r.messages = []; r.notes = []; }
   }
 
+  if (before) return send(res, 200, { requests, olderFrom });
   const roster = (await artists.list()).filter((a) => auth.canSeeArtist(me, a.slug)).map((a) => ({ ...a, photoUrl: artists.photoUrl(a) }));
   const waitlists = {}, calendar = {};
   const from = Date.now() - 7 * cal.DAY, to = Date.now() + 180 * cal.DAY;
@@ -53,11 +58,11 @@ module.exports = async function handler(req, res) {
 
   return send(res, 200, {
     me: { ...auth.publicUser(me), shopKey: me.id === "shop", full: auth.isFull(me), seesAll: auth.seesAll(me) },
-    requests, artists: roster, waitlists, calendar,
+    requests, olderFrom, artists: roster, waitlists, calendar,
     feed: { https: feedUrl, webcal: feedUrl.replace(/^https?:/, "webcal:"), live: process.env.VERCEL_ENV === "production" },
     sessionLengths: config.sessionLengths, timeZone: T.zoneName(Date.now()),
     templates: config.templates, statuses: config.statuses, words: config.words, negotiate: config.negotiate, form: config.form || [], kind: config.kind, ageCheck: Boolean(config.ageCheck), policyCheck: Boolean(config.policyCheck), depositPolicy: config.depositPolicy,
-    sizes: config.sizes, storage: store.backend, emailReady: emailReady(), smsReady: require("../../lib/sms").smsReady(), shopName: config.studio.name, instagram: auth.isFull(me) ? await require("../../lib/instagram").status().catch(() => null) : null,
+    sizes: config.sizes, instant: Boolean(config.instant), services: config.services || [], storage: store.backend, emailReady: emailReady(), smsReady: require("../../lib/sms").smsReady(), shopName: config.studio.name, instagram: auth.isFull(me) ? await require("../../lib/instagram").status().catch(() => null) : null,
   });
 };
 

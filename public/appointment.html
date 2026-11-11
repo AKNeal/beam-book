@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d1014">
+<link rel="icon" href="/assets/brand/beam-icon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+<script src="/assets/shop.js"></script>
+<title>Book an appointment | %SHOP%</title>
+<meta name="description" content="Pick a service, a barber and a time. You're booked right away.">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="page header-inner">
+    <a class="brand" href="/"><img data-shop="logo" src="" alt="" width="46" height="46" hidden><span class="brand-mono" hidden></span><span data-shop="name"></span></a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
+    <nav class="nav" id="nav" aria-label="Main">
+      <a href="/artists">Team</a>
+      <a data-shop="website" data-shop-if="website" href="#" rel="noopener" hidden>Shop website</a>
+      <a class="btn sign sm" href="/booking" data-word="cta" aria-current="page">Request a booking</a>
+    </nav>
+  </div>
+</header>
+<main id="main">
+  <div class="page" style="max-width:860px">
+    <header class="page-head">
+      <h1 data-word="title">Book an appointment</h1>
+      <p class="intro" id="intro">Loading…</p>
+    </header>
+    <div id="app"></div>
+  </div>
+<p class="poweredby"><a href="https://beam.nealmedia.app" rel="noopener" target="_blank">Powered by: <img class="pb-on-dark" src="/assets/brand/beam-book-logo-white.svg" alt="Beam Book" width="123" height="22"><img class="pb-on-light" src="/assets/brand/beam-book-logo.svg" alt="Beam Book" width="123" height="22"></a></p></main>
+<footer class="site-footer">
+  <div class="page">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="/"><img data-shop="logo" src="" alt="" width="46" height="46" hidden><span class="brand-mono" hidden></span><span data-shop="name"></span></a>
+        <p class="muted" style="margin-top:14px;max-width:30ch" data-shop="tagline"></p>
+      </div>
+      <div data-shop-if="address" hidden>
+        <h4>Visit</h4>
+        <ul><li><a data-shop="address" href="#" rel="noopener"></a></li></ul>
+      </div>
+      <div data-shop-if="phone|instagram|website" hidden>
+        <h4>Contact</h4>
+        <ul>
+          <li data-shop-if="phone" hidden><a data-shop="phone" href="#"></a></li>
+          <li data-shop-if="instagram" hidden><a data-shop="instagram" href="#" rel="noopener"></a></li>
+          <li data-shop-if="website" hidden><a data-shop="website" href="#" rel="noopener"></a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span data-shop="year"></span> <span data-shop="name"></span></span>
+    </div>
+  </div>
+</footer>
+<script src="/assets/site.js" defer></script>
+<script src="/assets/common.js"></script>
+<script src="/assets/appointment.js"></script>
+</body>
+</html>
