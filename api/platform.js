@@ -45,6 +45,12 @@ module.exports = async function handler(req, res) {
       case "logo": return await logo(req, res, b);
       case "ownerLink": return await ownerLink(req, res, b);
       case "active": return await active(req, res, b);
+      case "demo": case "clearDemo": {
+        const rec = await tenant.getRecord(b.slug);
+        if (!rec) return send(res, 404, { error: "No such shop." });
+        const demo = require("../lib/demo");
+        return send(res, 200, await tenant.runAs(rec.slug, () => (b.action === "demo" ? demo.fill() : demo.clear())));
+      }
       default: return send(res, 400, { error: "Unknown action." });
     }
   } catch (e) {

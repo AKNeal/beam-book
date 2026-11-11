@@ -770,6 +770,19 @@ const valid = (o = {}) => ({
       x = await call("/api/admin/books", { body: { action: "clientsRemoveAll", confirm: "DELETE ALL" } }); assert.equal(x.data.removed, 520);
       x = await call("/api/admin/books", { body: { action: "clients", q: "client" } }); assert.equal(x.data.clients.length, 0);
       ok("owner can remove every client; search index cleared too");
+
+      // Demo data from the control page: fills, shows in the inbox, sends nothing, and comes out cleanly.
+      const logLen = log.length;
+      let dm = await control({ action: "demo", slug: "levelup" });
+      assert.equal(dm.status, 200, JSON.stringify(dm.data)); assert.equal(dm.data.barbers, 3); assert.equal(dm.data.clients, 120); assert.ok(dm.data.bookings > 10, JSON.stringify(dm.data));
+      assert.ok(!/\[email:dev\]|\[sms:dev\]/.test(log.slice(logLen)), "demo sends no emails or texts");
+      x = await call("/api/admin/inbox"); assert.ok(x.data.artists.length >= 3); assert.ok(x.data.requests.filter((r) => r.demo).length === dm.data.bookings);
+      x = await call("/api/admin/books", { body: { action: "clients" } }); assert.equal(x.data.total, 120);
+      dm = await control({ action: "clearDemo", slug: "levelup" }); assert.equal(dm.status, 200); assert.ok(dm.data.bookings > 10);
+      x = await call("/api/admin/inbox"); assert.equal(x.data.requests.filter((r) => r.demo).length, 0); assert.ok(!x.data.artists.some((a) => a.name === "Tony Vega"));
+      assert.ok(Object.values(x.data.calendar).every((c) => !c.appts.some((a) => a.source === "demo")));
+      x = await call("/api/admin/books", { body: { action: "clients" } }); assert.equal(x.data.total, 0);
+      ok("demo data: control page fills a barbershop with made-up barbers, clients and bookings, sends nothing, and removes it all");
       SHOPHOST = "blackwolf.localhost"; cookie = "";
     }
 

@@ -259,7 +259,18 @@
         linkOut.hidden = false;
       } catch (x) { toast(x.message); }
     }
-    f.append(confirmBox, linkOut);
+    // Demo data (barbershops): made-up barbers, clients and a week of bookings, for showing the shop owner.
+    const demoBox = S.instant ? el("div", { class: "panel", style: "margin-top:14px" },
+      el("h3", { style: "margin-top:0" }, "Demo data"),
+      el("p", { class: "note" }, "Fills the shop with made-up barbers, 120 made-up clients and a week of bookings, so the owner can see it working. No emails or texts are sent. Remove it before adding the shop's real barbers and clients."),
+      el("div", { class: "actions", style: "margin:0" },
+        el("button", { class: "btn line", type: "button", onclick: async (e) => { e.target.disabled = true;
+          try { const r = await api("/api/platform", { body: { action: "demo", slug: S.slug } }); toast(`Demo ready: ${r.barbers} barbers, ${r.clients} clients, ${r.bookings} bookings`); }
+          catch (x) { toast(x.message); } e.target.disabled = false; } }, "Fill with demo data"),
+        el("button", { class: "btn line", type: "button", onclick: async (e) => { if (!confirm("Remove all demo barbers, clients and bookings from this shop?")) return; e.target.disabled = true;
+          try { const r = await api("/api/platform", { body: { action: "clearDemo", slug: S.slug } }); toast(`Removed ${r.bookings} bookings, ${r.clients} clients, ${r.barbers} barbers`); }
+          catch (x) { toast(x.message); } e.target.disabled = false; } }, "Remove demo data"))) : null;
+    f.append(confirmBox, linkOut, demoBox);
     f.addEventListener("submit", async (e) => {
       e.preventDefault(); err.hidden = true; const fd = new FormData(f);
       const hours = {}; for (let d = 0; d < 7; d++) hours[d] = fd.has(`on${d}`) ? { open: fd.get(`open${d}`), close: fd.get(`close${d}`) } : null;

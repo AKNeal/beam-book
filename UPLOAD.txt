@@ -1,7 +1,3 @@
-Beam Book: barbershop mode + Day screen. Upload to github.com/AKNeal/beam-book -> Add file -> Upload files.
-Unzip first, then drag the FOLDERS (api, lib, public, src, test) and the loose files in together,
-so files land in the same folders they're in here. Skip this file.
-This zip replaces the earlier barbershop zip (it includes everything from it).
-
-After it deploys: Vercel -> beam-book -> Settings -> Environment Variables -> add CRON_SECRET (any long random text).
-Still no new Vercel functions (stays at 12).
+Beam Book: demo data buttons on the control page. Upload to github.com/AKNeal/beam-book -> Add file -> Upload files.
+Unzip first, then drag the FOLDERS (api, lib, public, test) in together so files land in the same folders. Skip this file.
+New: lib/demo.js   Changed: api/platform.js, public/platform.html, lib/reminders.js, test/smoke.js
