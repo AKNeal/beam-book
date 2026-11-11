@@ -80,6 +80,29 @@
   .howto { margin-top: 16px; font-size: .9375rem; } .howto summary { font: 600 1rem var(--body); padding: 6px 0; }
   .howto p { margin: 10px 0; }
   @media (max-width: 960px) { .cal-cols { grid-template-columns: 1fr; } }
+  /* Day screen: barbers across, times down */
+  .dv-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--white); }
+  .dv-grid { display: grid; min-width: max-content; }
+  .dv-corner, .dv-head { position: sticky; top: 0; z-index: 3; background: var(--white); border-bottom: 1px solid var(--line); padding: 10px 12px; }
+  .dv-corner { left: 0; z-index: 4; }
+  .dv-head { border-left: 1px solid var(--line); }
+  .dv-times { position: sticky; left: 0; z-index: 2; background: var(--white); }
+  .dv-time { position: absolute; right: 8px; transform: translateY(-50%); font-size: .75rem; color: var(--graphite); white-space: nowrap; }
+  .dv-time:first-child { transform: none; margin-top: 2px; }
+  .dv-col { position: relative; border-left: 1px solid var(--line);
+    background-image: repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px 104px), repeating-linear-gradient(to bottom, rgba(127,127,127,.12) 0 1px, transparent 1px 26px); }
+  .dv-closed { position: absolute; left: 0; right: 0; background: repeating-linear-gradient(135deg, rgba(127,127,127,.10) 0 6px, rgba(127,127,127,.18) 6px 12px); }
+  .dv-item { position: absolute; overflow: hidden; border-radius: 6px; padding: 3px 7px; font: inherit; font-size: .8125rem; line-height: 1.25; text-align: left; display: flex; flex-direction: column; gap: 1px; }
+  .dv-item.appt { background: var(--ink); color: var(--snow); border: 0; border-left: 4px solid var(--gold); cursor: pointer; }
+  .dv-item.appt:hover, .dv-item.appt:focus-visible { outline: 2px solid var(--gold); }
+  .dv-item.appt.pending { background: var(--white); color: var(--ink); border: 1.5px dashed var(--ink); border-left: 4px solid var(--gold); }
+  .dv-item.appt strong { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dv-item.appt span { opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dv-item.appt.short { flex-direction: row; align-items: center; gap: 6px; padding-top: 0; padding-bottom: 0; }
+  .dv-pend { font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .dv-item.off, .dv-item.busy { background: rgba(127,127,127,.22); color: var(--graphite); border: 1px solid rgba(127,127,127,.35); }
+  .dv-now { position: absolute; left: 0; right: 0; height: 2px; background: #d33; z-index: 1; }
+  .dv-now::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: #d33; }
   .cal-col .panel h2 { font-size: 1.75rem; margin-bottom: 12px; }
   .agenda-day { font-size: 1.125rem; margin: 18px 0 4px; color: var(--sign-dark); }
   .agenda-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -96,7 +119,7 @@
 <body class="admin">
 <header class="top"><div class="shell adminbar">
   <div><a class="brand" href="/admin"><span><b id="shopName" style="font-weight:inherit">Shop</b> · Inbox</span></a><div class="whoami" id="whoami"></div></div>
-  <nav id="nav" hidden><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
+  <nav id="nav" hidden><a href="#" id="viewDay">Day</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
 </div></header>
 
 <main class="shell" id="app">
@@ -144,6 +167,7 @@
   <div id="acctView" hidden></div>
   <div id="formView" hidden></div>
   <div id="clientsView" hidden></div>
+  <div id="dayView" hidden></div>
 </main>
 
 <script>
@@ -164,6 +188,7 @@
 <script src="/assets/shop.js"></script>
 <script src="/assets/formbuilder.js"></script>
 <script src="/assets/clients.js"></script>
+<script src="/assets/dayview.js"></script>
 <script>
 (() => {
   const { api, el, datetime, date } = BW;
@@ -201,11 +226,13 @@
     }
     selected = location.hash.slice(1) || null;
     if (selected) { const r = D.requests.find((x) => x.id === selected); if (r) tab = r.status; }
+    if (!selected && D.instant) return showDay(); // barbershops open on today's schedule
     showRequests();
   }
   let SHOP = "the shop";
+  let loadedAt = Date.now();
   async function load() {
-    D = await api("/api/admin/inbox");
+    D = await api("/api/admin/inbox"); loadedAt = Date.now();
     if (D.shopName) { SHOP = D.shopName; $("shopName").textContent = SHOP; document.title = `Inbox — ${SHOP}`; }
   }
   const fail = (id, msg) => { $(id).textContent = msg; $(id).hidden = false; };
@@ -256,7 +283,11 @@
   $("viewAcct").addEventListener("click", (e) => { e.preventDefault(); showAccount(); });
   $("viewForm").addEventListener("click", (e) => { e.preventDefault(); showForm(); });
   $("viewClients").addEventListener("click", (e) => { e.preventDefault(); window.BBClients.show({ only, toast, D }); });
-  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView"];
+  const dayCtx = () => ({ only, toast, get D() { return D; }, get loadedAt() { return loadedAt; }, reload: load,
+    openRequest: (r) => { tab = r.status; selected = r.id; history.replaceState(null, "", "#" + r.id); showRequests(); } });
+  const showDay = () => window.BBDay.show(dayCtx());
+  $("viewDay").addEventListener("click", (e) => { e.preventDefault(); showDay(); });
+  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView"];
   function only(v) { for (const x of views) $(x).hidden = x !== v; window.scrollTo({ top: 0 }); }
 
   // ---------- Requests ----------

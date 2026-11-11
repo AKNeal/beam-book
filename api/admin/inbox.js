@@ -44,11 +44,11 @@ module.exports = async function handler(req, res) {
     const ext = (await extcal.busyFor(a.slug, { refresh: false })).filter((b) => b.end > Date.now() && b.start < to);
     calendar[a.slug] = {
       external: await extcal.summary(a.slug),
-      busy: ext.slice(0, 300).map((b) => ({ ...b, day: T.dateKey(b.start), dayLabel: T.dayLabel(b.start),
+      busy: ext.slice(0, 300).map((b) => ({ ...b, day: T.dateKey(b.start), dayLabel: T.dayLabel(b.start), localStart: T.localInputValue(b.start), localEnd: T.localInputValue(b.end),
         time: b.allDay ? "All day" : `${T.timeLabel(b.start)} to ${T.timeLabel(b.end)}` })),
       settings: await cal.getSettings(a.slug),
-      blocks: (await cal.getBlocks(a.slug)).map((b) => ({ ...b, label: blockLabel(b) })),
-      appts: appts.map((x) => ({ ...x, localStart: T.localInputValue(x.start), when: T.rangeLabel(x.start, x.end), day: T.dateKey(x.start), dayLabel: T.dayLabel(x.start),
+      blocks: (await cal.getBlocks(a.slug)).map((b) => ({ ...b, label: blockLabel(b), localStart: T.localInputValue(b.start), localEnd: T.localInputValue(b.end) })),
+      appts: appts.map((x) => ({ ...x, localStart: T.localInputValue(x.start), localEnd: T.localInputValue(x.end), when: T.rangeLabel(x.start, x.end), day: T.dateKey(x.start), dayLabel: T.dayLabel(x.start),
         time: `${T.timeLabel(x.start)} to ${T.timeLabel(x.end)}` })),
     };
   }
@@ -60,7 +60,7 @@ module.exports = async function handler(req, res) {
     me: { ...auth.publicUser(me), shopKey: me.id === "shop", full: auth.isFull(me), seesAll: auth.seesAll(me) },
     requests, olderFrom, artists: roster, waitlists, calendar,
     feed: { https: feedUrl, webcal: feedUrl.replace(/^https?:/, "webcal:"), live: process.env.VERCEL_ENV === "production" },
-    sessionLengths: config.sessionLengths, timeZone: T.zoneName(Date.now()),
+    sessionLengths: config.sessionLengths, today: T.dateKey(Date.now()), nowLocal: T.localInputValue(Date.now()), timeZone: T.zoneName(Date.now()),
     templates: config.templates, statuses: config.statuses, words: config.words, negotiate: config.negotiate, form: config.form || [], kind: config.kind, ageCheck: Boolean(config.ageCheck), policyCheck: Boolean(config.policyCheck), depositPolicy: config.depositPolicy,
     sizes: config.sizes, instant: Boolean(config.instant), services: config.services || [], storage: store.backend, emailReady: emailReady(), smsReady: require("../../lib/sms").smsReady(), shopName: config.studio.name, instagram: auth.isFull(me) ? await require("../../lib/instagram").status().catch(() => null) : null,
   });
