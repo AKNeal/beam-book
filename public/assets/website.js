@@ -11,8 +11,9 @@
 
   // The setup checklist at the top of the inbox: closed by default, one line per item, red/green lights.
   var nudgeBox = null, nudgeOpen = null;
-  async function nudge(where, open) {
-    nudgeBox = where; nudgeOpen = open;
+  var GO = {};
+  async function nudge(where, open, go) {
+    nudgeBox = where; nudgeOpen = open; GO = go || GO;
     try { S = await call({ action: "site" }); } catch (e) { return; }
     drawNudge();
   }
@@ -55,6 +56,13 @@
 
   function row(it) {
     var done = Boolean(it.value), wrap = el("div", { class: "ck" + (done ? " done" : it.optional ? " opt" : it.skipped ? " skip" : "") });
+    if (it.type === "connect") {
+      wrap.append(el("div", { class: "ck-row" },
+        el("span", { class: "led", role: "img", "aria-label": done ? "Done" : "Still needed" }),
+        el("span", { class: "t", title: it.hint || "" }, it.label),
+        el("div", { class: "a" }, done ? null : el("button", { class: "btn sm line", type: "button", onclick: function () { if (GO[it.view]) GO[it.view](); } }, it.action || "Connect"))));
+      return wrap;
+    }
     var btn = el("button", { class: "btn sm line", type: "button", onclick: function () { editing = editing === it.key ? null : it.key; redraw(); } },
       editing === it.key ? "Close" : done ? "Edit" : /^photo/.test(it.type) ? "Upload" : it.type === "form" ? "Answer" : "Add");
     wrap.append(el("div", { class: "ck-row" },

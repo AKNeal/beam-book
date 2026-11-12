@@ -20,6 +20,12 @@ module.exports = async function handler(req, res) {
     if (!only) return send(res, 404, { error: "Calendar not found." });
   }
 
+  // Remember that a phone picked up this calendar (the setup checklist turns green from this). At most once an hour.
+  try {
+    const k = `calfeed:seen:${only || "shop"}`, seen = await store.getJSON(k);
+    if (!seen || Date.now() - seen.at > 3600 * 1000) await store.setJSON(k, { at: Date.now() });
+  } catch (e) { console.error("[calfeed]", e.message); }
+
   const site = baseUrl(req);
   const from = Date.now() - 60 * cal.DAY, to = Date.now() + 400 * cal.DAY;
   const events = [];

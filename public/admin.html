@@ -222,7 +222,7 @@
     $("viewSite").hidden = !["owner", "admin"].includes(ME.role);
     $("viewArt").textContent = ME.role === "artist" ? "My books" : "Books and waitlist";
     await load();
-    if (["owner", "admin"].includes(ME.role)) window.BBSite.nudge("siteNudge", showSite);
+    if (["owner", "admin"].includes(ME.role)) window.BBSite.nudge("siteNudge", showSite, { calendar: () => { showCalendar(); let n = 0; const t = setInterval(() => { const f = $("calFeed"); if (f || ++n > 40) { clearInterval(t); if (f) f.scrollIntoView({ behavior: "smooth", block: "start" }); } }, 100); }, team: showTeam, account: showAccount });
     $("viewDay").hidden = !D.instant; // request-style shops (gutters, tattoo) use Calendar; Day is for walk-in shops
     if (q.get("ig")) { // back from connecting Instagram
       const ok = q.get("ig") === "connected";
@@ -1043,7 +1043,7 @@
     }
 
     // iPhone calendar
-    const feed = el("section", { class: "panel" }, el("h2", {}, "Show bookings on your iPhone"),
+    const feed = el("section", { class: "panel", id: "calFeed" }, el("h2", {}, "Show bookings on your iPhone"),
       el("p", {}, D.me.seesAll ? "Every booking in the shop appears in your iPhone Calendar automatically. Set it up once:" : "Your bookings appear in your iPhone Calendar automatically. Set it up once:"),
       el("ol", { class: "small", style: "padding-left:20px" },
         el("li", {}, "On your iPhone, tap the button below (or copy the link)."),
