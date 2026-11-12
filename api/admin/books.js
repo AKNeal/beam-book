@@ -31,6 +31,7 @@ module.exports = async function handler(req, res) {
   if (/^ig[A-Z]/.test(String(b.action || ""))) return instagram(req, res, me, b.action);
   if (b.action === "bookingSettings") return bookingSettings(req, res, me, b);
   if (/^client/.test(String(b.action || ""))) return clientsApi(req, res, me, b);
+  if (/^site/.test(String(b.action || ""))) return siteApi(req, res, me, b);
   if (b.action !== "resetFeed" && (!auth.canSeeArtist(me, slug) || !(await artists.bySlug(slug)))) return send(res, 400, { error: "Unknown artist." });
   const needArtist = () => true;
 
@@ -154,6 +155,21 @@ async function clientsApi(req, res, me, b) {
 module.exports = require("../../lib/tenant").handler(module.exports);
 
 // The business's own request questions, words and negotiation rules (Owner / Site admin).
+// Beam: the shop's website checklist and change requests (lib/site.js). Owner and Site manager only.
+//   {action:"site"} · {action:"siteSave", key, value | photo (data URL) | remove | skip}
+//   {action:"siteChange", text, photos?} · {action:"siteReview", id, status?, note?} (Site manager)
+async function siteApi(req, res, me, b) {
+  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can work on the website." });
+  const site = require("../../lib/site");
+  try {
+    if (b.action === "siteSave") await site.saveItem(b);
+    else if (b.action === "siteChange") await site.addChange(me, b);
+    else if (b.action === "siteReview") await site.setChange(me, b);
+    else if (b.action !== "site") return send(res, 400, { error: "Unknown website action." });
+    return send(res, 200, { ok: true, ...(await site.adminView(me)) });
+  } catch (e) { return send(res, 400, { error: e.message }); }
+}
+
 async function bookingSettings(req, res, me, b) {
   if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can change the booking form." });
   const tenant = require("../../lib/tenant");

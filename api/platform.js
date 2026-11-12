@@ -122,6 +122,8 @@ function settingsFrom(b) {
     if (b.theme.font !== undefined) out.theme.font = b.theme.font === "sans" ? "sans" : "condensed";
   }
   if (b.depositPolicy !== undefined) out.depositPolicy = str(b.depositPolicy, 600);
+  if (b.siteChecklist !== undefined) out.siteChecklist = require("../lib/site").cleanChecklist(b.siteChecklist);
+  if (b.googlePlaceId !== undefined) { const g = str(b.googlePlaceId, 200); if (g && !/^[A-Za-z0-9_-]{10,200}$/.test(g)) throw new Error("That Google place ID doesn't look right."); out.googlePlaceId = g; }
   Object.assign(out, require("../lib/templates").bookingSettings(b));
   if (b.placements !== undefined) { out.placements = list(b.placements, 40, 30); if (!out.placements.length) throw new Error("Add at least one placement."); }
   if (b.colorOptions !== undefined) { out.colorOptions = list(b.colorOptions, 40, 12); if (!out.colorOptions.length) throw new Error("Add at least one style choice."); }

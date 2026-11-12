@@ -119,7 +119,7 @@
 <body class="admin">
 <header class="top"><div class="shell adminbar">
   <div><a class="brand" href="/admin"><img class="shop-logo" data-shop="logo" alt="" hidden><span><b id="shopName" style="font-weight:inherit">Shop</b> · Inbox</span></a><div class="whoami" id="whoami"></div></div>
-  <nav id="nav" hidden><a href="#" id="viewDay">Day</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
+  <nav id="nav" hidden><a href="#" id="viewDay">Day</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewSite" hidden>Website</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
 </div></header>
 
 <main class="shell" id="app">
@@ -160,6 +160,7 @@
     <p class="form-error" id="mcErr" role="alert" hidden></p>
     <p style="margin-top:20px"><button class="linkbtn" type="button" id="mcOut">Log out</button></p>
   </form>
+  <div id="siteNudge" hidden></div>
   <div id="inbox" hidden></div>
   <div id="artistsView" hidden></div>
   <div id="calView" hidden></div>
@@ -168,6 +169,7 @@
   <div id="formView" hidden></div>
   <div id="clientsView" hidden></div>
   <div id="dayView" hidden></div>
+  <div id="siteView" hidden></div>
 </main>
 
 <script>
@@ -189,6 +191,7 @@
 <script src="/assets/formbuilder.js"></script>
 <script src="/assets/clients.js"></script>
 <script src="/assets/dayview.js"></script>
+<script src="/assets/website.js"></script>
 <script>
 (() => {
   const { api, el, datetime, date } = BW;
@@ -216,8 +219,10 @@
     $("whoami").textContent = ME.shopKey ? "Shop password" : `${ME.name} · ${ME.roleName}`;
     $("viewTeam").hidden = !["owner", "admin"].includes(ME.role);
     $("viewForm").hidden = !["owner", "admin"].includes(ME.role);
+    $("viewSite").hidden = !["owner", "admin"].includes(ME.role);
     $("viewArt").textContent = ME.role === "artist" ? "My books" : "Books and waitlist";
     await load();
+    if (["owner", "admin"].includes(ME.role)) window.BBSite.nudge("siteNudge", showSite);
     if (q.get("ig")) { // back from connecting Instagram
       const ok = q.get("ig") === "connected";
       history.replaceState(null, "", "/admin");
@@ -287,7 +292,9 @@
     openRequest: (r) => { tab = r.status; selected = r.id; history.replaceState(null, "", "#" + r.id); showRequests(); } });
   const showDay = () => window.BBDay.show(dayCtx());
   $("viewDay").addEventListener("click", (e) => { e.preventDefault(); showDay(); });
-  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView"];
+  const showSite = () => { $("siteNudge").hidden = true; window.BBSite.show({ only, toast }); };
+  $("viewSite").addEventListener("click", (e) => { e.preventDefault(); showSite(); });
+  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView", "siteView"];
   function only(v) { for (const x of views) $(x).hidden = x !== v; window.scrollTo({ top: 0 }); }
 
   // ---------- Requests ----------

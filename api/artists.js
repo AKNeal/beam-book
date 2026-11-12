@@ -25,6 +25,21 @@ module.exports = async function handler(req, res) {
     return files.stream(res, a.photo, send);
   }
 
+  if (q.get("site")) { // Beam: the shop's own website content (checklist answers + Google reviews)
+    const data = await require("../lib/site").publicView();
+    res.statusCode = 200; res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=0, s-maxage=30, stale-while-revalidate=300");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    return res.end(JSON.stringify(data));
+  }
+  if (q.get("sitephoto")) {
+    const p = await require("../lib/site").photoFor(q.get("sitephoto"));
+    if (!p) return send(res, 404, { error: "No photo." });
+    if (!files.useBlob()) return files.sendLocal(res, p, send);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return files.stream(res, p, send);
+  }
+
   if (q.get("logo")) { // the shop's logo (uploaded on the Beam Book control page)
     const p = config.theme?.logo;
     if (!p || !p.startsWith(`${config.tenant}/brand/`)) return send(res, 404, { error: "No logo." });
