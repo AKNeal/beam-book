@@ -61,7 +61,7 @@ module.exports = async function handler(req, res) {
     requests, olderFrom, artists: roster, waitlists, calendar,
     feed: { https: feedUrl, webcal: feedUrl.replace(/^https?:/, "webcal:"), live: process.env.VERCEL_ENV === "production" },
     sessionLengths: config.sessionLengths, today: T.dateKey(Date.now()), nowLocal: T.localInputValue(Date.now()), timeZone: T.zoneName(Date.now()),
-    templates: config.templates, statuses: config.statuses, words: config.words, negotiate: config.negotiate, form: config.form || [], kind: config.kind, ageCheck: Boolean(config.ageCheck), policyCheck: Boolean(config.policyCheck), depositPolicy: config.depositPolicy,
+    templates: config.templates, statuses: config.statuses, words: config.words, negotiate: config.negotiate, form: config.form || [], kind: config.kind, ageCheck: Boolean(config.ageCheck), policyCheck: Boolean(config.policyCheck), askInstagram: config.askInstagram !== false, depositPolicy: config.depositPolicy,
     sizes: config.sizes, instant: Boolean(config.instant), services: config.services || [], storage: store.backend, emailReady: emailReady(), smsReady: require("../../lib/sms").smsReady(), shopName: config.studio.name, instagram: auth.isFull(me) ? await require("../../lib/instagram").status().catch(() => null) : null,
   });
 };

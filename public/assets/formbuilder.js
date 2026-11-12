@@ -8,6 +8,7 @@
 
   window.BW = window.BW || {};
   window.BW.formBuilder = function (box, S) {
+    S.askInstagram = S.askInstagram !== false;
     const { el } = window.BW;
     let form = JSON.parse(JSON.stringify(S.form || []));
     const words = { ...(S.words || {}) }, neg = { ...(S.negotiate || {}) };
@@ -58,7 +59,7 @@
       wrap.append(el("fieldset", {}, el("legend", {}, "Request questions"),
         el("p", { class: "note" }, "Every request also asks for a description, name, email and phone. Add whatever else this business needs to know."),
         qs, el("button", { class: "btn sm line", type: "button", onclick: () => { form.push({ label: "New question", type: "text" }); render(); } }, "Add a question"),
-        el("div", { style: "margin-top:16px" }, check(S, "ageCheck", "Ask clients to confirm their age"), check(S, "policyCheck", "Ask clients to accept the deposit policy"))));
+        el("div", { style: "margin-top:16px" }, check(S, "ageCheck", "Ask clients to confirm their age"), check(S, "policyCheck", "Ask clients to accept the deposit policy"), check(S, "askInstagram", "Ask clients for their Instagram"))));
 
       // Negotiation
       const lenBox = el("div", { class: "chips" });
@@ -76,7 +77,7 @@
     }
     render();
     return {
-      value: () => ({ words, form: form.map((q) => ({ ...q })), negotiate: neg, ageCheck: Boolean(S.ageCheck), policyCheck: Boolean(S.policyCheck), sessionLengths: lengths }),
+      value: () => ({ words, form: form.map((q) => ({ ...q })), negotiate: neg, ageCheck: Boolean(S.ageCheck), policyCheck: Boolean(S.policyCheck), askInstagram: Boolean(S.askInstagram), sessionLengths: lengths }),
     };
   };
 })();

@@ -22,6 +22,7 @@
   $("summaryLabel").textContent = W.summary || "What do you need?";
   $("summaryHint").textContent = W.summaryHint || "";
   if (!data.policyCheck && !data.ageCheck) $("beforeHead").hidden = true;
+  if (data.askInstagram === false) document.querySelectorAll('[data-f="instagram"]').forEach((f) => f.remove());
   if (data.policyCheck) { $("policyPart").hidden = false; $("policy").textContent = data.depositPolicy; }
   if (data.ageCheck) { $("agePart").hidden = false; $("ageText").textContent = `I'm ${data.studio.minAge} or older and will bring government photo ID`; }
   // ---- Artist dropdown ----

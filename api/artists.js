@@ -47,7 +47,7 @@ module.exports = async function handler(req, res) {
     options: { placements: config.placements, sizes: config.sizes, budgets: config.budgets, colorOptions: config.colorOptions },
     // Beam Book: this business's words, request questions and negotiation rules.
     kind: config.kind, words: config.words, form: config.form || [], negotiate: config.negotiate,
-    ageCheck: Boolean(config.ageCheck), policyCheck: Boolean(config.policyCheck), sessionLengths: config.sessionLengths,
+    ageCheck: Boolean(config.ageCheck), policyCheck: Boolean(config.policyCheck), askInstagram: config.askInstagram !== false, sessionLengths: config.sessionLengths,
     instant: Boolean(config.instant),
   });
 };

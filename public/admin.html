@@ -922,7 +922,7 @@
       el("p", { class: "muted", style: "margin-top:0" }, "What clients are asked, how your pages talk, and what clients may counter in an offer."));
     v.append(servicesPanel());
     const box = el("div", { style: "max-width:820px" });
-    const fb = BW.formBuilder(box, { words: D.words, form: D.form, negotiate: D.negotiate, ageCheck: D.ageCheck, policyCheck: D.policyCheck, sessionLengths: D.sessionLengths });
+    const fb = BW.formBuilder(box, { words: D.words, form: D.form, negotiate: D.negotiate, ageCheck: D.ageCheck, policyCheck: D.policyCheck, askInstagram: D.askInstagram, sessionLengths: D.sessionLengths });
     const dep = el("textarea", { rows: 3 }, D.depositPolicy || "");
     const err = el("p", { class: "form-error", role: "alert", hidden: true });
     v.append(el("div", { style: "max-width:820px" }, embedPanel(location.origin)));
