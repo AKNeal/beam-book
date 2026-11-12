@@ -467,3 +467,4 @@ h1, h2, h3, .brand span { color: var(--head-ink, inherit); }
 .ck-edit input[type=text], .ck-edit textarea { width: 100%; }
 .ck-edit .row-btns { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
 .ck-edit img { max-width: 160px; border-radius: 8px; display: block; margin-bottom: 8px; }
+.ck-edit select { width: 100%; }

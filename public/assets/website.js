@@ -43,7 +43,7 @@
     var isDone = function (i) { return Boolean(i.value); };
     S.items.filter(isDone).concat(S.items.filter(function (i) { return !isDone(i) && !i.skipped; }), S.items.filter(function (i) { return !isDone(i) && i.skipped; }))
       .forEach(function (it) { list.append(row(it)); });
-    d.append(el("div", { class: "setup-body" }, el("p", { class: "small muted" }, "Fill these in and they go on your website right away."), list));
+    d.append(el("div", { class: "setup-body" }, el("p", { class: "small muted" }, "Photos and short answers go on your website right away. Questionnaires stay private between you and Neal Media."), list));
     return d;
   }
   function redraw() { drawNudge(); var v = document.getElementById("siteView"); if (v && !v.hidden) render(); }
@@ -51,7 +51,7 @@
   function row(it) {
     var done = Boolean(it.value), wrap = el("div", { class: "ck" + (done ? " done" : it.skipped ? " skip" : "") });
     var btn = el("button", { class: "btn sm line", type: "button", onclick: function () { editing = editing === it.key ? null : it.key; redraw(); } },
-      editing === it.key ? "Close" : done ? "Edit" : it.type === "photo" ? "Upload" : "Add");
+      editing === it.key ? "Close" : done ? "Edit" : it.type === "photo" ? "Upload" : it.type === "form" ? "Answer" : "Add");
     wrap.append(el("div", { class: "ck-row" },
       el("span", { class: "led", role: "img", "aria-label": done ? "Done" : it.skipped ? "Skipped" : "Still needed" }),
       el("span", { class: "t", title: it.hint || "" }, it.label),
@@ -70,7 +70,23 @@
     }
     if (it.hint) box.append(el("p", { class: "small muted hint" }, it.hint));
     var btns = el("div", { class: "row-btns" });
-    if (it.type === "photo") {
+    if (it.type === "form") {
+      var ans = it.value || {}, inputs = {};
+      box.append(el("p", { class: "small muted hint" }, "Private: only you and Neal Media see these answers."));
+      (it.questions || []).forEach(function (q) {
+        var f;
+        if (q.type === "choice") {
+          f = el("select", {}, el("option", { value: "" }, "Pick one"), q.options.map(function (o) { return el("option", { value: o }, o); }));
+          f.value = ans[q.key] || "";
+        } else { f = q.type === "long" ? el("textarea", { rows: 3 }) : el("input", { type: "text" }); f.value = ans[q.key] || ""; }
+        inputs[q.key] = f;
+        box.append(el("div", { class: "field", style: "margin:10px 0" }, el("label", {}, q.label), q.hint ? el("p", { class: "small muted", style: "margin:0 0 4px" }, q.hint) : null, f));
+      });
+      btns.append(el("button", { class: "btn sm", type: "button", onclick: function () {
+        var a = {}; Object.keys(inputs).forEach(function (k) { a[k] = inputs[k].value; });
+        save({ answers: a }, "Answers saved. Thanks!");
+      } }, "Save answers"));
+    } else if (it.type === "photo") {
       if (it.value) box.append(el("img", { src: it.value, alt: it.label }));
       var file = el("input", { type: "file", accept: "image/*", hidden: true, onchange: async function () {
         var f = file.files[0]; if (!f) return;
