@@ -72,7 +72,7 @@ const instagramStrip = `<section class="section" data-ig-feed hidden aria-label=
   </section>
 <script src="/assets/instagram.js" defer></script>`;
 
-const poweredBy = `<p class="poweredby"><a href="https://beam.nealmedia.app" rel="noopener" target="_blank">Powered by: <img class="pb-on-dark" src="/assets/brand/beam-book-logo-white.svg" alt="Beam Book" width="123" height="22"><img class="pb-on-light" src="/assets/brand/beam-book-logo.svg" alt="Beam Book" width="123" height="22"></a></p>`;
+const poweredBy = `<p class="poweredby"><a href="https://beam.nealmedia.app" rel="noopener" target="_blank">Powered by: <img class="pb-on-dark" src="/assets/brand/beam-logo.svg" alt="Beam" width="76" height="22"><img class="pb-on-light" src="/assets/brand/beam-logo-dark-text.svg" alt="Beam" width="76" height="22"></a></p>`;
 
 let n = 0;
 for (const file of fs.readdirSync(SRC).filter((f) => f.endsWith(".html"))) {
