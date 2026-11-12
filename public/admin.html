@@ -311,8 +311,8 @@
       el("button", { class: "tab", type: "button", "aria-pressed": String(s === tab), onclick: () => { tab = s; selected = null; history.replaceState(null, "", "#"); renderInbox(); } },
         STATUS_NAMES[s], el("span", { class: "n" }, counts[s])))));
 
-    const af = el("select", { "aria-label": "Filter by artist", onchange: (e) => { artistFilter = e.target.value; renderInbox(); } },
-      el("option", { value: "all" }, "All artists"), el("option", { value: "any" }, "No preference (unassigned)"),
+    const af = el("select", { "aria-label": `Filter by ${wProv()}`, onchange: (e) => { artistFilter = e.target.value; renderInbox(); } },
+      el("option", { value: "all" }, `All ${wProvs()}`), el("option", { value: "any" }, "No preference (unassigned)"),
       D.artists.map((a) => el("option", { value: a.slug }, a.name)));
     af.value = artistFilter;
     const sf = el("input", { type: "text", placeholder: "Search name, email or idea", "aria-label": "Search", value: search,
@@ -354,6 +354,9 @@
     return "New message";
   }
   const cap = (t) => String(t || "").charAt(0).toUpperCase() + String(t || "").slice(1);
+  // The business's own word for the people who do the work (crew member, barber, artist...).
+  function wProv() { return ((typeof D !== "undefined" && D && D.words) || {}).provider || "team member"; }
+  function wProvs() { return ((typeof D !== "undefined" && D && D.words) || {}).providers || "team"; }
   const ansText = (a) => (a.type === "check" ? (a.value ? "Yes" : "No") : Array.isArray(a.value) ? a.value.join(", ") : String(a.value));
   const openOffer = (r) => (r.offers || []).find((o) => o.status === "open");
   function offerTag(r) { const o = openOffer(r); return !o ? "" : o.from === "client" ? ` · Their offer: ${offerSummary(o)}` : ` · Your offer: ${offerSummary(o)}`; }
@@ -500,7 +503,7 @@
     }, "btn sm danger");
     p.append(acts, form);
 
-    const assign = el("select", { "aria-label": "Assign artist", style: "width:auto", onchange: (e) => act(r, { action: "assign", artist: e.target.value }) },
+    const assign = el("select", { "aria-label": `Assign ${wProv()}`, style: "width:auto", onchange: (e) => act(r, { action: "assign", artist: e.target.value }) },
       el("option", { value: "any" }, "No preference (unassigned)"), D.artists.map((a) => el("option", { value: a.slug }, a.name)));
     assign.value = r.artist;
     if (D.me.seesAll) p.append(el("div", { class: "field" }, el("label", {}, `Assigned ${(D.words || {}).provider || "artist"} `), assign));
@@ -512,7 +515,7 @@
     box.append(p);
 
     const first = r.client.name.split(" ")[0];
-    const fillTpl = (t) => t.replaceAll("{name}", first).replaceAll("{artist}", r.artist === "any" ? "our artists" : artistName(r.artist));
+    const fillTpl = (t) => t.replaceAll("{name}", first).replaceAll("{artist}", r.artist === "any" ? `our ${wProvs()}` : artistName(r.artist));
     const msgField = (placeholder) => el("div", { class: "field" }, el("label", {}, "Message to client ", el("span", { class: "opt" }, "(optional)")),
       el("textarea", { name: "message", rows: 3, placeholder }));
     const notify = () => el("label", { class: "check" }, el("input", { type: "checkbox", name: "notify", checked: D.emailReady }), D.emailReady ? `Email ${r.client.email}` : `Email ${r.client.email} (email isn't connected yet)`);
@@ -610,7 +613,7 @@
     function declineForm(t) {
       const ta = el("textarea", { name: "message", rows: 4 }, fillTpl(D.templates.decline_style));
       const tpl = el("select", { "aria-label": "Reply template", onchange: (e) => { ta.value = fillTpl(D.templates[e.target.value]); } },
-        el("option", { value: "decline_style" }, "Not a fit for the artist's style"), el("option", { value: "decline_full" }, "Books are full"));
+        el("option", { value: "decline_style" }, "Not a good fit for us"), el("option", { value: "decline_full" }, "Books are full"));
       wrapForm(t, [el("div", { class: "field" }, el("label", {}, "Reply template"), tpl), el("div", { class: "field" }, el("label", {}, "Message to client"), ta)], "Decline request", () => ({ action: "decline" }));
     }
     function noteForm(t) {
@@ -625,7 +628,7 @@
       const res = await api("/api/admin/update", { body: { id: r.id, ...payload } });
       await load();
       if (res.deleted) { toast(`${r.client.name}'s request deleted`); selected = null; history.replaceState(null, "", "#"); renderInbox(); return; }
-      const done = { offer: "Offer sent", acceptOffer: "Offer accepted", seen: "Updated", addPhotos: "Photos added", removePhoto: "Photo removed", confirmTime: "Time confirmed", declineTime: "Asked for another time", reply: "Reply sent", quote: "Quote sent", schedule: "Booking link sent", book: "Booked", cancelAppt: "Appointment cancelled", done: "Marked done", decline: "Request declined", reopen: "Moved back to New", note: "Note saved", assign: "Artist assigned" }[payload.action];
+      const done = { offer: "Offer sent", acceptOffer: "Offer accepted", seen: "Updated", addPhotos: "Photos added", removePhoto: "Photo removed", confirmTime: "Time confirmed", declineTime: "Asked for another time", reply: "Reply sent", quote: "Quote sent", schedule: "Booking link sent", book: "Booked", cancelAppt: "Appointment cancelled", done: "Marked done", decline: "Request declined", reopen: "Moved back to New", note: "Note saved", assign: `${cap(wProv())} assigned` }[payload.action];
       if (res.emailed === "off" || (!D.emailReady && ["quote","offer","acceptOffer","schedule","book","cancelAppt","decline","reply","confirmTime","declineTime"].includes(payload.action))) toast(`${done.replace(/ sent$/, " saved")}. Email isn't connected: text or copy the link.`);
       else if (res.emailed === "failed") toast(`${done.replace(/ sent$/, " saved")}, but the email failed. Text or copy the link.`);
       else toast(done + (res.emailed === "sent" && res.texted === "sent" ? " by email and text" : res.emailed === "sent" ? " by email" : res.texted === "sent" ? " by text" : ""));
@@ -641,7 +644,7 @@
   // ---------- Artists & waitlists ----------
   function showArtists() {
     only("artistsView"); const v = $("artistsView"); v.textContent = "";
-    v.append(el("h1", { style: "font-size:44px;margin:28px 0 8px" }, D.me.seesAll ? "Artists" : "My books"),
+    v.append(el("h1", { style: "font-size:44px;margin:28px 0 8px" }, D.me.seesAll ? cap(wProvs()) : "My books"),
       el("p", { class: "muted" }, "Close books to stop new requests. Clients see a waitlist signup instead."));
     for (const a of D.artists) {
       const wl = D.waitlists[a.slug] || [];
@@ -676,7 +679,7 @@
     const err = el("p", { class: "form-error", role: "alert", hidden: true });
     const f = el("form", { class: "act-form", style: "margin:4px 0 20px" },
       el("div", { class: "pf-top" }, preview, el("div", {},
-        el("p", { class: "small muted", style: "margin-top:0" }, "Shown on the public Artists page. A clear portrait or a strong piece of your work works best."),
+        el("p", { class: "small muted", style: "margin-top:0" }, `Shown on your public ${cap(wProvs())} page. A clear photo works best.`),
         el("div", { class: "actions", style: "margin:0" },
           el("button", { class: "btn sm line", type: "button", onclick: () => file.click() }, a.photoUrl ? "Change photo" : "Add photo"),
           el("button", { class: "linkbtn", type: "button", onclick: () => { newPhoto = null; removePhoto = true; preview.replaceChildren(el("span", {}, a.name.split(" ").map((w) => w[0]).join("").slice(0, 2))); } }, "Remove photo")), file)),
@@ -687,7 +690,7 @@
       el("div", { class: "field" }, el("label", {}, "About ", el("span", { class: "opt" }, "(a few sentences)")), el("textarea", { name: "bio", rows: 4, maxlength: 800 }, a.bio || "")),
       err,
       el("div", { class: "actions", style: "margin:0" }, el("button", { class: "btn sm", type: "submit" }, "Save profile"),
-        el("a", { class: "btn sm line", href: "/artists", target: "_blank" }, "View Artists page")));
+        el("a", { class: "btn sm line", href: "/artists", target: "_blank" }, `View ${cap(wProvs())} page`)));
     f.addEventListener("submit", async (e) => {
       e.preventDefault(); err.hidden = true; const fd = new FormData(f);
       try {
@@ -780,13 +783,13 @@
     // Add someone
     const f = el("form", { class: "panel", style: "margin:24px 0 48px" }, el("h2", { style: "font-size:1.75rem" }, "Add someone"));
     const roleSel = el("select", { name: "role", required: true }, Object.entries(T.roles).map(([k, l]) => el("option", { value: k }, `${l} — ${roleHelp[k]}`)));
-    roleSel.value = "artist";
+    roleSel.value = "desk";
     const free = T.artists.filter((a) => !T.users.some((u) => u.role === "artist" && u.artist === a.slug && u.active));
-    const artSel = el("select", { name: "artist" }, free.map((a) => el("option", { value: a.slug }, a.name)), el("option", { value: "__new" }, "A new artist…"));
+    const artSel = el("select", { name: "artist" }, free.map((a) => el("option", { value: a.slug }, a.name)), el("option", { value: "__new" }, `A new ${wProv()}…`));
     if (!free.length) artSel.value = "__new";
-    const newArt = el("div", { class: "field" }, el("label", {}, "New artist's name (as clients will see it)"), el("input", { type: "text", name: "newArtist", maxlength: 60 }),
+    const newArt = el("div", { class: "field" }, el("label", {}, `New ${wProv()}'s name (as clients will see it)`), el("input", { type: "text", name: "newArtist", maxlength: 60 }),
       el("p", { class: "hint" }, "They won't show on the public booking form until you switch them on in Books and waitlist."));
-    const artField = el("div", { class: "field" }, el("label", {}, "Which artist"), artSel);
+    const artField = el("div", { class: "field" }, el("label", {}, `Which ${wProv()}`), artSel);
     const sync = () => { const isA = roleSel.value === "artist"; artField.hidden = !isA; newArt.hidden = !isA || artSel.value !== "__new"; };
     roleSel.addEventListener("change", sync); artSel.addEventListener("change", sync);
     const err = el("p", { class: "form-error", role: "alert", hidden: true });
@@ -973,12 +976,12 @@
       catch (e) { if (e.data?.instagram) D.instagram = e.data.instagram; toast(e.message); showAccount(); }
     }
     if (!I.ready) {
-      box.append(el("p", { class: "small muted", style: "margin-top:0" }, "Shows the shop's latest Instagram posts on your Artists page."),
+      box.append(el("p", { class: "small muted", style: "margin-top:0" }, `Shows your latest Instagram posts on your ${cap(wProvs())} page.`),
         el("p", { class: "notice small" }, "Instagram isn't switched on for Beam yet. Ask Beam support."));
       return box;
     }
     if (!I.connected) {
-      box.append(el("p", { class: "small muted", style: "margin-top:0" }, "Shows the shop's latest Instagram posts on your Artists page. You'll log in to Instagram on Instagram's own page; the account has to be a Professional account (Business or Creator)."),
+      box.append(el("p", { class: "small muted", style: "margin-top:0" }, `Shows your latest Instagram posts on your ${cap(wProvs())} page. You'll log in to Instagram on Instagram's own page; the account has to be a Professional account (Business or Creator).`),
         el("button", { class: "btn sm", type: "button", onclick: () => act("igConnect") }, "Connect Instagram"));
       return box;
     }
@@ -1010,7 +1013,7 @@
       el("p", { class: "muted", style: "margin-top:0" }, `Approved clients pick from these open times. All times are shop time (${D.timeZone}).`));
     if (D.artists.length > 1) {
       const pick = el("select", { style: "width:auto", onchange: (e) => { calArtist = e.target.value; showCalendar(); } }, D.artists.map((a) => el("option", { value: a.slug }, a.name)));
-      pick.value = calArtist; v.append(el("div", { class: "field" }, el("label", {}, "Artist "), pick));
+      pick.value = calArtist; v.append(el("div", { class: "field" }, el("label", {}, `${cap(wProv())} `), pick));
     }
     const cols = el("div", { class: "cal-cols" });
     v.append(cols);
