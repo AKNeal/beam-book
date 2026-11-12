@@ -118,6 +118,8 @@ function settingsFrom(b) {
     if (b.theme.mode !== undefined) out.theme.mode = b.theme.mode === "light" ? "light" : "dark";
     if (b.theme.deco !== undefined) out.theme.deco = Boolean(b.theme.deco);
     if (b.theme.accent !== undefined) { if (!/^#[0-9a-f]{6}$/i.test(b.theme.accent)) throw new Error("Pick an accent color."); out.theme.accent = b.theme.accent.toLowerCase(); }
+    if (b.theme.ink !== undefined) { if (b.theme.ink && !/^#[0-9a-f]{6}$/i.test(b.theme.ink)) throw new Error("Pick a heading color."); out.theme.ink = b.theme.ink ? b.theme.ink.toLowerCase() : ""; }
+    if (b.theme.font !== undefined) out.theme.font = b.theme.font === "sans" ? "sans" : "condensed";
   }
   if (b.depositPolicy !== undefined) out.depositPolicy = str(b.depositPolicy, 600);
   Object.assign(out, require("../lib/templates").bookingSettings(b));

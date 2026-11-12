@@ -20,7 +20,13 @@
     s.setProperty("--gold", light ? mix(a, "#000000", 0.25) : a);
     s.setProperty("--gold-bright", light ? mix(a, "#000000", 0.45) : mix(a, "#ffffff", 0.3));
     s.setProperty("--sign-dark", light ? mix(a, "#000000", 0.45) : mix(a, "#ffffff", 0.3));
+    s.setProperty("--soft", light ? mix(a, "#ffffff", 0.88) : mix(a, "#000000", 0.75));
+    if (/^#[0-9a-f]{6}$/i.test(t.ink || "")) { s.setProperty("--head-ink", t.ink); if (light) s.setProperty("--btn-hover", t.ink); }
+    if (t.font === "sans") { var sys = 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif'; s.setProperty("--head", sys); s.setProperty("--body", sys); }
     var meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.content = light ? "#f6f5f2" : "#0d1014";
+    // The inbox sets its own colors on <body>; copy the business's colors there too.
+    var copy = function () { if (document.body && document.body.classList.contains("admin")) document.body.setAttribute("style", root.getAttribute("style") || ""); };
+    if (document.body) copy(); else document.addEventListener("DOMContentLoaded", copy);
   }
   try { apply(JSON.parse(localStorage.getItem(KEY) || "null")); } catch (e) {}
 

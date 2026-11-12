@@ -40,7 +40,7 @@ module.exports = async function handler(req, res) {
     shop: { name: st.name, tagline: st.tagline, city: st.city, phone: st.phone, address: st.address, instagram: st.instagram,
       website: st.website, timeZone: st.timeZone,
       theme: { mode: th.mode === "light" ? "light" : "dark", accent: /^#[0-9a-f]{6}$/i.test(th.accent || "") ? th.accent : "#d08a3c",
-        deco: Boolean(th.deco),
+        deco: Boolean(th.deco), ink: /^#[0-9a-f]{6}$/i.test(th.ink || "") ? th.ink : "", font: th.font === "sans" ? "sans" : "condensed",
         logo: th.logo ? `/api/artists?logo=1&v=${encodeURIComponent(String(th.logoV || 1))}` : "" } },
     depositPolicy: config.depositPolicy,
     artists: roster.map((a) => ({ ...a, photo: artists.photoUrl(a) })),

@@ -429,3 +429,7 @@ html.embed body { background: var(--snow); }
 .facts dd { margin: 0; }
 .qtools > span { display: inline-flex; gap: 14px; }
 .embedcode { min-height: 0 !important; height: auto; width: 100%; font: 13px/1.5 ui-monospace, Menlo, monospace; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--snow); resize: vertical; }
+
+/* A business's own heading color (theme.ink), when set */
+h1, h2, h3, .brand span { color: var(--head-ink, inherit); }
+.brand img.shop-logo { width: auto; height: 40px; }
