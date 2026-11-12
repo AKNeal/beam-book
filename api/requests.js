@@ -36,10 +36,14 @@ module.exports = async function handler(req, res) {
   const errors = {};
   if (f.name.length < 2) errors.name = "Tell us your name.";
   if (!EMAIL_RE.test(f.email)) errors.email = "Enter a valid email so we can reply.";
-  if (f.idea.length < 10) errors.idea = "Describe it in a sentence or two.";
+  if (!config.summaryOptional && f.idea.length < 10) errors.idea = "Describe it in a sentence or two.";
   if (f.smsOk && !sms.toE164(f.phone)) errors.phone = "Enter a US mobile number to get texts, or untick the text box.";
   const { answers, errors: answerErrors } = readAnswers(form, b);
   Object.assign(errors, answerErrors);
+  if (config.summaryOptional && !f.idea) { // blank is fine: use their first pick (e.g. "New seamless gutters") so the inbox still says what it's about
+    const first = answers.find((a) => a.type === "choice" && a.value) || answers.find((a) => a.value && typeof a.value === "string");
+    f.idea = first ? String(answerText(first)).slice(0, 200) : "Estimate request";
+  }
   if (config.ageCheck && b.age18 !== true) errors.age18 = `You must be ${config.studio.minAge} or older to book.`;
   if (config.policyCheck && b.agreePolicy !== true) errors.agreePolicy = "Please accept the deposit policy.";
 

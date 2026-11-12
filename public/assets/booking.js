@@ -23,6 +23,7 @@
   $("summaryHint").textContent = W.summaryHint || "";
   if (!data.policyCheck && !data.ageCheck) $("beforeHead").hidden = true;
   if (data.askInstagram === false) document.querySelectorAll('[data-f="instagram"]').forEach((f) => f.remove());
+  if (data.summaryOptional) { const i = $("idea"); i.required = false; i.rows = 2; $("custom").after(document.querySelector('[data-f="idea"]')); $("summaryLabel").after(" ", Object.assign(document.createElement("span"), { className: "opt", textContent: "(optional)" })); }
   if (data.policyCheck) { $("policyPart").hidden = false; $("policy").textContent = data.depositPolicy; }
   if (data.ageCheck) { $("agePart").hidden = false; $("ageText").textContent = `I'm ${data.studio.minAge} or older and will bring government photo ID`; }
   // ---- Artist dropdown ----
