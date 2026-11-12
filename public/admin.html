@@ -223,6 +223,7 @@
     $("viewArt").textContent = ME.role === "artist" ? "My books" : "Books and waitlist";
     await load();
     if (["owner", "admin"].includes(ME.role)) window.BBSite.nudge("siteNudge", showSite);
+    $("viewDay").hidden = !D.instant; // request-style shops (gutters, tattoo) use Calendar; Day is for walk-in shops
     if (q.get("ig")) { // back from connecting Instagram
       const ok = q.get("ig") === "connected";
       history.replaceState(null, "", "/admin");
