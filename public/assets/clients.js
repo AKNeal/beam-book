@@ -114,7 +114,7 @@
       c.notes ? el("p", { class: "small", style: "white-space:pre-wrap" }, el("strong", {}, "Notes: "), c.notes) : null);
     var visits = c.visits || [];
     if (visits.length) {
-      p.append(el("p", { class: "small", style: "margin-bottom:4px" }, el("strong", {}, "Booked through Beam Book")));
+      p.append(el("p", { class: "small", style: "margin-bottom:4px" }, el("strong", {}, "Booked through Beam")));
       p.append(el("ul", { class: "small", style: "margin-top:0" }, visits.slice(0, 12).map(function (x) {
         return el("li", {}, new Date(x.at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) + (x.service ? " · " + x.service : "") + (x.barber ? " · " + barberName(x.barber) : ""));
       })));
@@ -166,7 +166,7 @@
     v.append(el("h1", { style: "font-size:44px;margin:28px 0 6px" }, "Import clients"),
       el("section", { class: "panel" },
         el("p", {}, "Export your client list from Squire (or any system) as a CSV file, then choose it here."),
-        el("p", { class: "small muted" }, "The file is read on this computer. Only name, phone, email, barber, last visit, last service and notes are sent to Beam Book. Payment method, tips and every other column stay on this computer and are never uploaded."),
+        el("p", { class: "small muted" }, "The file is read on this computer. Only name, phone, email, barber, last visit, last service and notes are sent to Beam. Payment method, tips and every other column stay on this computer and are never uploaded."),
         el("div", { class: "field" }, el("label", {}, "CSV file"), file), out,
         el("button", { class: "btn sm line", type: "button", style: "margin-top:12px", onclick: function () { show(ctx); } }, "Back to clients")));
     file.addEventListener("change", function () {

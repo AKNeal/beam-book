@@ -161,7 +161,7 @@ async function create(req, res, b) {
   const link = await tenant.runAs(slug, async () => {
     const auth = require("../lib/auth");
     const u = { id: id(8), name: ownerName, email: ownerEmail, role: "owner", artist: null, hash: "", mustChange: false, ver: 0, active: true,
-      createdAt: new Date().toISOString(), createdBy: "Beam Book" };
+      createdAt: new Date().toISOString(), createdBy: "Beam" };
     await auth.saveUsers([u]);
     return auth.makeResetLink(urlFor(rec), u, 24 * 7);
   });

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Beam Book control</title>
+<title>Beam control</title>
 <link rel="icon" href="/assets/brand/beam-icon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -72,8 +72,8 @@
     $("who").hidden = true;
     const err = el("p", { class: "form-error", role: "alert", hidden: true });
     const f = el("form", { class: "authbox panel", style: "max-width:420px;margin:60px auto" },
-      el("h1", { style: "font-size:2.5rem;margin-bottom:8px" }, "Beam Book control"),
-      el("p", { class: "muted" }, "Add and manage the shops on Beam Book."),
+      el("h1", { style: "font-size:2.5rem;margin-bottom:8px" }, "Beam control"),
+      el("p", { class: "muted" }, "Add and manage the businesses on Beam."),
       ready === false ? el("p", { class: "notice small" }, "Set PLATFORM_PASSWORD and SESSION_SECRET in Vercel, then redeploy.") : null,
       field("Password", el("input", { type: "password", name: "password", autocomplete: "current-password", required: true })),
       err, el("button", { class: "btn sign", type: "submit" }, "Log in"));
@@ -124,7 +124,7 @@
         el("div", { class: "grid2" }, field("City", inp("city", "", { placeholder: "Fairbanks, Alaska" })), field("Phone", inp("phone", "", { type: "tel" }))),
         field("Street address", inp("address")),
         el("div", { class: "grid2" }, field("Instagram", inp("instagram", "", { placeholder: "@shophandle" })), field("Time zone", tz)),
-        field("Their own web address (optional)", inp("hosts", "", { placeholder: "book.theirshop.com", autocapitalize: "off" }), "Only if they'll point a subdomain of their own site at Beam Book. You can add it later.")),
+        field("Their own web address (optional)", inp("hosts", "", { placeholder: "book.theirshop.com", autocapitalize: "off" }), "Only if they'll point a subdomain of their own site at Beam. You can add it later.")),
       el("fieldset", {}, el("legend", {}, "Owner"),
         el("div", { class: "grid2" }, field("Owner's name", inp("ownerName", "", { required: true })), field("Owner's email", inp("ownerEmail", "", { type: "email", required: true }))),
         field("First artist's name", inp("artistName", "", { placeholder: "Same as the owner, if they tattoo" }), "More artists are added by the owner in their inbox (Team).")),
@@ -150,13 +150,13 @@
 
   function showCreated(r, ownerName, ownerEmail) {
     const first = ownerName.split(" ")[0];
-    const msg = `Hi ${first}, your Beam Book booking page is ready: ${r.shop.url}\n\nSet your password here (link works once, for 7 days): ${r.ownerLink}\n\nYou'll log in at ${r.shop.url}/admin with ${ownerEmail}. From there you can add your artists and front desk under Team.`;
+    const msg = `Hi ${first}, your Beam booking page is ready: ${r.shop.url}\n\nSet your password here (link works once, for 7 days): ${r.ownerLink}\n\nYou'll log in at ${r.shop.url}/admin with ${ownerEmail}. From there you can add your artists and front desk under Team.`;
     app.replaceChildren(el("div", { class: "panel", style: "max-width:760px" },
       el("h1", { style: "font-size:2.5rem;margin-bottom:8px" }, `${r.shop.studio.name} is set up`),
       el("p", {}, "Send the owner this link to choose their password. It works once and lasts 7 days."),
       el("div", { class: "linkbox" }, el("code", {}, r.ownerLink), copyBtn(r.ownerLink)),
       el("div", { class: "actions" },
-        el("a", { class: "btn", href: `mailto:${ownerEmail}?subject=${encodeURIComponent("Your Beam Book booking page")}&body=${encodeURIComponent(msg)}` }, "Email it from my phone"),
+        el("a", { class: "btn", href: `mailto:${ownerEmail}?subject=${encodeURIComponent("Your Beam booking page")}&body=${encodeURIComponent(msg)}` }, "Email it from my phone"),
         el("a", { class: "btn line", href: `sms:?&body=${encodeURIComponent(msg)}` }, "Text it"),
         r.shop.url ? el("a", { class: "btn line", href: r.shop.url, target: "_blank", rel: "noopener" }, "Open their booking page") : null,
         el("a", { class: "btn line", href: `/platform?shop=${encodeURIComponent(r.shop.slug)}` }, "Shop settings"))));
@@ -216,7 +216,7 @@
         el("div", { class: "grid2" }, field("Business email (gets request alerts)", inp("contactEmail", st.contactEmail, { type: "email" })), field("Time zone", tz)),
         field("Minimum age", inp("minAge", st.minAge || 18, { type: "number", min: 16, max: 21, style: "max-width:120px" }))),
       el("fieldset", {}, el("legend", {}, "Web addresses"),
-        el("p", { class: "note" }, D.domain ? `Always reachable at https://${S.slug}.${D.domain}. Add their own address here (one per line), then add the same address to the Beam Book project in Vercel → Domains.` : "One per line. Each one also has to be added to the Beam Book project in Vercel → Domains."),
+        el("p", { class: "note" }, D.domain ? `Always reachable at https://${S.slug}.${D.domain}. Add their own address here (one per line), then add the same address to the beam-book project in Vercel → Domains.` : "One per line. Each one also has to be added to the beam-book project in Vercel → Domains."),
         el("textarea", { name: "hosts", rows: 2, spellcheck: "false" }, (S.hosts || []).join("\n"))),
       el("fieldset", {}, el("legend", {}, "Look"),
         el("div", { class: "grid2" },

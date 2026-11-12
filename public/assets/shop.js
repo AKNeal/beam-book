@@ -60,7 +60,7 @@
     if (shop.noShop) {
       var main = document.getElementById("main") || document.body;
       main.innerHTML = '<div class="page noshop"><h1>No booking page here</h1><p class="intro" style="margin:0 auto">There isn’t a shop at this address. Check the link you were sent.</p>' +
-        '<p class="poweredby"><a href="https://beam.nealmedia.app" rel="noopener">Powered by: <img class="pb-on-dark" src="/assets/brand/beam-book-logo-white.svg" alt="Beam Book" width="123" height="22"><img class="pb-on-light" src="/assets/brand/beam-book-logo.svg" alt="Beam Book" width="123" height="22"></a></p></div>';
+        '<p class="poweredby"><a href="https://beam.nealmedia.app" rel="noopener">Powered by: <img class="pb-on-dark" src="/assets/brand/beam-logo.svg" alt="Beam" width="76" height="22"><img class="pb-on-light" src="/assets/brand/beam-logo-dark-text.svg" alt="Beam" width="76" height="22"></a></p></div>';
       document.querySelectorAll(".site-header, .site-footer").forEach(function (n) { n.hidden = true; });
       return;
     }
