@@ -20,7 +20,7 @@
     var box = document.getElementById(nudgeBox);
     if (!box || !S) return;
     var parts = [];
-    if (S.items.length && S.done < S.items.length) parts.push(setup(true));
+    if (S.total && S.done < S.total) parts.push(setup(true));
     var waiting = S.changes.filter(function (c) { return c.status === "open"; }).length;
     if (S.canReview && waiting) parts.push(el("p", { class: "notice small", style: "margin:8px 0" }, el("b", {}, waiting + " website change request" + (waiting === 1 ? "" : "s")), " waiting for review. ",
       el("button", { class: "linkbtn", type: "button", onclick: nudgeOpen }, "Review")));
@@ -31,7 +31,7 @@
   // The compact list (used at the top of the inbox and on the Website screen).
   var editing = null;
   function setup(collapsible) {
-    var total = S.items.length, done = S.done, left = total - done;
+    var total = S.total, done = S.done, left = total - done;
     var open = !collapsible; if (collapsible) { try { open = localStorage.getItem("beam.setupOpen") === "1"; } catch (e) {} }
     var d = el("details", { class: "panel setup", open: open, ontoggle: function (e) { if (collapsible) try { localStorage.setItem("beam.setupOpen", e.target.open ? "1" : "0"); } catch (x) {} } },
       el("summary", {},
@@ -41,19 +41,24 @@
         collapsible ? el("span", { class: "btn sm line toggle" }, el("span", { class: "o" }, "Show list"), el("span", { class: "c" }, "Hide list"), el("span", { class: "chev", "aria-hidden": "true" })) : null));
     var list = el("div", { class: "ck-list" });
     var isDone = function (i) { return Boolean(i.value); };
-    S.items.filter(isDone).concat(S.items.filter(function (i) { return !isDone(i) && !i.skipped; }), S.items.filter(function (i) { return !isDone(i) && i.skipped; }))
+    var req = S.items.filter(function (i) { return !i.optional; }), opt = S.items.filter(function (i) { return i.optional; });
+    req.filter(isDone).concat(req.filter(function (i) { return !isDone(i) && !i.skipped; }), req.filter(function (i) { return !isDone(i) && i.skipped; }))
       .forEach(function (it) { list.append(row(it)); });
-    d.append(el("div", { class: "setup-body" }, el("p", { class: "small muted" }, "Photos and short answers go on your website right away. Questionnaires stay private between you and Neal Media."), list));
+    if (opt.length) {
+      list.append(el("p", { class: "ck-group" }, "Optional extras ", el("span", { class: "small muted" }, "Not needed to launch. They make the site stronger whenever you get to them.")));
+      opt.forEach(function (it) { list.append(row(it)); });
+    }
+    d.append(el("div", { class: "setup-body" }, el("p", { class: "small muted" }, "Your answers to the first questions come privately to Neal Media. Your license number and any photos go on your website right away."), list));
     return d;
   }
   function redraw() { drawNudge(); var v = document.getElementById("siteView"); if (v && !v.hidden) render(); }
 
   function row(it) {
-    var done = Boolean(it.value), wrap = el("div", { class: "ck" + (done ? " done" : it.skipped ? " skip" : "") });
+    var done = Boolean(it.value), wrap = el("div", { class: "ck" + (done ? " done" : it.optional ? " opt" : it.skipped ? " skip" : "") });
     var btn = el("button", { class: "btn sm line", type: "button", onclick: function () { editing = editing === it.key ? null : it.key; redraw(); } },
-      editing === it.key ? "Close" : done ? "Edit" : it.type === "photo" ? "Upload" : it.type === "form" ? "Answer" : "Add");
+      editing === it.key ? "Close" : done ? "Edit" : /^photo/.test(it.type) ? "Upload" : it.type === "form" ? "Answer" : "Add");
     wrap.append(el("div", { class: "ck-row" },
-      el("span", { class: "led", role: "img", "aria-label": done ? "Done" : it.skipped ? "Skipped" : "Still needed" }),
+      el("span", { class: "led", role: "img", "aria-label": done ? "Done" : it.optional ? "Optional" : it.skipped ? "Skipped" : "Still needed" }),
       el("span", { class: "t", title: it.hint || "" }, it.label),
       el("div", { class: "a" }, btn)));
     if (editing === it.key) wrap.append(editor(it));
@@ -65,7 +70,7 @@
     var err = el("p", { class: "form-error", role: "alert", hidden: true });
     async function save(payload, msg) {
       err.hidden = true;
-      try { S = await call(Object.assign({ action: "siteSave", key: it.key }, payload)); editing = null; ctxToast(msg); redraw(); }
+      try { S = await call(Object.assign({ action: "siteSave", key: it.key }, payload)); if (!payload.slot) editing = null; ctxToast(msg); redraw(); }
       catch (e) { err.textContent = e.message; err.hidden = false; }
     }
     if (it.hint) box.append(el("p", { class: "small muted hint" }, it.hint));
@@ -86,6 +91,21 @@
         var a = {}; Object.keys(inputs).forEach(function (k) { a[k] = inputs[k].value; });
         save({ answers: a }, "Answers saved. Thanks!");
       } }, "Save answers"));
+    } else if (it.type === "photos") {
+      var grid = el("div", { class: "ck-slots" });
+      it.slots.forEach(function (sl) {
+        var url = it.photos[sl.key];
+        var file = el("input", { type: "file", accept: "image/*", hidden: true, onchange: async function () {
+          var f = file.files[0]; if (!f) return;
+          try { await save({ slot: sl.key, photo: await BW.shrink(f, 1800) }, sl.label + " photo saved"); } catch (e) { err.textContent = e.message; err.hidden = false; }
+        } });
+        grid.append(el("div", { class: "ck-slot" }, el("b", {}, sl.label),
+          url ? el("img", { src: url, alt: sl.label }) : el("div", { class: "ck-empty" }, "No photo yet"), file,
+          el("div", { class: "row-btns" },
+            el("button", { class: "btn sm", type: "button", onclick: function () { file.click(); } }, url ? "Replace" : "Choose photo"),
+            url ? el("button", { class: "btn sm line", type: "button", onclick: function () { save({ slot: sl.key, remove: true }, sl.label + " photo removed"); } }, "Remove") : null)));
+      });
+      box.append(grid);
     } else if (it.type === "photo") {
       if (it.value) box.append(el("img", { src: it.value, alt: it.label }));
       var file = el("input", { type: "file", accept: "image/*", hidden: true, onchange: async function () {
@@ -100,7 +120,7 @@
       box.append(input);
       btns.append(el("button", { class: "btn sm", type: "button", onclick: function () { save({ value: input.value }, input.value.trim() ? "On your website now" : "Taken off the site"); } }, "Save"));
     }
-    if (!it.value) btns.append(el("button", { class: "linkbtn small", type: "button", onclick: function () { save({ skip: !it.skipped }, it.skipped ? "Back on the list" : "Skipped"); } },
+    if (!it.value && !it.optional) btns.append(el("button", { class: "linkbtn small", type: "button", onclick: function () { save({ skip: !it.skipped }, it.skipped ? "Back on the list" : "Skipped"); } },
       it.skipped ? "Put back on the list" : "Skip this"));
     box.append(btns, err);
     return box;
