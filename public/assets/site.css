@@ -433,3 +433,37 @@ html.embed body { background: var(--snow); }
 /* A business's own heading color (theme.ink), when set */
 h1, h2, h3, .brand span { color: var(--head-ink, inherit); }
 .brand img.shop-logo { width: auto; height: 40px; }
+
+/* Beam inbox: setup checklist (compact, like Black Wolf's). Red light = still needed, green = done. */
+.setup { margin: 22px 0 8px; padding: 0 !important; overflow: hidden; }
+.setup > summary { list-style: none; cursor: pointer; padding: 12px 18px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.setup > summary::-webkit-details-marker { display: none; }
+.setup > summary::after { display: none; }
+.setup > summary h2 { margin: 0; font-size: 18px; }
+.setup .count { font-weight: 600; font-size: 14px; color: var(--muted, #555); }
+.setup .bar { flex: 1 1 100%; height: 8px; border-radius: 99px; background: #f3d6d6; overflow: hidden; min-width: 120px; }
+.setup .bar i { display: block; height: 100%; background: #1fa34a; border-radius: 99px; }
+.setup .toggle { flex: 1 1 100%; justify-content: center; gap: 8px; min-height: 36px; }
+.setup[open] .toggle .o, .setup:not([open]) .toggle .c { display: none; }
+.setup .chev { display: inline-block; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .15s; }
+.setup[open] .chev { transform: translateY(2px) rotate(-135deg); }
+.setup > .setup-body { padding: 0 18px 12px; border-top: 1px solid var(--line); max-width: none; color: inherit; }
+.setup > summary { font: inherit; }
+.setup-body > p { margin: 10px 0 6px; }
+.led { flex: none; width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff9a9a, #e02424 55%, #8f1111);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 0 8px 2px rgba(224,36,36,.45); }
+.ck.done .led { background: radial-gradient(circle at 35% 30%, #b6ffc9, #22c55e 55%, #11692f); box-shadow: 0 0 0 1px rgba(0,0,0,.25), 0 0 8px 2px rgba(34,197,94,.6); }
+.ck.skip .led { background: #cfd4da; box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
+.ck-list { margin: 6px 0 0; }
+.ck { border-bottom: 1px solid var(--line); }
+.ck:last-child { border-bottom: 0; }
+.ck-row { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 4px 0; }
+.ck .t { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ck.done .t, .ck.skip .t { font-weight: 500; color: var(--muted, #555); }
+.ck .a { flex: none; display: flex; gap: 6px; }
+.ck .a .btn { padding: 4px 10px; font-size: 13px; min-height: 0; }
+.ck-edit { padding: 2px 0 12px 22px; }
+.ck-edit .hint { margin: 0 0 8px; }
+.ck-edit input[type=text], .ck-edit textarea { width: 100%; }
+.ck-edit .row-btns { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+.ck-edit img { max-width: 160px; border-radius: 8px; display: block; margin-bottom: 8px; }

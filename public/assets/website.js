@@ -9,20 +9,87 @@
   function call(body) { return BW.api("/api/admin/books", { body: body }); }
   function when(t) { return new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric" }); }
 
-  // The small "finish your website" strip at the top of the inbox.
+  // The setup checklist at the top of the inbox: closed by default, one line per item, red/green lights.
+  var nudgeBox = null, nudgeOpen = null;
   async function nudge(where, open) {
+    nudgeBox = where; nudgeOpen = open;
     try { S = await call({ action: "site" }); } catch (e) { return; }
-    var box = document.getElementById(where);
-    if (!box) return;
-    var left = S.items.length - S.done, open_ = S.changes.filter(function (c) { return c.status === "open"; }).length;
-    var parts = [];
-    if (left > 0) parts.push(el("span", {}, el("b", {}, "Finish your website: "), S.done + " of " + S.items.length + " done. "));
-    if (S.canReview && open_) parts.push(el("span", {}, el("b", {}, open_ + " website change request" + (open_ === 1 ? "" : "s")), " waiting for review. "));
-    if (!parts.length) { box.hidden = true; return; }
-    box.replaceChildren(el("div", { class: "notice", style: "display:flex;gap:12px;align-items:center;flex-wrap:wrap" },
-      el("span", {}, parts), el("button", { class: "btn sm", type: "button", onclick: open }, left > 0 ? "Open checklist" : "Review")));
-    box.hidden = false;
+    drawNudge();
   }
+  function drawNudge() {
+    var box = document.getElementById(nudgeBox);
+    if (!box || !S) return;
+    var parts = [];
+    if (S.items.length && S.done < S.items.length) parts.push(setup(true));
+    var waiting = S.changes.filter(function (c) { return c.status === "open"; }).length;
+    if (S.canReview && waiting) parts.push(el("p", { class: "notice small", style: "margin:8px 0" }, el("b", {}, waiting + " website change request" + (waiting === 1 ? "" : "s")), " waiting for review. ",
+      el("button", { class: "linkbtn", type: "button", onclick: nudgeOpen }, "Review")));
+    box.replaceChildren.apply(box, parts);
+    box.hidden = !parts.length;
+  }
+
+  // The compact list (used at the top of the inbox and on the Website screen).
+  var editing = null;
+  function setup(collapsible) {
+    var total = S.items.length, done = S.done, left = total - done;
+    var open = !collapsible; if (collapsible) { try { open = localStorage.getItem("beam.setupOpen") === "1"; } catch (e) {} }
+    var d = el("details", { class: "panel setup", open: open, ontoggle: function (e) { if (collapsible) try { localStorage.setItem("beam.setupOpen", e.target.open ? "1" : "0"); } catch (x) {} } },
+      el("summary", {},
+        el("h2", {}, "Setup checklist"),
+        el("span", { class: "count" }, done + " of " + total + " done" + (left ? " · " + left + " to go" : "")),
+        el("span", { class: "bar", role: "img", "aria-label": done + " of " + total + " done" }, el("i", { style: "width:" + Math.round(100 * done / Math.max(total, 1)) + "%" })),
+        collapsible ? el("span", { class: "btn sm line toggle" }, el("span", { class: "o" }, "Show list"), el("span", { class: "c" }, "Hide list"), el("span", { class: "chev", "aria-hidden": "true" })) : null));
+    var list = el("div", { class: "ck-list" });
+    var isDone = function (i) { return Boolean(i.value); };
+    S.items.filter(isDone).concat(S.items.filter(function (i) { return !isDone(i) && !i.skipped; }), S.items.filter(function (i) { return !isDone(i) && i.skipped; }))
+      .forEach(function (it) { list.append(row(it)); });
+    d.append(el("div", { class: "setup-body" }, el("p", { class: "small muted" }, "Fill these in and they go on your website right away."), list));
+    return d;
+  }
+  function redraw() { drawNudge(); var v = document.getElementById("siteView"); if (v && !v.hidden) render(); }
+
+  function row(it) {
+    var done = Boolean(it.value), wrap = el("div", { class: "ck" + (done ? " done" : it.skipped ? " skip" : "") });
+    var btn = el("button", { class: "btn sm line", type: "button", onclick: function () { editing = editing === it.key ? null : it.key; redraw(); } },
+      editing === it.key ? "Close" : done ? "Edit" : it.type === "photo" ? "Upload" : "Add");
+    wrap.append(el("div", { class: "ck-row" },
+      el("span", { class: "led", role: "img", "aria-label": done ? "Done" : it.skipped ? "Skipped" : "Still needed" }),
+      el("span", { class: "t", title: it.hint || "" }, it.label),
+      el("div", { class: "a" }, btn)));
+    if (editing === it.key) wrap.append(editor(it));
+    return wrap;
+  }
+
+  function editor(it) {
+    var box = el("div", { class: "ck-edit" });
+    var err = el("p", { class: "form-error", role: "alert", hidden: true });
+    async function save(payload, msg) {
+      err.hidden = true;
+      try { S = await call(Object.assign({ action: "siteSave", key: it.key }, payload)); editing = null; ctxToast(msg); redraw(); }
+      catch (e) { err.textContent = e.message; err.hidden = false; }
+    }
+    if (it.hint) box.append(el("p", { class: "small muted hint" }, it.hint));
+    var btns = el("div", { class: "row-btns" });
+    if (it.type === "photo") {
+      if (it.value) box.append(el("img", { src: it.value, alt: it.label }));
+      var file = el("input", { type: "file", accept: "image/*", hidden: true, onchange: async function () {
+        var f = file.files[0]; if (!f) return;
+        try { await save({ photo: await BW.shrink(f, 1800) }, "On your website now"); } catch (e) { err.textContent = e.message; err.hidden = false; }
+      } });
+      btns.append(file, el("button", { class: "btn sm", type: "button", onclick: function () { file.click(); } }, it.value ? "Replace photo" : "Choose photo"));
+      if (it.value) btns.append(el("button", { class: "btn sm line", type: "button", onclick: function () { save({ remove: true }, "Photo taken off the site"); } }, "Remove"));
+    } else {
+      var input = it.type === "long" ? el("textarea", { rows: 3 }) : el("input", { type: "text" });
+      input.value = it.value || "";
+      box.append(input);
+      btns.append(el("button", { class: "btn sm", type: "button", onclick: function () { save({ value: input.value }, input.value.trim() ? "On your website now" : "Taken off the site"); } }, "Save"));
+    }
+    if (!it.value) btns.append(el("button", { class: "linkbtn small", type: "button", onclick: function () { save({ skip: !it.skipped }, it.skipped ? "Back on the list" : "Skipped"); } },
+      it.skipped ? "Put back on the list" : "Skip this"));
+    box.append(btns, err);
+    return box;
+  }
+  function ctxToast(m) { if (ctx) ctx.toast(m); else { var t = el("div", { class: "toast", role: "status" }, m); document.body.append(t); setTimeout(function () { t.remove(); }, 2600); } }
 
   async function show(c) {
     ctx = c; ctx.only("siteView");
@@ -34,61 +101,11 @@
 
   function render() {
     var v = document.getElementById("siteView");
+    var nb = document.getElementById(nudgeBox || "siteNudge"); if (nb) nb.hidden = true;
     v.replaceChildren(
       el("h1", { style: "font-size:44px;margin:28px 0 6px" }, "Website"),
-      el("p", { class: "muted", style: "margin-top:0" }, "Fill these in and they show up on your website right away. Want to change anything else? Send a change request at the bottom and we'll take care of it."),
-      checklist(), google(), changes());
-  }
-
-  // ---------- checklist ----------
-  function checklist() {
-    var sec = el("section", { class: "panel", style: "margin-top:20px" },
-      el("h2", { style: "margin-top:0;font-size:30px" }, "Checklist ", el("span", { class: "small muted", style: "font-weight:400" }, S.done + " of " + S.items.length + " done")));
-    if (!S.items.length) sec.append(el("p", { class: "muted" }, "Nothing to fill in right now."));
-    S.items.forEach(function (it) { sec.append(item(it)); });
-    return sec;
-  }
-
-  function item(it) {
-    var done = Boolean(it.value), row = el("div", { style: "border-top:1px solid var(--line);padding:18px 0" });
-    var mark = el("span", { "aria-hidden": "true", style: "display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;margin-right:8px;font-size:13px;" +
-      (done ? "background:var(--accent);color:#fff" : it.skipped ? "background:var(--line);color:var(--muted)" : "border:2px solid var(--line)") }, done ? "✓" : it.skipped ? "–" : "");
-    var head = el("div", { style: "display:flex;align-items:center;font-weight:600" }, mark, it.label,
-      it.skipped && !done ? el("span", { class: "small muted", style: "font-weight:400;margin-left:8px" }, "(skipped)") : null);
-    row.append(head);
-    if (it.hint) row.append(el("p", { class: "small muted", style: "margin:4px 0 10px 30px" }, it.hint));
-    var body = el("div", { style: "margin-left:30px" });
-    var err = el("p", { class: "form-error", role: "alert", hidden: true });
-
-    async function save(payload, msg) {
-      err.hidden = true;
-      try { S = await call(Object.assign({ action: "siteSave", key: it.key }, payload)); ctx.toast(msg); render(); }
-      catch (e) { err.textContent = e.message; err.hidden = false; }
-    }
-    var skip = el("button", { class: "linkbtn small", type: "button", onclick: function () { save({ skip: !it.skipped }, it.skipped ? "Back on the list" : "Skipped"); } },
-      it.skipped ? "Put back on the list" : "Skip this");
-
-    if (it.type === "photo") {
-      if (it.value) body.append(el("div", { class: "pics" }, el("a", { href: it.value, target: "_blank", rel: "noopener" }, el("img", { src: it.value, alt: it.label }))));
-      var file = el("input", { type: "file", accept: "image/*", hidden: true, onchange: async function () {
-        var f = file.files[0]; if (!f) return;
-        try { var data = await BW.shrink(f, 1800); await save({ photo: data }, "On your website now"); } catch (e) { err.textContent = e.message; err.hidden = false; }
-      } });
-      body.append(file, el("div", { class: "actions" },
-        el("button", { class: "btn sm", type: "button", onclick: function () { file.click(); } }, it.value ? "Replace photo" : "Upload photo"),
-        it.value ? el("button", { class: "btn sm line", type: "button", onclick: function () { save({ remove: true }, "Photo taken off the site"); } }, "Remove") : null,
-        it.value ? null : skip));
-    } else {
-      var input = it.type === "long" ? el("textarea", { rows: 4, style: "width:100%" }) : el("input", { type: "text", style: "width:100%" });
-      input.value = it.value || "";
-      body.append(input, el("div", { class: "actions", style: "margin-top:8px" },
-        el("button", { class: "btn sm", type: "button", onclick: function () { save({ value: input.value }, input.value.trim() ? "On your website now" : "Taken off the site"); } }, "Save"),
-        it.value ? null : skip));
-    }
-    if (it.updatedAt && it.value) body.append(el("p", { class: "small muted", style: "margin:6px 0 0" }, "Updated " + when(it.updatedAt)));
-    body.append(err);
-    row.append(body);
-    return row;
+      el("p", { class: "muted", style: "margin-top:0" }, "Checklist answers go on your website right away. Want to change anything else? Send a change request and we'll take care of it."),
+      S.items.length ? setup(false) : null, google(), changes());
   }
 
   // ---------- Google reviews ----------
