@@ -65,7 +65,7 @@ module.exports = async function handler(req, res) {
   let historyNote = message || undefined;
 
   if (b.action === "delete") {
-    if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site admin can delete requests." });
+    if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can delete requests." });
     if (r.apptId) await cal.cancelAppt(slugFor(r), r.apptId);
     await files.removeAll([...(r.images || []), ...(r.donePhotos || []).map((ph) => ph.name)]);
     await store.indexRemove("reqs", r.id);

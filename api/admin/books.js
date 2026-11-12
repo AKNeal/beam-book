@@ -78,7 +78,7 @@ module.exports = async function handler(req, res) {
         await extcal.syncAll(slug);
         return send(res, 200, { ok: true, calendars: await extcal.summary(slug) });
       case "listed":
-        if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site admin can change the booking form." });
+        if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can change the booking form." });
         await artists.setListed(slug, b.listed === true);
         return send(res, 200, { ok: true, artists: await artists.list() });
       case "resetFeed":
@@ -94,7 +94,7 @@ module.exports = async function handler(req, res) {
 
 // The shop's Instagram feed (Owner / Site admin).
 async function instagram(req, res, me, action) {
-  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site admin can change the shop's Instagram." });
+  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can change the shop's Instagram." });
   const ig = require("../../lib/instagram");
   const { baseUrl } = require("../../lib/http");
   try {
@@ -110,8 +110,8 @@ async function instagram(req, res, me, action) {
 async function clientsApi(req, res, me, b) {
   const clients = require("../../lib/clients");
   const store = require("../../lib/store");
-  const staffOnly = () => { if (!auth.seesAll(me)) { send(res, 403, { error: "Only the Owner, a Site admin or Front desk can change clients." }); return false; } return true; };
-  const ownerOnly = () => { if (!auth.isFull(me)) { send(res, 403, { error: "Only the Owner or a Site admin can do that." }); return false; } return true; };
+  const staffOnly = () => { if (!auth.seesAll(me)) { send(res, 403, { error: "Only the Owner, a Site manager or Staff can change clients." }); return false; } return true; };
+  const ownerOnly = () => { if (!auth.isFull(me)) { send(res, 403, { error: "Only the Owner or a Site manager can do that." }); return false; } return true; };
   try {
     switch (b.action) {
       case "clients": {
@@ -155,7 +155,7 @@ module.exports = require("../../lib/tenant").handler(module.exports);
 
 // The business's own request questions, words and negotiation rules (Owner / Site admin).
 async function bookingSettings(req, res, me, b) {
-  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site admin can change the booking form." });
+  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can change the booking form." });
   const tenant = require("../../lib/tenant");
   const config = require("../../config/studio");
   try {

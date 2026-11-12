@@ -102,7 +102,7 @@ async function igCallback(req, res) {
       if (q.get("error")) throw new Error(q.get("error_reason") === "user_denied" ? "Instagram wasn't connected (the login was cancelled)." : (q.get("error_description") || "Instagram said no."));
       const auth = require("../lib/auth");
       const u = (await auth.users()).find((x) => x.id === st.uid);
-      if (!u || u.active === false || !auth.isFull(u)) throw new Error("Only the Owner or a Site admin can connect Instagram.");
+      if (!u || u.active === false || !auth.isFull(u)) throw new Error("Only the Owner or a Site manager can connect Instagram.");
       await ig.finishConnect(q.get("code"), igRedirect(req), st.name);
     });
   } catch (e) { msg = e.message || "Instagram couldn't be connected."; }

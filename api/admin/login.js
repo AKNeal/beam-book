@@ -144,7 +144,7 @@ async function changeOwn(req, res, b) {
 async function team(req, res, b) {
   const me = await auth.currentUser(req);
   if (!me) return send(res, 401, { error: "Log in first." });
-  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site admin can manage logins." });
+  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can manage logins." });
   const site = baseUrl(req);
   const list = await auth.users();
   const find = () => { const u = list.find((x) => x.id === str(b.id, 40)); if (!u) throw new Error("That person isn't on the team."); return u; };
@@ -190,10 +190,11 @@ async function team(req, res, b) {
       if (b.name !== undefined) { const n = str(b.name, 60); if (n.length < 2) throw new Error("Enter their name."); u.name = n; }
       const role = b.role !== undefined ? str(b.role, 10) : u.role;
       const artist = role === "artist" ? (b.artist !== undefined ? str(b.artist, 60) : u.artist) : null;
-      if (u.id === me.id && (role !== u.role || b.active === false)) throw new Error("You can't change your own role or turn off your own login.");
+      const fullSwap = auth.isFull(u) && ["owner", "admin"].includes(role); // Owner <-> Site manager keeps full access
+      if (u.id === me.id && (b.active === false || (role !== u.role && !fullSwap))) throw new Error("You can't change your own role or turn off your own login.");
       await checkRole(role, artist);
       if (auth.isFull(u) && (!auth.ROLES[role] || !["owner", "admin"].includes(role) || b.active === false) && !fullLeft(u.id))
-        throw new Error("Keep at least one Owner or Site admin login.");
+        throw new Error("Keep at least one Owner or Site manager login.");
       const changedAccess = role !== u.role || artist !== u.artist || (b.active !== undefined && Boolean(b.active) !== (u.active !== false));
       u.role = role; u.artist = artist;
       if (b.active !== undefined) u.active = Boolean(b.active);
@@ -205,7 +206,7 @@ async function team(req, res, b) {
     case "remove": {
       const u = find();
       if (u.id === me.id) throw new Error("You can't remove your own login.");
-      if (auth.isFull(u) && !fullLeft(u.id)) throw new Error("Keep at least one Owner or Site admin login.");
+      if (auth.isFull(u) && !fullLeft(u.id)) throw new Error("Keep at least one Owner or Site manager login.");
       const next = list.filter((x) => x.id !== u.id);
       await auth.saveUsers(next);
       return send(res, 200, { ok: true, ...(await teamOut(next)) });
@@ -230,7 +231,11 @@ async function team(req, res, b) {
 }
 
 async function teamOut(list) {
-  return { users: list.map(auth.publicUser), artists: await artists.list(), roles: auth.ROLES, emailReady: emailReady() };
+  const w = require("../../config/studio").words || {};
+  const provider = w.provider ? w.provider.charAt(0).toUpperCase() + w.provider.slice(1) : auth.ROLES.artist;
+  const roles = { ...auth.ROLES, artist: provider };
+  const users = list.map(auth.publicUser).map((u) => (u.role === "artist" ? { ...u, roleName: provider } : u));
+  return { users, artists: await artists.list(), roles, emailReady: emailReady() };
 }
 
 // Beam Book: run this endpoint for the shop at this web address.

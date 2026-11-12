@@ -748,8 +748,8 @@
   function renderTeam() {
     const v = $("teamView"); v.textContent = "";
     v.append(el("h1", { style: "font-size:44px;margin:28px 0 6px" }, "Team"),
-      el("p", { class: "muted", style: "margin-top:0" }, "Everyone gets their own login. Create it here with a password you choose, or send them a link to choose their own. Artists only see clients assigned to them and their own calendar."));
-    const roleHelp = { owner: "Everything, including this Team screen", admin: "Everything, including this Team screen", desk: "All requests and calendars; can't manage logins", artist: "Only their own clients and calendar" };
+      el("p", { class: "muted", style: "margin-top:0" }, `Everyone gets their own login. Create it here with a password you choose, or send them a link to choose their own. ${T.roles.artist}s only see the jobs assigned to them and their own calendar.`));
+    const roleHelp = { owner: "The business owner. Everything, including logins", admin: "Runs the site. Everything, including logins", desk: "All requests and calendars; can't manage logins", artist: "Only their own jobs and calendar" };
     const artistName2 = (slug) => T.artists.find((a) => a.slug === slug)?.name || slug;
     const list = el("section", { class: "panel" });
     if (!T.users.length) list.append(el("p", { class: "muted" }, "No one has a login yet."));
