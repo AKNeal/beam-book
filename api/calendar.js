@@ -61,7 +61,9 @@ module.exports = async function (req, res) {
   if (new URL(req.url, "http://x").searchParams.get("cron") === "reminders") {
     const secret = process.env.CRON_SECRET;
     if (secret && req.headers.authorization !== `Bearer ${secret}`) return send(res, 401, { error: "Not allowed." });
-    return send(res, 200, await require("../lib/reminders").daily());
+    const out = { reminders: await require("../lib/reminders").daily() };
+    try { out.rankings = await require("../lib/rankcheck").daily(); } catch (e) { out.rankings = { error: e.message }; } // never blocks reminders
+    return send(res, 200, out);
   }
   return forShop(req, res);
 };

@@ -131,6 +131,14 @@ function settingsFrom(b) {
   if (b.placements !== undefined) { out.placements = list(b.placements, 40, 30); if (!out.placements.length) throw new Error("Add at least one placement."); }
   if (b.colorOptions !== undefined) { out.colorOptions = list(b.colorOptions, 40, 12); if (!out.colorOptions.length) throw new Error("Add at least one style choice."); }
   if (b.hosts !== undefined) out.hosts = list(b.hosts, 253, 5).map(tenant.cleanHost);
+  if (b.ranking !== undefined) {
+    const r = b.ranking || {}, num = (v) => (v === "" || v == null ? undefined : Number(v));
+    const lat = num(r.lat), lng = num(r.lng), radius = num(r.radius);
+    if (lat !== undefined && !(lat >= -90 && lat <= 90)) throw new Error("Ranking: latitude should be -90 to 90.");
+    if (lng !== undefined && !(lng >= -180 && lng <= 180)) throw new Error("Ranking: longitude should be -180 to 180.");
+    out.ranking = { searches: list(r.searches, 80, 5), ...(lat !== undefined ? { lat } : {}), ...(lng !== undefined ? { lng } : {}),
+      radius: Math.min(50000, Math.max(500, radius || 5000)) };
+  }
   if (b.plan !== undefined) { if (!require("../lib/plans").PLANS[b.plan]) throw new Error("Pick a plan."); out.plan = b.plan; }
   if (b.messaging) {
     const m = {}, sms = require("../lib/sms");

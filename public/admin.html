@@ -8,7 +8,7 @@
 <link rel="icon" href="/assets/brand/beam-icon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
 <style>
   body { font-size: 16px; }
@@ -114,6 +114,66 @@
   .hours-edit input:disabled { opacity: .4; }
   .linkbtn { background: none; border: 0; padding: 0; color: var(--sign-dark); text-decoration: underline; font: inherit; cursor: pointer; }
   @media (max-width: 480px) { .agenda-row { flex-direction: column; align-items: flex-start; } .hours-edit { grid-template-columns: 1fr 1fr; } .hours-edit .hd { grid-column: 1 / -1; } .hours-edit span { display: none; } }
+  .awards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 10px 0 16px; }
+  .award { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--white); }
+  .award-tier { font: 800 11px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--medal-ink); }
+  .award-q { font-weight: 700; font-size: 14px; line-height: 1.25; }
+  .award-ch { font-size: 12px; font-weight: 700; } .award-ch.up { color: #15803d; } .award-ch.down { color: #b91c1c; } .award-ch.same { color: var(--graphite, #555); }
+  .award-ahead { font-size: 12px; color: var(--graphite, #555); line-height: 1.3; }
+  .tier-gold.award { border-color: #e9c46a; } .tier-silver.award { border-color: #c4cad2; } .tier-bronze.award { border-color: #d9a273; } .tier-blue.award { border-color: #93c5fd; }
+  /* 8-bit ribbon medal. Tier colors: o outline, l light, m mid, d dark, f face; ribbons q/R/r; k is the number. */
+  .pxmedal { display: inline-block; line-height: 0; }
+  .pxmedal svg { display: block; }
+  .pxmedal .px-o { fill: var(--px-o); } .pxmedal .px-l { fill: var(--px-l); } .pxmedal .px-m { fill: var(--px-m); } .pxmedal .px-d { fill: var(--px-d); }
+  .pxmedal .px-f { fill: var(--px-m); } .pxmedal .px-w { fill: var(--px-l); } .pxmedal .px-k { fill: var(--px-k, var(--px-o)); }
+  .pxmedal .px-q { fill: var(--rb-o, #5c0f0f); } .pxmedal .px-R { fill: var(--rb-l, #e53935); } .pxmedal .px-r { fill: var(--rb-d, #b71c1c); }
+  .pxmedal .px-shine { fill: #fff; opacity: .7; animation: px-shine 4.5s steps(12) infinite; }
+  @keyframes px-shine { 0%, 55% { transform: translateX(0) skewX(-20deg); } 100% { transform: translateX(34px) skewX(-20deg); } }
+  .tier-grey { --rb-o: #4b5563; --rb-l: #b8bcc3; --rb-d: #8b9098; }
+  .tier-blue { --px-k: #fff; }
+  .tier-gold   { --px-o: #5a3a00; --px-l: #fff3a0; --px-m: #f4c430; --px-d: #b8860b; --medal-ink: #6b4e00; }
+  .tier-silver { --px-o: #2f3640; --px-l: #ffffff; --px-m: #c9d0d8; --px-d: #7d8590; --medal-ink: #39414b; }
+  .tier-bronze { --px-o: #4a2208; --px-l: #ffd2a6; --px-m: #cd7f32; --px-d: #8a4b1c; --medal-ink: #5a2d0c; }
+  .tier-blue   { --px-o: #0b2a6b; --px-l: #bfdbfe; --px-m: #3b82f6; --px-d: #1e40af; --medal-ink: #0b2a6b; }
+  .tier-grey   { --px-o: #4b5563; --px-l: #f3f4f6; --px-m: #c4c8ce; --px-d: #8b9098; --medal-ink: #6b7280; }
+  .tier-grey .px-shine { opacity: .45; }
+  .px-font { font-family: "Press Start 2P", monospace; letter-spacing: 0; }
+  /* Floating medal (bottom left): bobs slowly and shimmers. */
+  body.has-rank { padding-bottom: 110px; }
+  .rank-float { position: fixed; left: 14px; bottom: 16px; z-index: 60; }
+  @media (min-width: 861px) { .rank-float { left: 34px; bottom: 30px; } }
+  .rank-badge { position: relative; border: 0; background: none; padding: 0; cursor: pointer; animation: px-bob 2.8s steps(4, jump-none) infinite alternate; filter: drop-shadow(3px 3px 0 rgba(0,0,0,.25)); }
+  @keyframes px-bob { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+  .rank-badge:focus-visible { outline: 3px dashed #976c24; outline-offset: 4px; }
+  .rank-badge .pxmedal { position: relative; z-index: 1; }
+  .rank-badge { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .rank-cap { font: 600 9.5px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; color: #4b4a47;
+    background: rgba(255,255,255,.88); padding: 3px 6px 2px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  .rank-float.open .rank-badge { animation-play-state: paused; }
+  /* The torn sheet: tears out to the right from the medal. */
+  .rank-fly { position: absolute; left: 84px; bottom: 0; width: min(440px, calc(100vw - 92px)); pointer-events: none;
+    clip-path: inset(0 100% 0 0); transition: clip-path .45s steps(9); filter: drop-shadow(4px 5px 0 rgba(0,0,0,.18)); }
+  .rank-float.open .rank-fly { clip-path: inset(-20px -20px -20px 0); pointer-events: auto; }
+  .fly-paper { background: #fbf6e8; color: #2a2418; padding: 16px 34px 14px 18px; text-align: left;
+    background-image: repeating-linear-gradient(transparent 0 23px, rgba(80,120,200,.12) 23px 24px); }
+  .fly-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .fly-head .px-font { font-size: 11px; }
+  .fly-avg { display: flex; align-items: baseline; gap: 10px; margin: 12px 0 10px; } .fly-avg .px-font { font-size: 24px; }
+  .fly-avg-l { font: 600 13px var(--body); color: #6b6250; }
+  .fly-rows { border-top: 2px dashed #d9cfb5; }
+  .fly-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 2px dashed #d9cfb5; font-size: 14px; }
+  .fly-q { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dot { flex: none; min-width: 40px; height: 22px; display: grid; place-items: center; font: 9px/1 "Press Start 2P", monospace; color: var(--px-o); background: var(--px-m); box-shadow: 0 0 0 2px var(--px-o); }
+  .dot.tier-blue, .dot.tier-bronze { color: #fff; }
+  .fly-rev { font-size: 13px; margin-top: 8px; } .fly-rev .up { color: #15803d; font-weight: 700; }
+  .fly-more { display: block; margin-top: 8px; font-size: 12px; font-weight: 600; color: #976c24; text-align: right; }
+  @media (prefers-reduced-motion: reduce) { .rank-badge, .pxmedal .px-shine { animation: none; } .rank-fly { transition: none; } }
+  .rank-foot { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; }
+  @media (max-width: 640px) {
+    .awards { gap: 8px; } .award { padding: 10px 4px 10px; }
+    .award-q { font-size: 12px; } .award-ahead { display: none; }
+  }
+
 </style>
 </head>
 <body class="admin">
@@ -170,6 +230,7 @@
   <div id="clientsView" hidden></div>
   <div id="dayView" hidden></div>
   <div id="siteView" hidden></div>
+  <div id="rankView" hidden></div>
 </main>
 
 <script>
@@ -222,6 +283,7 @@
     $("viewSite").hidden = !["owner", "admin"].includes(ME.role);
     $("viewArt").textContent = ME.role === "artist" ? "My books" : "Books and waitlist";
     await load();
+    rankBadge();
     if (["owner", "admin"].includes(ME.role)) window.BBSite.nudge("siteNudge", showSite, { calendar: () => { showCalendar(); let n = 0; const t = setInterval(() => { const f = $("calFeed"); if (f || ++n > 40) { clearInterval(t); if (f) f.scrollIntoView({ behavior: "smooth", block: "start" }); } }, 100); }, team: showTeam, account: showAccount });
     $("viewDay").hidden = !D.instant; // request-style shops (gutters, tattoo) use Calendar; Day is for walk-in shops
     if (q.get("ig")) { // back from connecting Instagram
@@ -295,7 +357,7 @@
   $("viewDay").addEventListener("click", (e) => { e.preventDefault(); showDay(); });
   const showSite = () => { $("siteNudge").hidden = true; window.BBSite.show({ only, toast }); };
   $("viewSite").addEventListener("click", (e) => { e.preventDefault(); showSite(); });
-  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView", "siteView"];
+  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView", "siteView", "rankView"];
   function only(v) { for (const x of views) $(x).hidden = x !== v; window.scrollTo({ top: 0 }); }
 
   // ---------- Requests ----------
@@ -651,6 +713,115 @@
   }
 
   // ---------- Artists & waitlists ----------
+  // Google ranking: a floating award (bottom left). Click it for key numbers; the link at the bottom opens the full page.
+  const rkFmt = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  // Award tier by place: gold, silver, bronze, blue ribbon for #4-5, grey for #6 and below.
+  const rkTier = (r) => r == null ? ["grey", "No rank"] : r <= 1 ? ["gold", "Gold"] : r === 2 ? ["silver", "Silver"] : r === 3 ? ["bronze", "Bronze"] : r <= 5 ? ["blue", "Top 5"] : ["grey", r > 10 ? "Not top 10" : `${r}th place`];
+  const rkLabel = (r) => r == null ? "–" : r > 10 ? ">10" : `#${r}`;
+  // The badge shows this month's Friday average, or the latest check's average before the first Friday.
+  function rkOverall(k) {
+    if (k.monthAvg != null) return { n: Math.round(k.monthAvg), exact: k.monthAvg, what: "this month's average" };
+    const rs = k.searches.map((x) => x.rank).filter((x) => x != null);
+    if (!rs.length) return { n: null, exact: null, what: "latest check" };
+    const avg = Math.round(rs.reduce((a, b) => a + b, 0) / rs.length * 10) / 10;
+    return { n: Math.round(avg), exact: avg, what: "latest check" };
+  }
+  // 8-bit ribbon medal, drawn as pixels: o outline, l light, m mid, d dark, f face, w shine, q/R/r ribbon. Colors come from the tier's CSS variables.
+  const MEDAL = ["...........ooo...........", "........ooolllooo........", "......oollllllllloo......", ".....olllldddddlmmmo.....", "....olllddwffffddmmmo....", "...ollldwwfffffffdmmmo...", "...olldwwfffffffffdmmo...", "..olldwwfffffffffffdddo..", "..olldwffffffffffffdddo..", "..olldfffffffffffffdddo..", "..olldfffffffffffffdddo..", "..olldfffffffffffffdddo..", "..olldfffffffffffffdddo..", "..olldfffffffffffffdddo..", "..olldfffffffffffffdddo..", "...ommdfffffffffffdddo...", "...ommmdfffffffffddddo...", "....ommmddfffffdddddo....", ".....ommmddddddddddo.....", "......oodddddddddoo......", "......qRooodddooorq......", ".....qRRRq.ooo.qrrrq.....", ".....qRRRq.....qrrrq.....", "....qRRRq.......qrrrq....", "....qRRRq.......qrrrq....", "...qRRRq.........qrrrq...", "...qRRRq.........qrrrq...", "..qRRRq...........qrrrq..", "..qRqRq...........qrqrq..", "..qq.qq...........qq.qq.."];
+  const DIGITS = { 0: ["111","101","101","101","111"], 1: ["010","110","010","010","111"], 2: ["111","001","111","100","111"], 3: ["111","001","011","001","111"],
+    4: ["101","101","111","001","001"], 5: ["111","100","111","001","111"], 6: ["111","100","111","101","111"], 7: ["111","001","010","010","010"],
+    8: ["111","101","111","101","111"], 9: ["111","101","111","001","111"], "+": ["000","010","111","010","000"], "-": ["000","000","111","000","000"], "?": ["111","001","011","000","010"], ".": ["0","0","0","0","1"] };
+  const SVGNS = "http://www.w3.org/2000/svg";
+  let medalN = 0;
+  function medal(r, scale = 3, label = null) {
+    const [t, word] = rkTier(r), id = "mc" + (++medalN);
+    const W = MEDAL[0].length, H = MEDAL.length;
+    const svg = document.createElementNS(SVGNS, "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", W * scale); svg.setAttribute("height", H * scale);
+    svg.setAttribute("shape-rendering", "crispEdges"); svg.setAttribute("aria-hidden", "true");
+    const mk = (tag, at) => { const n = document.createElementNS(SVGNS, tag); for (const k in at) n.setAttribute(k, at[k]); return n; };
+    const defs = mk("defs", {}), clip = mk("clipPath", { id }); defs.append(clip); svg.append(defs);
+    MEDAL.forEach((row, y) => [...row].forEach((c, x) => {
+      if (c === ".") return;
+      svg.append(mk("rect", { x, y, width: 1, height: 1, class: "px-" + c }));
+      if ("olmdfw".includes(c)) clip.append(mk("rect", { x, y, width: 1, height: 1 }));
+    }));
+    // The number on the face (3x5 pixel digits, 1px dot), centered.
+    const txt = label != null ? label : r == null ? "?" : r > 10 ? "10+" : String(r);
+    const glyphs = [...txt].map((ch) => DIGITS[ch] || DIGITS["?"]);
+    const gw = glyphs.reduce((a, gl) => a + gl[0].length + 1, -1);
+    let x = Math.round(W / 2 - gw / 2); const y0 = 9;
+    for (const gl of glyphs) {
+      gl.forEach((line, dy) => [...line].forEach((bit, dx) => { if (bit === "1") svg.append(mk("rect", { x: x + dx, y: y0 + dy, width: 1, height: 1, class: "px-k" })); }));
+      x += gl[0].length + 1;
+    }
+    const g = mk("g", { "clip-path": `url(#${id})` });
+    g.append(mk("rect", { class: "px-shine", x: -6, y: -2, width: 3, height: 26, transform: "skewX(-20)" }));
+    svg.append(g);
+    return el("span", { class: `pxmedal tier-${t}`, role: "img", "aria-label": `${word}, number ${r ?? "unknown"}` }, svg);
+  }
+  // A torn edge for the paper sheet (random each time, so it looks hand-torn).
+  function tornEdge() {
+    const pts = ["0 0"]; let y = 0;
+    while (y < 100) { pts.push(`${(96 + Math.random() * 4).toFixed(1)}% ${y.toFixed(1)}%`); y += 3 + Math.random() * 5; }
+    pts.push("97% 100%", "0 100%");
+    return `polygon(${pts.join(", ")})`;
+  }
+  function closeRankFly() { const w = document.getElementById("rankFloat"); if (w) { w.classList.remove("open"); w.querySelector(".rank-badge").setAttribute("aria-expanded", "false"); } }
+  function rankBadge() {
+    document.getElementById("rankFloat")?.remove();
+    const k = D.rankings; if (!k || k.pending) return;
+    const o = rkOverall(k);
+    const btn = el("button", { class: "rank-badge", type: "button", "aria-expanded": "false", "aria-controls": "rankFly", "aria-label": `Google ranking: #${o.exact ?? "–"}. Show details` },
+      medal(o.n, 3, o.exact == null ? null : o.exact > 10 ? "10+" : String(o.exact)),
+      el("span", { class: "rank-cap", "aria-hidden": "true" }, "Google ranking"));
+    const rows = k.searches.map((x) => el("div", { class: "fly-row" },
+      el("span", { class: `dot tier-${rkTier(x.rank)[0]}` }, rkLabel(x.rank)),
+      el("span", { class: "fly-q" }, x.q),
+      x.change ? el("span", { class: `award-ch ${x.change > 0 ? "up" : "down"}` }, x.change > 0 ? `▲${x.change}` : `▼${-x.change}`)
+        : el("span", { class: "award-ch same", title: "No change", "aria-label": "No change" }, "–")));
+    const paper = el("div", { class: "fly-paper" },
+      el("div", { class: "fly-head" }, el("span", { class: "px-font" }, "GOOGLE RANK"), el("span", { class: "small muted" }, `checked ${rkFmt(k.date)}`)),
+      el("div", { class: "fly-avg" }, el("span", { class: "px-font" }, o.exact != null ? `#${o.exact}` : "–"), el("span", { class: "fly-avg-l" }, o.what)),
+      el("div", { class: "fly-rows" }, rows),
+      el("div", { class: "fly-rev" }, el("strong", {}, `${k.reviews} reviews`), ` · ${Number(k.rating).toFixed(1)}★`, k.reviewsGained > 0 ? el("span", { class: "up" }, ` +${k.reviewsGained}`) : null),
+      el("a", { href: "#", class: "fly-more", onclick: (e) => { e.preventDefault(); showRank(); } }, "See full details →"));
+    const fly = el("div", { class: "rank-fly", id: "rankFly", role: "dialog", "aria-label": "Google ranking" }, paper);
+    const wrap = el("div", { class: "rank-float", id: "rankFloat" }, btn, fly);
+    btn.addEventListener("click", () => {
+      const open = !wrap.classList.contains("open");
+      if (open) paper.style.clipPath = tornEdge();
+      wrap.classList.toggle("open", open); btn.setAttribute("aria-expanded", String(open));
+    });
+    document.addEventListener("click", (e) => { if (!wrap.contains(e.target)) closeRankFly(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeRankFly(); });
+    document.body.append(wrap); document.body.classList.add("has-rank");
+  }
+  // Full page: one award per search, then reviews.
+  function showRank() {
+    only("rankView"); const v = $("rankView"); v.textContent = ""; const k = D.rankings;
+    v.append(el("h1", { style: "font-size:44px;margin:28px 0 6px" }, "Google ranking"));
+    v.append(el("p", { class: "muted", style: "max-width:680px" }, k.pending ? "The first check runs tomorrow morning. Your awards show here once it's in." : `Where ${SHOP} shows in Google's local results for each search, near the shop. #1 is the top. Checked every morning; last checked ${rkFmt(k.date)}.`));
+    const body = el("section", { class: "panel", style: "max-width:820px;margin-top:18px" });
+    body.append(el("div", { class: "awards" }, k.searches.map((x) => {
+      const [t, word] = rkTier(x.rank);
+      const ch = x.change == null ? "–" : x.change > 0 ? `▲ ${x.change}` : x.change < 0 ? `▼ ${-x.change}` : "– No change";
+      const ahead = x.rank > 1 ? x.top.slice(0, Math.min(x.rank - 1, 5)).filter((n) => n.toLowerCase() !== String(SHOP).toLowerCase()) : [];
+      return el("div", { class: `award tier-${t}` }, medal(x.rank, 4),
+        el("span", { class: "award-tier" }, word),
+        el("span", { class: "award-q" }, `"${x.q}"`),
+        ch ? el("span", { class: `award-ch ${x.change > 0 ? "up" : x.change < 0 ? "down" : "same"}` }, k.changeSince ? `${ch} since ${rkFmt(k.changeSince)}` : ch) : null,
+        ahead.length ? el("span", { class: "award-ahead" }, `Ahead: ${ahead.join(", ")}`) : null);
+    })));
+    if (k.monthAvg != null) {
+      body.append(el("p", {}, el("strong", {}, `This month's average: #${k.monthAvg}`), " (Friday checks)"));
+    }
+    if (!k.pending) body.append(el("div", { class: "rank-foot" },
+      el("span", {}, el("strong", {}, `${k.reviews} Google reviews`), ` · ${Number(k.rating).toFixed(1)}★`,
+        k.reviewsGained > 0 ? el("span", { style: "color:#15803d;font-weight:700" }, ` · +${k.reviewsGained} since ${rkFmt(k.reviewsSince)}`) : null)));
+    v.append(body);
+  }
+
   function showArtists() {
     only("artistsView"); const v = $("artistsView"); v.textContent = "";
     v.append(el("h1", { style: "font-size:44px;margin:28px 0 8px" }, D.me.seesAll ? cap(wProvs()) : "My books"),

@@ -816,6 +816,35 @@ const valid = (o = {}) => ({
         ok("plans and messaging: plan picked on the control page, own email/text senders validated, shared sender uses the shop's name, monthly bill with overage");
       }
 
+      // Google ranking: daily check per shop (Places API, mocked here), awards summary in the inbox
+      {
+        let y = await control({ action: "update", slug: "levelup", googlePlaceId: "ChIJlevelupTEST123", ranking: { searches: "barber North Pole\nbarbershop near me", lat: "64.75", lng: "-147.35" } });
+        assert.equal(y.status, 200, JSON.stringify(y.data)); assert.deepEqual(y.data.shop.ranking.searches, ["barber North Pole", "barbershop near me"]);
+        y = await control({ action: "update", slug: "levelup", ranking: { searches: "x", lat: "200" } }); assert.equal(y.status, 400, "bad latitude refused");
+        const tenant = require("../lib/tenant"), rc = require("../lib/rankcheck");
+        const fake = (order, rating) => async (url, opt) => ({ ok: true, json: async () => url.includes("searchText")
+          ? { places: order(JSON.parse(opt.body).textQuery).map((id) => ({ id, displayName: { text: id === "ChIJlevelupTEST123" ? "Test Barbershop" : `Shop ${id}` } })) }
+          : { rating, userRatingCount: 40 } });
+        delete process.env.GOOGLE_PLACES_KEY;
+        let r1 = await tenant.runAs("levelup", () => rc.run({ force: true })); assert.equal(r1.skipped, "no key", "no key, no guessing");
+        process.env.GOOGLE_PLACES_KEY = "test";
+        const day1 = Date.UTC(2026, 10, 12, 20), day2 = Date.UTC(2026, 10, 13, 20); // Thu, Fri (Alaska)
+        r1 = await tenant.runAs("levelup", () => rc.run({ now: day1, fetchImpl: fake((q) => q.includes("near") ? ["a", "b", "c", "ChIJlevelupTEST123"] : ["a", "ChIJlevelupTEST123"], 4.8) }));
+        assert.ok(r1.ok, JSON.stringify(r1)); assert.equal(r1.check.ranks["barber North Pole"].rank, 2); assert.equal(r1.check.ranks["barbershop near me"].rank, 4);
+        const r2 = await tenant.runAs("levelup", () => rc.run({ now: day2, fetchImpl: fake(() => ["ChIJlevelupTEST123", "a"], 4.9) }));
+        assert.equal(r2.check.weekly, true, "Friday checks are weekly");
+        assert.equal((await tenant.runAs("levelup", () => rc.run({ now: day2, fetchImpl: fake(() => [], 1) }))).skipped, "already checked today");
+        const blind = await tenant.runAs("blackwolf", () => rc.run({ now: day2, fetchImpl: fake(() => [], 1) })); assert.equal(blind.skipped, "not set up");
+        delete process.env.GOOGLE_PLACES_KEY;
+        cookie = owner;
+        y = await call("/api/admin/inbox"); const k = y.data.rankings;
+        assert.equal(k.searches[0].rank, 1); assert.equal(k.searches[0].change, 1); assert.equal(k.searches[1].change, 3); assert.equal(k.rating, 4.9);
+        cookie = bwOwnerCookie(); SHOPHOST = "blackwolf.localhost";
+        y = await call("/api/admin/inbox"); assert.equal(y.data.rankings, null, "shops without ranking set up get no panel");
+        SHOPHOST = "levelup.localhost"; cookie = "";
+        ok("google ranking: per-shop daily check by place ID, never guesses without a key, weekly Fridays, change since last check, shown only where set up");
+      }
+
       // Reminders: once, the day before
       const tenant = require("../lib/tenant"), rem = require("../lib/reminders");
       let rr = await tenant.runAs("levelup", () => rem.forShop(slot.start - 86400e3));
