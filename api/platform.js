@@ -33,7 +33,7 @@ function loggedIn(req) {
 
 module.exports = async function handler(req, res) {
   try {
-    if (req.method === "OPTIONS" && process.env.STORE_NAMESPACE) { importCors(res); res.statusCode = 204; return res.end(); }
+    if (req.method === "OPTIONS" && process.env.IMPORT_TOKEN) { importCors(res); res.statusCode = 204; return res.end(); }
     if (req.method === "GET") return await get(req, res);
     if (!method(req, res, "POST")) return;
     const b = body(req);
@@ -267,7 +267,8 @@ function importCors(res) {
 async function importSquire(req, res, b) {
   importCors(res);
   const tok = process.env.IMPORT_TOKEN || "";
-  if (!process.env.STORE_NAMESPACE || tok.length < 20 || !crypto.timingSafeEqual(sha(b.token || ""), sha(tok))) return send(res, 403, { error: "Importing is only open on the sandbox." });
+  // Open only while IMPORT_TOKEN is set (always on the sandbox; on the live app only for the time of a move, then removed).
+  if (tok.length < 20 || !crypto.timingSafeEqual(sha(b.token || ""), sha(tok))) return send(res, 403, { error: "Importing isn't open." });
   const slug = str(b.slug, 40).toLowerCase();
   let rec = await tenant.getRecord(slug), ownerLink = null;
   if (!rec) {
@@ -278,10 +279,27 @@ async function importSquire(req, res, b) {
     rec = await tenant.getRecord(slug); ownerLink = made?.ownerLink || null;
   }
   const imp = require("../lib/importer");
-  const out = await tenant.runAs(rec.slug, () => (b.action === "importSquire" ? imp.fromSquire(b.data || {}) : imp.clear()));
-  if (!ownerLink && b.ownerLink) ownerLink = await tenant.runAs(rec.slug, async () => {
-    const auth = require("../lib/auth"); const owner = (await auth.users()).find((u) => u.role === "owner");
-    return owner ? auth.makeResetLink(urlFor(rec), owner, 24 * 7) : null;
+  const out = await tenant.runAs(rec.slug, async () => {
+    const r = {};
+    if (b.clearDemo) r.demoRemoved = await require("../lib/demo").clear();
+    Object.assign(r, b.action === "importSquire" ? await imp.fromSquire(b.data || {}) : await imp.clear());
+    if (b.studio && typeof b.studio === "object") { // fill in the shop's details if they're blank
+      const cur = await tenant.getRecord(rec.slug), st = { ...(cur.studio || {}) };
+      for (const k of ["phone", "address", "instagram", "contactEmail", "website"]) if (!st[k] && b.studio[k]) st[k] = String(b.studio[k]).slice(0, 200);
+      await tenant.saveRecord({ ...cur, studio: st });
+    }
+    return r;
   });
-  return send(res, 200, { ok: true, shop: urlFor(rec), ...out, ownerLink });
+  let ownerEmail = null;
+  if (b.ownerLink) ownerLink = ownerLink || await tenant.runAs(rec.slug, async () => {
+    const auth = require("../lib/auth"); const users = await auth.users(); const owner = users.find((u) => u.role === "owner");
+    if (!owner) return null;
+    const want = String(b.ownerEmail || "").trim().toLowerCase();
+    if (want && EMAIL_RE.test(want) && owner.email !== want && !owner.hash) { // only before the owner has set a password
+      owner.email = want; if (b.ownerName) owner.name = str(b.ownerName, 60); await auth.saveUsers(users);
+    }
+    ownerEmail = owner.email;
+    return auth.makeResetLink(urlFor(rec), owner, 24 * 7);
+  });
+  return send(res, 200, { ok: true, shop: urlFor(rec), ...out, ownerLink, ownerEmail });
 }
