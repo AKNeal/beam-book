@@ -22,7 +22,13 @@ The control page (Neal) and the business's own inbox (**Booking form**, for the 
 - **Texts need consent.** Imported clients get email reminders only, unless the owner confirms they opted in to texts. Online bookers tick a box. Nothing sends marketing.
 - **Reminders:** a daily job (`/reminders/daily`, about 10 am Alaska time) emails, and texts if allowed, everyone booked for tomorrow, once per appointment. Set `CRON_SECRET` in Vercel so only Vercel can run it.
 - **Inbox** loads the newest 300 requests in one go, with **Load older requests** for the rest.
+- **Clients move or cancel it themselves** from the link in their confirmation and reminder: pick another open time (same barber or anyone), or cancel. The old time frees up at once and the barber gets a text and email. Shops set how close to the appointment that's allowed (**Instant booking → hours before**, default 2); inside it the link says to call.
 - Payments are not handled: the shop keeps its card reader for checkout.
+
+## Plans and messaging
+- Each shop is on a plan (`lib/plans.js`): **Core** $150 (500 texts/mo), **Shop** $199 (2,000; text-to-book), **Shop AI** $249 (3,500; AI agent). Texts over the allowance are $0.03 each. Set it on the control page, which also shows this month's texts, emails and bill.
+- **Email** goes through Resend (`RESEND_API_KEY`, `EMAIL_FROM`). Shops without their own sender use the Beam address with the shop's name on it; replies go to the shop's email. A shop with a domain verified in Resend can send as itself (control page → Send emails from).
+- **Texts** go through Twilio (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` or `TWILIO_MESSAGING_SERVICE_SID`). A shop can have its own Twilio number (control page → Their own text number); Shop plans need one so replies reach the right shop. Texts are counted per shop per month in carrier segments.
 
 ## Offers
 - Either side can send an offer: price, date, start time, length, what's included, terms and deposit, plus a note. A new offer replaces the open one, which is marked "countered". The full history shows on both sides.

@@ -355,6 +355,7 @@
 
   function newLabel(r) {
     const last = r.history[r.history.length - 1];
+    if (r.status === "declined" && r.cancelledAt) return "Client cancelled";
     if (r.status === "declined" && r.declinedBy === "client") return "Turned down";
     if (r.status === "pending") return "Confirm time";
     if (last && last.by === "client" && /^Accepted/.test(last.note || "")) return "Accepted";
@@ -951,6 +952,9 @@
     const on = el("input", { type: "checkbox", checked: Boolean(D.instant) });
     p.append(el("label", { class: "check" }, on, "Clients book a service and time themselves, with no request or approval (best for barbershops and salons)."),
       el("p", { class: "small muted" }, "When this is on, your booking page shows the services below. When it's off, clients send a request instead. Each barber's hours and time off are on the Calendar page."));
+    const cutoff = el("input", { type: "number", min: 0, max: 168, step: 0.5, id: "changeCutoff", value: D.changeCutoffHours ?? 2, style: "max-width:110px" });
+    p.append(el("div", { class: "field", style: "margin:4px 0 16px" }, el("label", { for: "changeCutoff" }, "Clients can change or cancel online up to this many hours before"), cutoff,
+      el("p", { class: "small muted" }, "Inside that window their booking link tells them to call. 0 = any time before it starts.")));
     const rows = el("div", {});
     const addRow = (sv = {}) => {
       const r = el("div", { style: "display:flex;flex-wrap:wrap;align-items:end;gap:8px;margin-bottom:10px" },
@@ -969,7 +973,7 @@
         const services = [...rows.children].map((r) => ({ id: r.dataset.id || undefined, barbers: JSON.parse(r.dataset.barbers || "[]"),
           ...Object.fromEntries([...r.querySelectorAll("[data-k]")].map((i) => [i.dataset.k, i.value])) })).filter((x) => x.name.trim());
         if (on.checked && !services.length) { err.textContent = "Add at least one service before turning instant booking on."; err.hidden = false; return; }
-        try { await api("/api/admin/books", { body: { action: "bookingSettings", instant: on.checked, services } }); await load(); toast("Services saved"); showForm(); }
+        try { await api("/api/admin/books", { body: { action: "bookingSettings", instant: on.checked, services, changeCutoffHours: cutoff.value } }); await load(); toast("Services saved"); showForm(); }
         catch (x) { err.textContent = x.message; err.hidden = false; }
       } }, "Save services"), el("a", { class: "btn sm line", href: "/appointment", target: "_blank", rel: "noopener" }, "See the booking page")));
     return p;

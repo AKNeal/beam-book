@@ -180,7 +180,7 @@
   // ---------- one shop ----------
   async function showShop(slug) {
     let S;
-    try { S = (await api(`/api/platform?shop=${encodeURIComponent(slug)}`)).shop; } catch (x) { app.replaceChildren(el("p", {}, x.message)); return; }
+    try { const r = await api(`/api/platform?shop=${encodeURIComponent(slug)}`); S = r.shop; D.plans = r.plans; } catch (x) { app.replaceChildren(el("p", {}, x.message)); return; }
     const st = S.studio || {}, th = S.theme || {}, cal = S.calendarDefaults || D.defaults.calendarDefaults;
     const err = el("p", { class: "form-error", role: "alert", hidden: true });
     const tz = el("select", { name: "timeZone" }, TZS.map((z) => el("option", { value: z, selected: z === st.timeZone }, z.replace("_", " "))));
@@ -215,6 +215,15 @@
         el("div", { class: "grid2" }, field("Instagram", inp("instagram", st.instagram)), field("Their website", inp("website", st.website, { placeholder: "theirshop.com" }))),
         el("div", { class: "grid2" }, field("Business email (gets request alerts)", inp("contactEmail", st.contactEmail, { type: "email" })), field("Time zone", tz)),
         field("Minimum age", inp("minAge", st.minAge || 18, { type: "number", min: 16, max: 21, style: "max-width:120px" }))),
+      el("fieldset", {}, el("legend", {}, "Plan and messaging"),
+        el("div", { class: "grid2" },
+          field("Plan", el("select", { name: "plan" }, Object.entries(D.plans || {}).map(([k, p]) => el("option", { value: k, selected: (S.plan || "core") === k }, `${p.label} · $${p.price}/mo · ${p.texts.toLocaleString()} texts`)))),
+          S.bill ? el("div", { class: "field" }, el("label", {}, `This month (${S.usage?.month || ""})`),
+            el("p", { style: "margin:6px 0 0" }, `${(S.usage?.texts || 0).toLocaleString()} of ${S.bill.allowance.toLocaleString()} texts · ${(S.usage?.emails || 0).toLocaleString()} emails`),
+            el("p", { class: "note", style: "margin:2px 0 0" }, S.bill.overTexts ? `${S.bill.overTexts} over: +$${S.bill.overage.toFixed(2)} · bill $${S.bill.total.toFixed(2)}` : `Bill $${S.bill.total.toFixed(2)}`)) : null),
+        el("div", { class: "grid2" },
+          field("Send emails from (optional)", inp("emailFrom", S.messaging?.emailFrom || "", { placeholder: "Level Up Barbershop <bookings@theirshop.com>", autocapitalize: "off" }), "Only an address on a domain verified in Resend. Blank = the Beam address with the shop's name."),
+          field("Their own text number (optional)", inp("smsFrom", S.messaging?.smsFrom || "", { type: "tel", placeholder: "907-555-0100" }), "A Twilio number bought for this shop. Needed for text-to-book (Shop plans). Blank = the Beam number."))),
       el("fieldset", {}, el("legend", {}, "Web addresses"),
         el("p", { class: "note" }, D.domain ? `Always reachable at https://${S.slug}.${D.domain}. Add their own address here (one per line), then add the same address to the beam-book project in Vercel → Domains.` : "One per line. Each one also has to be added to the beam-book project in Vercel → Domains."),
         el("textarea", { name: "hosts", rows: 2, spellcheck: "false" }, (S.hosts || []).join("\n"))),
@@ -279,6 +288,7 @@
           studio: { name: fd.get("name"), tagline: fd.get("tagline"), city: fd.get("city"), phone: fd.get("phone"), address: fd.get("address"), instagram: fd.get("instagram"),
             website: fd.get("website"), contactEmail: fd.get("contactEmail"), timeZone: fd.get("timeZone"), minAge: Number(fd.get("minAge")) },
           hosts: String(fd.get("hosts") || "").split(/\s+/).filter(Boolean),
+          plan: fd.get("plan") || undefined, messaging: { emailFrom: fd.get("emailFrom") || "", smsFrom: fd.get("smsFrom") || "" },
           theme: { mode: fd.get("mode"), accent: fd.get("accent"), deco: fd.has("deco") },
           depositPolicy: fd.get("depositPolicy"), calendarDefaults: { hours }, ...fb.value() } });
         toast("Saved"); D = await api("/api/platform"); showShop(S.slug);

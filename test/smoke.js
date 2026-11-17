@@ -756,6 +756,66 @@ const valid = (o = {}) => ({
       SHOPHOST = "levelup.localhost";
       ok("instant booking: service, barber or first available, time; booked at once, no double-booking, shows in inbox and on the client");
 
+      // Client self-service: move or cancel from the booking link, inside the shop's rules
+      {
+        cookie = "";
+        let y = await call(`/api/schedule?instant=1&service=${svc.id}&barber=mike-fade`);
+        const allSlots = y.data.days.flatMap((d) => d.slots);
+        const [s1, s2] = [allSlots[3], allSlots[8]];
+        y = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: s1.start, name: "Client 10 Test", phone: "907-555-1010" } });
+        assert.equal(y.status, 200, JSON.stringify(y.data));
+        const st = new URL(y.data.statusUrl, "http://x").searchParams; const id = st.get("id"), t = st.get("t");
+        y = await call(`/api/status?id=${id}&t=${t}`); assert.equal(y.data.canChange, true); assert.equal(y.data.instant, true); assert.equal(y.data.service.id, svc.id);
+        y = await call("/api/status", { body: { id, t, action: "reschedule", start: s2.start } });
+        assert.equal(y.status, 200, JSON.stringify(y.data)); assert.equal(y.data.status, "booked");
+        y = await call(`/api/schedule?instant=1&service=${svc.id}&barber=mike-fade`);
+        let open = y.data.days.flatMap((d) => d.slots).map((sl) => sl.start);
+        assert.ok(open.includes(s1.start), "old time is open again"); assert.ok(!open.includes(s2.start), "new time is taken");
+        y = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: s2.start, name: "Late Comer", phone: "907-555-3002" } });
+        assert.equal(y.status, 409, "nobody else can take the moved-to time");
+        y = await call("/api/status", { body: { id, t, action: "reschedule", start: slot.start } });
+        assert.equal(y.status, 409, "can't move onto someone else's appointment");
+        y = await call("/api/status", { body: { id, t, action: "cancel", message: "Sick kid" } });
+        assert.equal(y.status, 200, JSON.stringify(y.data)); assert.equal(y.data.status, "declined"); assert.ok(y.data.cancelledAt);
+        y = await call(`/api/schedule?instant=1&service=${svc.id}&barber=mike-fade`);
+        open = y.data.days.flatMap((d) => d.slots).map((sl) => sl.start); assert.ok(open.includes(s2.start), "cancelled time is open again");
+        y = await call("/api/status", { body: { id, t, action: "cancel" } }); assert.equal(y.status, 409, "can't cancel twice");
+        // Inside the shop's cutoff, the link says to call instead.
+        y = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: s1.start, name: "Client 11 Test", phone: "907-555-1011" } });
+        const st2 = new URL(y.data.statusUrl, "http://x").searchParams;
+        cookie = owner;
+        y = await call("/api/admin/books", { body: { action: "bookingSettings", changeCutoffHours: 168 } }); assert.equal(y.data.changeCutoffHours, 168);
+        cookie = "";
+        y = await call(`/api/status?id=${st2.get("id")}&t=${st2.get("t")}`); assert.equal(y.data.canChange, false); assert.match(y.data.changeNote, /907-555-0199/);
+        y = await call("/api/status", { body: { id: st2.get("id"), t: st2.get("t"), action: "cancel" } }); assert.equal(y.status, 409);
+        cookie = owner; await call("/api/admin/books", { body: { action: "bookingSettings", changeCutoffHours: 2 } }); cookie = "";
+        y = await call("/api/status", { body: { id: st2.get("id"), t: st2.get("t"), action: "cancel" } }); assert.equal(y.status, 200, "outside the window again, it can be cancelled");
+        ok("client self-service: move to an open time (old time frees up, no double-booking), cancel, and the shop's cutoff window");
+      }
+
+      // Plans, per-shop senders and usage (control page)
+      {
+        let y = await control({ action: "update", slug: "levelup", plan: "gold" }); assert.equal(y.status, 400, "unknown plan refused");
+        y = await control({ action: "update", slug: "levelup", messaging: { emailFrom: "not an email" } }); assert.equal(y.status, 400);
+        y = await control({ action: "update", slug: "levelup", messaging: { smsFrom: "12" } }); assert.equal(y.status, 400);
+        y = await control({ action: "update", slug: "levelup", plan: "shop_ai", messaging: { emailFrom: "Level Up <bookings@levelup.example>", smsFrom: "(907) 555-0177" } });
+        assert.equal(y.status, 200, JSON.stringify(y.data)); assert.equal(y.data.shop.plan, "shop_ai"); assert.equal(y.data.shop.messaging.smsFrom, "+19075550177");
+        y = await control(); y = await fetch(BASE + "/api/platform?shop=levelup", { headers: { Cookie: control.c } }).then((r) => r.json());
+        assert.equal(y.shop.plan, "shop_ai"); assert.equal(y.shop.bill.price, 249); assert.equal(y.shop.bill.allowance, 3500); assert.ok(y.plans.core);
+        const tenant = require("../lib/tenant"), email = require("../lib/email"), sms = require("../lib/sms"), P = require("../lib/plans");
+        tenant.cache?.clear?.();
+        assert.equal(await tenant.runAs("levelup", async () => email.fromFor()), "Level Up <bookings@levelup.example>");
+        await control({ action: "update", slug: "levelup", messaging: { emailFrom: "" } });
+        process.env.EMAIL_FROM = "Beam Book <bookings@nealmedia.app>";
+        assert.equal(await tenant.runAs("blackwolf", async () => email.fromFor()), '"Black Wolf Tattoo Club" <bookings@nealmedia.app>', "shared sender carries the shop's name");
+        delete process.env.EMAIL_FROM;
+        assert.equal(sms.segments("x".repeat(160)), 1); assert.equal(sms.segments("x".repeat(161)), 2); assert.equal(sms.segments("é".repeat(71)), 2);
+        assert.deepEqual(P.bill("shop", 2100), { plan: "shop", price: 199, allowance: 2000, texts: 2100, overTexts: 100, overage: 3, total: 202 });
+        assert.equal(P.bill("core", 10).total, 150);
+        await control({ action: "update", slug: "levelup", plan: "core", messaging: { smsFrom: "" } });
+        ok("plans and messaging: plan picked on the control page, own email/text senders validated, shared sender uses the shop's name, monthly bill with overage");
+      }
+
       // Reminders: once, the day before
       const tenant = require("../lib/tenant"), rem = require("../lib/reminders");
       let rr = await tenant.runAs("levelup", () => rem.forShop(slot.start - 86400e3));

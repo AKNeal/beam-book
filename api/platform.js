@@ -84,11 +84,14 @@ async function get(req, res) {
     const counts = await tenant.runAs(slug, async () => ({
       people: (await require("../lib/auth").users()).filter((u) => u.active !== false).length,
       requests: (await store.indexRange("reqs", 5000)).length,
+      usage: await require("../lib/plans").usage(),
     })).catch(() => ({}));
-    return send(res, 200, { shop: { ...rec, url: urlFor(rec), ...counts } });
+    const P = require("../lib/plans");
+    const plan = P.planOf(rec);
+    return send(res, 200, { shop: { ...rec, plan, url: urlFor(rec), ...counts, bill: P.bill(plan, counts.usage?.texts || 0) }, plans: P.PLANS });
   }
   const shops = (await tenant.listShops()).map((r) => ({ slug: r.slug, name: r.studio?.name || r.slug, city: r.studio?.city || "",
-    hosts: r.hosts || [], active: r.active !== false, createdAt: r.createdAt, url: urlFor(r) }));
+    hosts: r.hosts || [], active: r.active !== false, createdAt: r.createdAt, url: urlFor(r), plan: require("../lib/plans").planOf(r) }));
   const T = require("../lib/templates");
   return send(res, 200, { loggedIn: true, shops, domain: process.env.BEAMBOOK_DOMAIN || "", defaults: tenant.DEFAULTS,
     kinds: Object.fromEntries(Object.entries(T.KINDS).map(([k, v]) => [k, { label: v.label, words: v.words, form: v.form, negotiate: v.negotiate }])), types: T.TYPES });
@@ -128,6 +131,21 @@ function settingsFrom(b) {
   if (b.placements !== undefined) { out.placements = list(b.placements, 40, 30); if (!out.placements.length) throw new Error("Add at least one placement."); }
   if (b.colorOptions !== undefined) { out.colorOptions = list(b.colorOptions, 40, 12); if (!out.colorOptions.length) throw new Error("Add at least one style choice."); }
   if (b.hosts !== undefined) out.hosts = list(b.hosts, 253, 5).map(tenant.cleanHost);
+  if (b.plan !== undefined) { if (!require("../lib/plans").PLANS[b.plan]) throw new Error("Pick a plan."); out.plan = b.plan; }
+  if (b.messaging) {
+    const m = {}, sms = require("../lib/sms");
+    if (b.messaging.emailFrom !== undefined) {
+      const v = str(b.messaging.emailFrom, 160);
+      if (v && !/^(?:"?[^"<>]{1,80}"?\s*)?<?[^\s@<>]+@[^\s@<>]+\.[^\s@<>]{2,}>?$/.test(v)) throw new Error('Sender email: use "Shop Name <bookings@theirshop.com>" or just the address.');
+      m.emailFrom = v;
+    }
+    if (b.messaging.smsFrom !== undefined) {
+      const v = str(b.messaging.smsFrom, 30);
+      if (v && !sms.toE164(v)) throw new Error("Text number: a US number like 907-555-0100.");
+      m.smsFrom = v ? sms.toE164(v) : "";
+    }
+    out.messaging = m;
+  }
   if (b.calendarDefaults) {
     const c = b.calendarDefaults, hours = {};
     for (let d = 0; d < 7; d++) {
@@ -184,7 +202,7 @@ async function update(req, res, b) {
       instant: Boolean(tpl.instant), ...(tpl.services ? { services: T.cleanServices(tpl.services) } : {}) });
   }
   const next = { ...rec, ...set, studio: { ...rec.studio, ...(set.studio || {}) }, theme: { ...rec.theme, ...(set.theme || {}) },
-    calendarDefaults: { ...rec.calendarDefaults, ...(set.calendarDefaults || {}) } };
+    calendarDefaults: { ...rec.calendarDefaults, ...(set.calendarDefaults || {}) }, messaging: { ...(rec.messaging || {}), ...(set.messaging || {}) } };
   const saved = await tenant.saveRecord(next);
   return send(res, 200, { shop: { ...saved, url: urlFor(saved) } });
 }

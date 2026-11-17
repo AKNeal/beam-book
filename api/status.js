@@ -6,6 +6,8 @@
 //   POST /api/status {id, t, action:"decline", message?}      turn the offer down
 //   POST /api/status {id, t, action:"ask", message}           send the shop a question (shows in the inbox)
 //   POST /api/status {id, t, action:"addPhotos", images}      photos of the finished tattoo (once it's done)
+//   POST /api/status {id, t, action:"cancel", message?}      cancel an instant booking (outside the shop's cutoff window)
+//   POST /api/status {id, t, action:"reschedule", start, barber?}  move an instant booking to another open time
 //   GET  /api/status?id=&t=&photo=<name>                      one of this request's finished-tattoo photos
 
 const config = require("../config/studio");
@@ -17,6 +19,7 @@ const { sendEmail } = require("../lib/email");
 const files = require("../lib/files");
 const offers = require("../lib/offers");
 const deal = require("../lib/deal");
+const changes = require("../lib/changes");
 const { answerText } = require("../lib/templates");
 const { send, body, ip, str, baseUrl } = require("../lib/http");
 
@@ -67,6 +70,20 @@ async function view(r, token) {
     donePhotos: (r.donePhotos || []).map((ph) => ({ url: files.clientUrl(ph.name, r, token), byYou: ph.by === "client", at: ph.at })),
     canAddPhotos: r.status === "done" && (r.donePhotos || []).length < files.MAX_DONE,
     ...r.clientView,
+    ...(await changeInfo(r)),
+  };
+}
+
+// Instant bookings: can the client cancel or move it themselves, and if not, why.
+async function changeInfo(r) {
+  if (!r.instant) return {};
+  const c = await changes.changeable(r);
+  return {
+    instant: true, cancelledAt: r.cancelledAt || null,
+    canChange: c.ok, changeNote: !c.ok && r.status === "booked" && c.reason !== "no-appt" ? changes.tooLate(c.reason) : "",
+    changeCutoffHours: Number(config.changeCutoffHours ?? 2),
+    service: r.service ? { id: r.service.id, name: r.service.name, price: r.service.price, durationMin: r.service.durationMin } : null,
+    barberSlug: r.artist,
   };
 }
 
@@ -94,6 +111,13 @@ async function post(req, res) {
   const shopTo = [config.studio.contactEmail, artist?.email].filter(Boolean);
   const inboxBtn = { label: "Open in the inbox", url: `${site}/admin#${r.id}` };
   let alert = null;
+
+  if (b.action === "cancel" || b.action === "reschedule") {
+    const out = b.action === "cancel" ? await changes.cancel(r, { site, reason: message })
+      : await changes.reschedule(r, { start: b.start, barber: str(b.barber, 60) || "same", site });
+    if (out.error) return send(res, out.status || 400, { error: out.error, taken: out.taken || undefined });
+    return send(res, 200, await view(r, str(b.t, 40)));
+  }
 
   switch (b.action) {
     case "accept": {

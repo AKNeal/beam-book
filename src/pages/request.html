@@ -65,14 +65,68 @@
     return box;
   }
 
+  // Instant bookings: move to another open time, or cancel, right from this page.
+  function changePanel(s, err) {
+    const wrap = el("div", { class: "change", style: "margin-top:16px" });
+    const pick = el("div", { class: "act-box", hidden: true });
+    const sure = el("div", { class: "act-box", hidden: true });
+    const h = s.changeCutoffHours;
+    wrap.append(el("div", { class: "actions", style: "margin:0" },
+      el("button", { class: "btn line", type: "button", onclick: () => { sure.hidden = true; pick.hidden = false; if (!pick.dataset.loaded) loadTimes(); } }, "Change time"),
+      el("button", { class: "linkbtn", type: "button", onclick: () => { pick.hidden = true; sure.hidden = false; } }, "Cancel appointment")),
+      h ? el("p", { class: "small muted", style: "margin:8px 0 0" }, `You can change or cancel online up to ${h} hour${h === 1 ? "" : "s"} before.`) : null, pick, sure);
+
+    // Cancel: one more tap to be sure.
+    const why = el("textarea", { rows: 2, maxlength: 300, id: "whyCancel" });
+    sure.append(el("p", { style: "margin-top:0" }, "Cancel this appointment? The time opens up for someone else."),
+      el("div", { class: "field" }, el("label", { for: "whyCancel" }, "Anything the shop should know? ", el("span", { class: "opt" }, "(optional)")), why),
+      el("div", { class: "actions", style: "margin:0" },
+        el("button", { class: "btn danger", type: "button", onclick: async (e) => { e.target.disabled = true; err.hidden = true;
+          try { render(await post("cancel", { message: why.value })); window.scrollTo({ top: 0 }); } catch (x) { err.textContent = x.message; err.hidden = false; e.target.disabled = false; } } }, "Yes, cancel it"),
+        el("button", { class: "btn line", type: "button", onclick: () => { sure.hidden = true; } }, "Keep it")));
+
+    // Change time: same barber or anyone, then a day, then a time.
+    const who = el("select", { id: "whoNew" }, el("option", { value: s.barberSlug }, `Same barber (${s.artist.split(" ")[0]})`), el("option", { value: "any" }, "Anyone available"));
+    const days = el("div", { class: "chips", style: "display:flex;flex-wrap:wrap;gap:6px;margin:10px 0" });
+    const times = el("div", { style: "display:flex;flex-wrap:wrap;gap:6px" });
+    const note = el("p", { class: "small muted", role: "status" });
+    pick.append(el("div", { class: "field" }, el("label", { for: "whoNew" }, "Who"), who), days, times, note,
+      el("button", { class: "btn line", type: "button", style: "margin-top:12px", onclick: () => { pick.hidden = true; } }, "Never mind"));
+    who.addEventListener("change", loadTimes);
+    async function loadTimes() {
+      pick.dataset.loaded = "1"; days.textContent = ""; times.textContent = ""; note.textContent = "Finding open times…";
+      try {
+        const d = await api(`/api/schedule?instant=1&service=${encodeURIComponent(s.service.id)}&barber=${encodeURIComponent(who.value)}`);
+        note.textContent = d.days.length ? "Pick a day, then a time." : "No open times right now. Call the shop to move it.";
+        d.days.slice(0, 21).forEach((day, i) => {
+          const b = el("button", { class: "btn sm line", type: "button", onclick: () => showDay(day, b) }, day.label);
+          days.append(b); if (i === 0) showDay(day, b);
+        });
+      } catch (x) { note.textContent = x.message; }
+    }
+    function showDay(day, btn) {
+      [...days.children].forEach((c) => c.classList.toggle("sign", c === btn));
+      times.textContent = "";
+      day.slots.forEach((sl) => times.append(el("button", { class: "btn sm", type: "button", onclick: async (e) => {
+        e.target.disabled = true; err.hidden = true; note.textContent = "Moving your appointment…";
+        try { render(await post("reschedule", { start: sl.start, barber: who.value === "any" ? (sl.barber || "any") : who.value })); window.scrollTo({ top: 0 }); }
+        catch (x) { note.textContent = ""; err.textContent = x.message; err.hidden = false; e.target.disabled = false; if (/taken/i.test(x.message)) loadTimes(); }
+      } }, sl.label)));
+    }
+    return wrap;
+  }
+
   function render(s) {
     const W = s.words || {};
     const NAMES = { new: "Request received", quoted: "Offer", agreed: "Agreed", scheduling: "Pick your time", pending: "Waiting for confirmation", booked: "Booked", done: "Done" };
     const who = s.artist.startsWith("the ") ? ((BW.shop && BW.shop.name) || "the business") : s.artist.split(" ")[0];
     const Who = who.charAt(0).toUpperCase() + who.slice(1);
     main.textContent = "";
-    main.append(el("h1", {}, "Your request"), el("p", { class: "intro" }, `With ${s.artist}, sent ${date(s.createdAt)}.`));
-    if (s.status === "declined") {
+    main.append(el("h1", {}, s.instant ? "Your booking" : "Your request"), el("p", { class: "intro" }, s.instant && s.service ? `${s.service.name} with ${s.artist}.` : `With ${s.artist}, sent ${date(s.createdAt)}.`));
+    if (s.status === "declined" && s.cancelledAt) {
+      main.append(el("div", { class: "panel", style: "margin-top:28px" }, el("h3", {}, "Cancelled"),
+        el("p", {}, s.message || "This booking is cancelled."), el("a", { class: "btn sign", href: "/appointment" }, "Book again")));
+    } else if (s.status === "declined") {
       main.append(el("div", { class: "panel", style: "margin-top:28px" }, el("h3", {}, "Not going ahead"),
         el("p", {}, s.message || "This request isn't going ahead. You're welcome to send a new one."), el("a", { class: "btn", href: "/booking" }, "Send a new request")));
     } else {
@@ -111,6 +165,10 @@
       }
       if (s.message) box.append(el("p", {}, s.message));
       if (s.when) box.append(el("p", {}, el("strong", {}, s.status === "pending" ? "Time you asked for: " : "Booked for: "), s.when));
+      if (s.instant && s.status === "booked") {
+        if (s.canChange) box.append(changePanel(s, err));
+        else if (s.changeNote) box.append(el("p", { class: "muted" }, s.changeNote));
+      }
       if (s.status === "pending") box.append(el("p", {}, `It's held for you. ${Who} will confirm it soon, and this page will say Booked once they do.`));
       if (s.status === "agreed") box.append(el("p", {}, `${Who} will set the time with you.`));
       if (s.canSchedule) box.append(el("p", {}, "You're approved. Pick any open time that works for you."), el("a", { class: "btn sign", href: link("/schedule") }, "Pick your time"));
