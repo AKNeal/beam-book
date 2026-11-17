@@ -301,5 +301,6 @@ async function importSquire(req, res, b) {
     ownerEmail = owner.email;
     return auth.makeResetLink(urlFor(rec), owner, 24 * 7);
   });
-  return send(res, 200, { ok: true, shop: urlFor(rec), ...out, ownerLink, ownerEmail });
+  const onboardLink = b.onboardLink ? await tenant.runAs(rec.slug, () => require("../lib/onboarding").makeLink(urlFor(rec))) : null;
+  return send(res, 200, { ok: true, shop: urlFor(rec), ...out, ownerLink, ownerEmail, onboardLink });
 }

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Welcome to Beam</title>
+<style>
+  :root { --ink:#16161a; --muted:#6b6b76; --line:#e3e3e8; --soft:#f6f6f8; --accent:#e3262f; --blue:#1d4ed8; --ok:#15803d; --r:12px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 Inter, system-ui, -apple-system, sans-serif; color: var(--ink); background: #fff; }
+  .top { background: var(--ink); color: #fff; padding: 36px 20px 30px; }
+  .top .in, main { max-width: 760px; margin: 0 auto; }
+  .stripe { height: 6px; width: 140px; border-radius: 9px; background: linear-gradient(90deg, var(--accent) 33%, #fff 33% 66%, var(--blue) 66%); margin-bottom: 16px; }
+  h1 { font-size: 34px; line-height: 1.1; margin: 0 0 8px; }
+  .top p { color: #c9c9d1; margin: 0; }
+  main { padding: 10px 20px 80px; }
+  section { border-bottom: 1px solid var(--line); padding: 26px 0; }
+  h2 { font-size: 22px; margin: 0 0 4px; } h2 small { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 6px; }
+  .lead { color: var(--muted); margin: 0 0 16px; font-size: 15px; }
+  label { display: block; font-weight: 600; font-size: 14px; margin: 14px 0 4px; }
+  label .hint { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+  input, textarea, select { width: 100%; font: inherit; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; }
+  textarea { min-height: 90px; resize: vertical; }
+  input:focus, textarea:focus { outline: none; border-color: var(--ink); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; } @media (max-width: 620px) { .two { grid-template-columns: 1fr; } }
+  .member { border: 1.5px solid var(--line); border-radius: var(--r); padding: 16px; margin: 14px 0; background: var(--soft); }
+  .member h3 { margin: 0; display: flex; align-items: center; gap: 12px; font-size: 18px; }
+  .pic { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: #ddd; flex: none; }
+  .check { display: flex; gap: 8px; align-items: center; font-weight: 400; } .check input { width: auto; }
+  .bar { position: sticky; bottom: 0; background: #fff; border-top: 1px solid var(--line); padding: 14px 20px; }
+  .bar .in { max-width: 760px; margin: 0 auto; display: flex; gap: 12px; align-items: center; }
+  button { font: 600 16px Inter, system-ui, sans-serif; background: var(--accent); color: #fff; border: 0; border-radius: 999px; padding: 13px 26px; cursor: pointer; }
+  button:disabled { opacity: .5; } #msg { font-size: 14px; color: var(--muted); }
+  .ok { color: var(--ok) !important; font-weight: 600; } .err { color: #b91c1c !important; font-weight: 600; }
+  .center { text-align: center; padding: 80px 20px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="top"><div class="in"><div class="stripe"></div><h1 id="hello">Welcome</h1><p>A few questions so we can set up your website and booking. Fill in what you can; you can come back to this link and change anything. Everything saves when you press Save.</p></div></div>
+<main id="main"><p class="center">Loading…</p></main>
+<div class="bar" id="bar" hidden><div class="in"><button id="save" type="button">Save</button><span id="msg"></span></div></div>
+<script src="/assets/common.js"></script>
+<script>
+const q = new URLSearchParams(location.search), T = q.get("t") || "";
+const { el } = window.BW;
+let V = null, photos = {};
+const f = (label, name, val, o = {}) => el("label", {}, label, o.hint ? el("span", { class: "hint" }, o.hint) : null,
+  o.long ? el("textarea", { name, placeholder: o.ph || "", rows: o.rows || 4 }, val || "") : el("input", { name, value: val || "", placeholder: o.ph || "", type: o.type || "text", inputmode: o.mode || null }));
+
+async function load() {
+  const r = await fetch("/api/artists?onboard=" + encodeURIComponent(T)); const d = await r.json();
+  if (!r.ok) { document.getElementById("main").innerHTML = `<p class="center">${d.error || "This link doesn't work."}</p>`; return; }
+  V = d; document.getElementById("hello").textContent = `Welcome to Beam, ${d.shop.name || "friend"}`; document.title = `${d.shop.name} · Onboarding`;
+  draw(); document.getElementById("bar").hidden = false;
+}
+
+function draw() {
+  const m = document.getElementById("main"); m.textContent = "";
+  const sh = V.shop, x = V.extra || {};
+  m.append(el("section", { id: "s-shop" }, el("h2", {}, "1. Your shop"), el("p", { class: "lead" }, "What clients see on your website and booking page."),
+    el("div", { class: "two" }, f("Shop phone", "phone", sh.phone, { type: "tel" }), f("Shop email", "email", sh.email, { type: "email" })),
+    f("Address", "address", sh.address, { ph: "Street, city, state, zip" }),
+    f("About the shop", "about", sh.about, { long: true, hint: "Your story, the vibe, what you're known for. A few sentences is perfect.", rows: 5 }),
+    el("div", { class: "two" }, f("Year you opened", "founded", sh.founded, { mode: "numeric" }), f("Walk-ins?", "walkIns", sh.walkIns, { ph: "e.g. Welcome when a chair is open" })),
+    f("Hours note", "hoursNote", sh.hoursNote, { hint: "Anything about hours beyond each barber's schedule (holidays, late nights)." }),
+    el("div", { class: "two" }, f("Parking", "parking", sh.parking), f("Ways to pay", "payments", sh.payments, { ph: "Cash, cards, Apple Pay…" }))));
+
+  m.append(el("section", { id: "s-social" }, el("h2", {}, "2. Website and socials"), el("p", { class: "lead" }, "We'll promote these on your website. Paste a link or an @handle; leave blank what you don't use."),
+    f("Current website (if any)", "website", sh.website),
+    el("div", { class: "two" }, ...Object.keys(V.socialLabels).map((k) => f(V.socialLabels[k], "so_" + k, V.socials[k], { ph: k === "instagram" ? "@levelup907" : k === "google" ? "Your Google Business link" : "" })))));
+
+  const team = el("section", { id: "s-team" }, el("h2", {}, "3. Meet the team"), el("p", { class: "lead" }, "This becomes the Meet the Team page. Add a photo, a title and a short bio for each person. Untick anyone who shouldn't be on the website."));
+  for (const t of V.team) {
+    const img = el("img", { class: "pic", src: t.photo || "data:image/gif;base64,R0lGODlhAQABAAAAACw=", alt: "" });
+    const file = el("input", { type: "file", accept: "image/*", onchange: async (e) => { const fl = e.target.files[0]; if (!fl) return; const d = await window.BW.shrink(fl, 1000, 0.82); photos[t.slug] = d; img.src = d; } });
+    team.append(el("div", { class: "member", "data-slug": t.slug },
+      el("h3", {}, img, t.name),
+      el("label", { class: "check" }, el("input", { type: "checkbox", name: "listed", checked: t.listed }), "Show on the website and booking page"),
+      el("label", {}, "Photo", el("span", { class: "hint" }, "A clear, friendly headshot works best."), file),
+      el("div", { class: "two" }, f("Title", "title", t.title, { ph: "Owner / Master Barber" }), f("Years cutting", "years", t.years, { mode: "numeric" })),
+      f("Specialties", "styles", t.styles, { ph: "Fades, beards, kids cuts, designs" }),
+      f("Short bio", "bio", t.bio, { long: true, rows: 3 }),
+      f("Instagram", "instagram", t.instagram, { ph: "@handle" })));
+  }
+  m.append(team);
+
+  m.append(el("section", { id: "s-more" }, el("h2", {}, "4. Promotions and policies"),
+    f("What should we promote right now?", "x_promote", x.promote, { long: true, hint: "Specials, events, products, new barbers, gift cards." }),
+    f("Cancellation and no-show policy", "x_policy", x.policy, { long: true, rows: 3, hint: "e.g. 2 hours' notice to change or cancel; no-shows pay a fee." }),
+    f("Prizes for the team's rebooking challenges", "x_prizes", x.prizes, { ph: "e.g. $100 cash, a day off" }),
+    f("Your logo and photos", "x_photos", x.photos, { hint: "Paste a link to a shared folder (Google Drive, Dropbox) with your logo and shop photos." }),
+    f("Anything else we should know?", "x_notes", x.notes, { long: true })));
+}
+
+async function save() {
+  const b = document.getElementById("save"), msg = document.getElementById("msg"); b.disabled = true; msg.className = ""; msg.textContent = "Saving…";
+  const v = (n, root = document) => root.querySelector(`[name="${n}"]`)?.value ?? "";
+  const body = { action: "onboardSave", t: T,
+    shop: Object.fromEntries(["phone", "email", "address", "about", "founded", "walkIns", "hoursNote", "parking", "payments", "website"].map((k) => [k, v(k)])),
+    socials: Object.fromEntries(Object.keys(V.socialLabels).map((k) => [k, v("so_" + k)])),
+    team: [...document.querySelectorAll(".member")].map((n) => ({ slug: n.dataset.slug, listed: n.querySelector('[name="listed"]').checked,
+      title: v("title", n), years: v("years", n), styles: v("styles", n), bio: v("bio", n), instagram: v("instagram", n), photo: photos[n.dataset.slug] || undefined })),
+    extra: Object.fromEntries(["promote", "policy", "prizes", "photos", "notes"].map((k) => [k, v("x_" + k)])) };
+  try {
+    const r = await fetch("/api/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Couldn't save. Try again.");
+    photos = {}; msg.className = "ok"; msg.textContent = "Saved. Thank you! You can come back and change anything.";
+  } catch (e) { msg.className = "err"; msg.textContent = e.message; }
+  b.disabled = false;
+}
+document.getElementById("save").addEventListener("click", save);
+load();
+</script>
+</body>
+</html>

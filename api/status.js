@@ -102,6 +102,11 @@ async function get(req, res) {
 async function post(req, res) {
   if ((await store.hit(`rl:status:${ip(req)}`, 3600)) > 30) return send(res, 429, { error: "Too many tries. Please call the shop." });
   const b = body(req);
+  if (b.action === "onboardSave") { // Beam: the shop's private onboarding page (lib/onboarding.js)
+    const ob = require("../lib/onboarding");
+    if (!(await ob.check(b.t))) return send(res, 404, { error: "This link has expired. Ask Neal Media for a new one." });
+    try { return send(res, 200, await ob.save(b)); } catch (e) { return send(res, 400, { error: e.message }); }
+  }
   const r = await reqs.byToken(str(b.id, 40), str(b.t, 40));
   if (!r) return send(res, 404, { error: NOT_FOUND });
   const now = new Date().toISOString();

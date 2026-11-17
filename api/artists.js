@@ -55,11 +55,19 @@ module.exports = async function handler(req, res) {
   }
 
   const st = config.studio, th = config.theme || {};
+  res.setHeader("Access-Control-Allow-Origin", "*"); // public shop info: the shop's own website reads it too (Meet the Team, socials)
+  if (q.get("onboard")) { // Beam: the private onboarding page's current answers
+    const ob = require("../lib/onboarding");
+    if (!(await ob.check(q.get("onboard")))) return send(res, 404, { error: "This link has expired. Ask Neal Media for a new one." });
+    return send(res, 200, await ob.view());
+  }
   return send(res, 200, {
     studio: { name: st.name, tagline: st.tagline, city: st.city, minAge: st.minAge },
     // Beam Book: what the booking pages need to look and read like this shop.
     shop: { name: st.name, tagline: st.tagline, city: st.city, phone: st.phone, address: st.address, instagram: st.instagram,
-      website: st.website, timeZone: st.timeZone,
+      website: st.website, timeZone: st.timeZone, about: st.about || "", founded: st.founded || "", hoursNote: st.hoursNote || "",
+      walkIns: st.walkIns || "", parking: st.parking || "", payments: st.payments || "",
+      socials: Object.fromEntries(Object.entries(config.socials || {}).filter(([, v]) => v)),
       theme: { mode: th.mode === "light" ? "light" : "dark", accent: /^#[0-9a-f]{6}$/i.test(th.accent || "") ? th.accent : "#d08a3c",
         deco: Boolean(th.deco), ink: /^#[0-9a-f]{6}$/i.test(th.ink || "") ? th.ink : "", font: th.font === "sans" ? "sans" : "condensed",
         logo: th.logo ? `/api/artists?logo=1&v=${encodeURIComponent(String(th.logoV || 1))}` : "" } },

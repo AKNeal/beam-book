@@ -39,7 +39,19 @@ const TOKEN = "t".repeat(32);
     assert.equal(dash.cuts, 4); assert.equal(dash.money.gross, 55 + 80 + 50 + 25, "prices from the catalog, multi-service visits add up");
     assert.equal(dash.rebookRate, null, "Squire doesn't say when visits were booked, so no rebook rate from imports");
     assert.equal(dash.newClients, 2);
+    // Onboarding link: owner fills shop details, socials and team; the website reads them back publicly.
+    const ob = new URL((await post({ action: "importSquire", token: TOKEN, slug: "levelup", data, onboardLink: true })).data.onboardLink);
+    const G = (u) => fetch(BASE + u, { headers: { "X-Forwarded-Host": "levelup.localhost" } }).then(async (q) => ({ status: q.status, data: await q.json(), cors: q.headers.get("access-control-allow-origin") }));
+    assert.equal((await G("/api/artists?onboard=wrong-token-123")).status, 404);
+    let v = await G(`/api/artists?onboard=${ob.searchParams.get("t")}`); assert.equal(v.status, 200); assert.ok(v.data.team.some((t) => t.name === "Seth Long"));
+    r = await fetch(BASE + "/api/status", { method: "POST", headers: H, body: JSON.stringify({ action: "onboardSave", t: ob.searchParams.get("t"),
+      shop: { phone: "907-651-9424", about: "North Pole's barbershop." }, socials: { instagram: "@levelup907", facebook: "facebook.com/levelup907" },
+      team: [{ slug: "seth-long", title: "Barber", years: "6", bio: "Fades and beards.", instagram: "@sethcuts", styles: "Fades, beards", listed: true }], extra: { promote: "Gift cards" } }) });
+    assert.equal(r.status, 200, await r.text());
+    v = await G("/api/artists"); assert.equal(v.cors, "*");
+    assert.equal(v.data.shop.about, "North Pole's barbershop."); assert.equal(v.data.shop.socials.facebook, "https://facebook.com/levelup907"); assert.equal(v.data.shop.instagram, "levelup907");
+    const seth = v.data.artists.find((a) => a.slug === "seth-long"); assert.equal(seth.title, "Barber"); assert.equal(seth.instagram, "@sethcuts"); assert.deepEqual(seth.styles, ["Fades", "beards"]);
     x = await post({ action: "importSquireClear", token: TOKEN, slug: "levelup" }); assert.equal(x.data.appointments, 4);
-    console.log("ok - Squire import (sandbox only): shop, team hours, services, calendar, dashboard, and clean removal");
+    console.log("ok - Squire import: shop, team hours, services, calendar, dashboard, onboarding link (shop, socials, team), clean removal");
   } catch (e) { console.error(e); console.error(log.slice(-3000)); process.exitCode = 1; } finally { srv.kill(); }
 })();
