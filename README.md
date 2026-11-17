@@ -25,6 +25,22 @@ The control page (Neal) and the business's own inbox (**Booking form**, for the 
 - **Clients move or cancel it themselves** from the link in their confirmation and reminder: pick another open time (same barber or anyone), or cancel. The old time frees up at once and the barber gets a text and email. Shops set how close to the appointment that's allowed (**Instant booking → hours before**, default 2); inside it the link says to call.
 - Payments are not handled: the shop keeps its card reader for checkout.
 
+## Dashboard, scoreboard and rebooking challenges
+
+Inbox → **Dashboard**. The owner sees the whole shop: gross (done + booked), earned so far, still on the books (projected), and net
+(gross − cash discounts − card fees unless passed to the client − barber pay + booth rent − monthly shop expenses), day by day,
+every barber's appointments, rebook rate, new clients, hours and pay, and top services. A barber sees only their own numbers and pay.
+
+- **Rebook rate**: a finished visit counts as rebooked when the client's next appointment was booked during the visit or within
+  24 hours after it (owner can change the window). Shown per barber and for the shop.
+- **Challenges**: the owner sets a name, what it measures (rebook rate, rebooks, cuts, new clients), dates, a goal, barber-vs-barber
+  or whole shop, and an optional prize. Progress is live.
+- **Shop TV**: `/scoreboard?t=…` (private link from the Dashboard; "New link" cuts the old one off). Rotates live challenges,
+  this week's leaders and who's open now. Never shows money.
+- Settings: cash share, cash discount, card fees, expenses, goals, and each barber's pay (commission %, booth rent, or owner).
+  Barbers with no setting count as 50% commission.
+- Demo data (control page) can take `barbers`, `services`, `weeks` of made-up past visits and a rough `rebook` % per barber.
+
 ## Plans and messaging
 - Each shop is on a plan (`lib/plans.js`): **Core** $150 (500 texts/mo), **Shop** $199 (2,000; text-to-book), **Shop AI** $249 (3,500; AI agent). Texts over the allowance are $0.03 each. Set it on the control page, which also shows this month's texts, emails and bill.
 - **Email** goes through Resend (`RESEND_API_KEY`, `EMAIL_FROM`). Shops without their own sender use the Beam address with the shop's name on it; replies go to the shop's email. A shop with a domain verified in Resend can send as itself (control page → Send emails from).

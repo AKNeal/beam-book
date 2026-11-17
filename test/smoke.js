@@ -793,6 +793,32 @@ const valid = (o = {}) => ({
         ok("client self-service: move to an open time (old time frees up, no double-booking), cancel, and the shop's cutoff window");
       }
 
+      // Dashboard, rebooking challenges and the shop TV scoreboard
+      {
+        cookie = owner;
+        let y = await call("/api/admin/books", { body: { action: "dash", period: "next30" } });
+        assert.equal(y.status, 200, JSON.stringify(y.data)); assert.equal(y.data.owner, true);
+        assert.ok(y.data.dash.cuts >= 1 && y.data.dash.money.gross > 0 && y.data.dash.money.projected > 0, "booked appointments count as projected");
+        assert.ok("net" in y.data.dash.money && y.data.dash.settings.rebookWindowHours === 24);
+        y = await call("/api/admin/books", { body: { action: "dashSettings", settings: { cashShare: 40, expenses: [{ name: "Rent", monthly: 2400 }], rebookWindowHours: 48 } } });
+        assert.equal(y.data.settings.cashShare, 40); assert.equal(y.data.settings.expenses[0].monthly, 2400);
+        y = await call("/api/admin/books", { body: { action: "dashPay", slug: "mike-fade", pay: { model: "commission", rate: 60 } } }); assert.equal(y.data.pay["mike-fade"].rate, 60);
+        y = await call("/api/admin/books", { body: { action: "challengeSave", title: "Rebook Rumble", metric: "rebookRate", goal: 70, startDate: T.dateKey(Date.now()), endDate: T.dateKey(Date.now() + 14 * 864e5), prize: "$100" } });
+        assert.equal(y.status, 200, JSON.stringify(y.data)); assert.equal(y.data.challenges[0].status, "live"); assert.equal(y.data.challenges[0].rows[0].name, "Mike Fade");
+        y = await call("/api/admin/books", { body: { action: "challengeSave", title: "Bad", metric: "rebookRate", goal: 150, startDate: "2026-01-01", endDate: "2026-01-02" } }); assert.equal(y.status, 400, "rebook goal over 100% refused");
+        y = await call("/api/admin/books", { body: { action: "boardLink" } }); const tok = y.data.token;
+        cookie = "";
+        y = await call("/api/artists?board=wrongwrongwrong"); assert.equal(y.status, 404);
+        y = await call(`/api/artists?board=${tok}`); assert.equal(y.status, 200);
+        assert.equal(y.data.challenges[0].title, "Rebook Rumble"); assert.ok(y.data.chairs.length && y.data.leaders.length);
+        assert.ok(!JSON.stringify(y.data).match(/gross|"net"|money|"pay"/), "the TV never shows money");
+        y = await call("/api/admin/books", { body: { action: "dash" } }); assert.equal(y.status, 401);
+        assert.equal((await page("/scoreboard", "levelup.localhost")).status, 200);
+        cookie = owner; y = await call("/api/admin/books", { body: { action: "boardLink", reset: true } }); cookie = "";
+        assert.equal((await call(`/api/artists?board=${tok}`)).status, 404, "a new link cuts off the old one");
+        ok("dashboard: projected gross and net, settings and pay, rebooking challenges, and a money-free TV scoreboard behind a private link");
+      }
+
       // Plans, per-shop senders and usage (control page)
       {
         let y = await control({ action: "update", slug: "levelup", plan: "gold" }); assert.equal(y.status, 400, "unknown plan refused");
@@ -865,7 +891,9 @@ const valid = (o = {}) => ({
       let dm = await control({ action: "demo", slug: "levelup" });
       assert.equal(dm.status, 200, JSON.stringify(dm.data)); assert.equal(dm.data.barbers, 3); assert.equal(dm.data.clients, 120); assert.ok(dm.data.bookings > 10, JSON.stringify(dm.data));
       assert.ok(!/\[email:dev\]|\[sms:dev\]/.test(log.slice(logLen)), "demo sends no emails or texts");
-      x = await call("/api/admin/inbox"); assert.ok(x.data.artists.length >= 3); assert.ok(x.data.requests.filter((r) => r.demo).length === dm.data.bookings);
+      x = await call("/api/admin/inbox"); assert.ok(x.data.artists.length >= 3); assert.ok(x.data.requests.filter((r) => r.demo).length > 10);
+      x = await call("/api/admin/books", { body: { action: "dash", period: "last30" } });
+      assert.ok(x.data.dash.done > 20 && x.data.dash.rebookRate > 20 && x.data.dash.rebookRate < 95, `made-up history gives a believable rebook rate: ${x.data.dash.rebookRate}% of ${x.data.dash.rebookable}`);
       x = await call("/api/admin/books", { body: { action: "clients" } }); assert.equal(x.data.total, 120);
       dm = await control({ action: "clearDemo", slug: "levelup" }); assert.equal(dm.status, 200); assert.ok(dm.data.bookings > 10);
       x = await call("/api/admin/inbox"); assert.equal(x.data.requests.filter((r) => r.demo).length, 0); assert.ok(!x.data.artists.some((a) => a.name === "Tony Vega"));

@@ -49,7 +49,7 @@ module.exports = async function handler(req, res) {
         const rec = await tenant.getRecord(b.slug);
         if (!rec) return send(res, 404, { error: "No such shop." });
         const demo = require("../lib/demo");
-        return send(res, 200, await tenant.runAs(rec.slug, () => (b.action === "demo" ? demo.fill() : demo.clear())));
+        return send(res, 200, await tenant.runAs(rec.slug, () => (b.action === "demo" ? demo.fill({ barbers: b.barbers, services: b.services, weeks: b.weeks, rebook: b.rebook }) : demo.clear())));
       }
       default: return send(res, 400, { error: "Unknown action." });
     }

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Scoreboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#e3262f;--red2:#ff4d55;--blue:#3b82f6;--ink:#0b0b0e;--ink2:#15151a;--line:#2a2a31;--text:#f4f4f5;--muted:#9a9aa3;--green:#22c55e;--gold:#f5b301}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--ink);color:var(--text);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+.wrap{height:100vh;display:grid;grid-template-rows:auto 1fr auto;padding:3vh 3vw;gap:2.4vh}
+header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--red);padding-bottom:1.6vh}
+h1{font-family:Anton,sans-serif;font-weight:400;letter-spacing:.04em;font-size:5vh;margin:0;text-transform:uppercase}
+h1 em{color:var(--red);font-style:normal}.stripe{height:.8vh;width:14vw;background:linear-gradient(90deg,var(--red) 33%,#fff 33% 66%,var(--blue) 66%);border-radius:9px;margin-top:.8vh}
+.clock{font-family:Anton,sans-serif;font-size:5vh;color:var(--muted)}
+.panel{display:none;height:100%;animation:f .6s}.panel.on{display:block}@keyframes f{from{opacity:0}to{opacity:1}}
+h2{font-family:Anton,sans-serif;font-weight:400;font-size:4.2vh;margin:0 0 2vh;text-transform:uppercase;letter-spacing:.03em}h2 em{color:var(--red);font-style:normal}
+.sub{color:var(--muted);font-size:2.2vh;margin:-1.4vh 0 2vh}
+.row{display:grid;grid-template-columns:7vh 1fr 20vw 12vw;align-items:center;gap:2vw;background:var(--ink2);border:1px solid var(--line);border-radius:1.6vh;padding:1.6vh 2vw;margin-bottom:1.3vh;font-size:3vh}
+.row.lead{border-color:var(--gold);background:linear-gradient(90deg,#2d2405,var(--ink2))}
+.pos{font-family:Anton,sans-serif;font-size:4vh;color:var(--muted)}.lead .pos{color:var(--gold)}
+.name{font-weight:700}.val{font-family:Anton,sans-serif;font-size:4.4vh;text-align:right}
+.bar{height:1.4vh;background:var(--line);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--red2));border-radius:99px;transition:width 1s}
+.bar.done i{background:linear-gradient(90deg,var(--green),#4ade80)}
+.big{display:grid;grid-template-columns:repeat(3,1fr);gap:2vw;margin-bottom:3vh}
+.tile{background:var(--ink2);border:1px solid var(--line);border-radius:1.6vh;padding:2.4vh 2vw}.tile b{display:block;font-family:Anton,sans-serif;font-weight:400;font-size:8vh;line-height:1.1}.tile span{color:var(--muted);font-size:2.2vh;text-transform:uppercase;letter-spacing:.08em}
+.chairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(22vw,1fr));gap:1.6vw}
+.chair{background:var(--ink2);border:1px solid var(--line);border-radius:1.6vh;padding:2.4vh 2vw;font-size:2.6vh}.chair b{font-size:3.4vh;display:block;margin-bottom:.8vh}
+.dot{display:inline-block;width:1.6vh;height:1.6vh;border-radius:50%;margin-right:.8vw;vertical-align:middle}.busy{background:var(--red)}.free{background:var(--green)}
+.prize{display:inline-block;background:var(--gold);color:#000;font-weight:700;border-radius:99px;padding:.6vh 1.4vw;font-size:2.2vh;margin-left:1vw;vertical-align:middle}
+.team{background:var(--ink2);border:2px solid var(--blue);border-radius:1.6vh;padding:3vh 2vw;margin-bottom:2vh}.team .val{text-align:left;font-size:9vh}
+footer{display:flex;justify-content:space-between;color:var(--muted);font-size:1.8vh}.dots i{display:inline-block;width:1.2vh;height:1.2vh;border-radius:50%;background:var(--line);margin-left:.6vw}.dots i.on{background:var(--red)}
+.msg{display:grid;place-items:center;height:100%;font-size:3vh;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div><h1 id="shop">Scoreboard</h1><div class="stripe"></div></div><div class="clock" id="clock"></div></header>
+  <main id="main"><div class="msg">Loading the scoreboard…</div></main>
+  <footer><span id="upd"></span><span class="dots" id="dots"></span></footer>
+</div>
+<script>
+const t = new URLSearchParams(location.search).get("t") || "";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let panels = [], at = 0, data = null;
+
+function fmt(metric, v) { return metric === "rebookRate" ? (v == null ? "–" : v + "%") : (v ?? 0); }
+
+function build(d) {
+  const p = [];
+  // 1. Challenges, one panel each
+  for (const c of d.challenges) {
+    let h = `<h2>${esc(c.title)}${c.prize ? `<span class="prize">🏆 ${esc(c.prize)}</span>` : ""}</h2>`;
+    h += `<p class="sub">${esc(c.label)} · goal ${fmt(c.metric, c.goal)} · ${c.status === "upcoming" ? "starts " + esc(c.startDate) : c.daysLeft + (c.daysLeft === 1 ? " day" : " days") + " left"}</p>`;
+    if (c.team) h += `<div class="team"><span class="sub">Whole shop</span><div class="val">${fmt(c.metric, c.team.value)}</div><div class="bar ${c.team.pct >= 100 ? "done" : ""}"><i style="width:${c.team.pct}%"></i></div></div>`;
+    h += c.rows.slice(0, c.team ? 4 : 7).map((r, i) => `<div class="row ${i === 0 && r.value > 0 ? "lead" : ""}"><div class="pos">${i === 0 && r.value > 0 ? "👑" : i + 1}</div><div class="name">${esc(r.name)}</div><div class="bar ${r.pct >= 100 ? "done" : ""}"><i style="width:${r.pct}%"></i></div><div class="val">${fmt(c.metric, r.value)}</div></div>`).join("");
+    p.push(h);
+  }
+  // 2. This week's leaderboards
+  const board = (title, key, metric, sub) => {
+    const rows = d.leaders.filter((x) => x[key] != null).sort((a, b) => (b[key] || 0) - (a[key] || 0)).slice(0, 7);
+    if (!rows.length) return;
+    const max = Math.max(1, ...rows.map((r) => r[key] || 0));
+    p.push(`<h2>This week · <em>${title}</em></h2><p class="sub">${sub}</p>` + rows.map((r, i) => `<div class="row ${i === 0 && r[key] > 0 ? "lead" : ""}"><div class="pos">${i === 0 && r[key] > 0 ? "👑" : i + 1}</div><div class="name">${esc(r.name)}</div><div class="bar"><i style="width:${metric === "rebookRate" ? r[key] : Math.round(100 * (r[key] || 0) / max)}%"></i></div><div class="val">${fmt(metric, r[key])}</div></div>`).join(""));
+  };
+  board("Rebook rate", "rebookRate", "rebookRate", "Clients who booked their next cut in the chair or within a day");
+  board("Cuts", "cuts", "cuts", "Booked and finished, Monday to Sunday");
+  board("New clients", "newClients", "newClients", "First visit to the shop");
+  // 3. Shop + chairs
+  const w = d.week;
+  p.push(`<h2>The shop <em>today</em></h2><div class="big"><div class="tile"><b>${w.cuts}${w.goal ? `<small style="font-size:4vh;color:var(--muted)"> / ${w.goal}</small>` : ""}</b><span>Cuts this week</span></div><div class="tile"><b>${w.rebookRate == null ? "–" : w.rebookRate + "%"}</b><span>Shop rebook rate</span></div><div class="tile"><b>${d.chairs.filter((c) => !c.busy).length}</b><span>Chairs open now</span></div></div><div class="chairs">` +
+    d.chairs.map((c) => `<div class="chair"><b><span class="dot ${c.busy ? "busy" : "free"}"></span>${esc(c.name)}</b>${c.busy ? "In the chair" : "Open"} · ${c.doneToday} done today<br><span style="color:var(--muted)">${c.nextOpen ? "Next open " + esc(c.nextOpen) : "Booked up today"}</span></div>`).join("") + `</div>`);
+  return p;
+}
+
+function show() {
+  if (!panels.length) return;
+  at = at % panels.length;
+  $("main").innerHTML = `<div class="panel on">${panels[at]}</div>`;
+  $("dots").innerHTML = panels.map((_, i) => `<i class="${i === at ? "on" : ""}"></i>`).join("");
+}
+
+async function load() {
+  try {
+    const r = await fetch("/api/artists?board=" + encodeURIComponent(t), { cache: "no-store" });
+    const d = await r.json();
+    if (!r.ok) { $("main").innerHTML = `<div class="msg">${esc(d.error || "Scoreboard unavailable.")}</div>`; return; }
+    data = d; $("shop").innerHTML = esc(d.shop) + " <em>Scoreboard</em>"; document.title = d.shop + " · Scoreboard";
+    panels = build(d); show();
+    $("upd").textContent = "Updated " + new Date(d.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  } catch { $("upd").textContent = "Reconnecting…"; }
+}
+setInterval(() => { at++; show(); }, 12000);
+setInterval(load, 60000);
+setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }, 1000);
+load();
+</script>
+</body>
+</html>

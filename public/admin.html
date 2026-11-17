@@ -179,7 +179,7 @@
 <body class="admin">
 <header class="top"><div class="shell adminbar">
   <div><a class="brand" href="/admin"><img class="shop-logo" data-shop="logo" alt="" hidden><span><b id="shopName" style="font-weight:inherit">Shop</b> · Inbox</span></a><div class="whoami" id="whoami"></div></div>
-  <nav id="nav" hidden><a href="#" id="viewDay">Day</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewSite" hidden>Website</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
+  <nav id="nav" hidden><a href="#" id="viewDash">Dashboard</a><a href="#" id="viewDay">Day</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewSite" hidden>Website</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
 </div></header>
 
 <main class="shell" id="app">
@@ -231,6 +231,7 @@
   <div id="dayView" hidden></div>
   <div id="siteView" hidden></div>
   <div id="rankView" hidden></div>
+  <div id="dashView" hidden></div>
 </main>
 
 <script>
@@ -253,6 +254,7 @@
 <script src="/assets/clients.js"></script>
 <script src="/assets/dayview.js"></script>
 <script src="/assets/website.js"></script>
+<script src="/assets/dashboard.js"></script>
 <script>
 (() => {
   const { api, el, datetime, date } = BW;
@@ -357,7 +359,8 @@
   $("viewDay").addEventListener("click", (e) => { e.preventDefault(); showDay(); });
   const showSite = () => { $("siteNudge").hidden = true; window.BBSite.show({ only, toast }); };
   $("viewSite").addEventListener("click", (e) => { e.preventDefault(); showSite(); });
-  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView", "siteView", "rankView"];
+  $("viewDash").addEventListener("click", (e) => { e.preventDefault(); window.BBDash.show({ only, toast, D }); });
+  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView", "siteView", "rankView", "dashView"];
   function only(v) { for (const x of views) $(x).hidden = x !== v; window.scrollTo({ top: 0 }); }
 
   // ---------- Requests ----------

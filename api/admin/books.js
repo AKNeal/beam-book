@@ -32,6 +32,7 @@ module.exports = async function handler(req, res) {
   if (b.action === "bookingSettings") return bookingSettings(req, res, me, b);
   if (/^client/.test(String(b.action || ""))) return clientsApi(req, res, me, b);
   if (/^site/.test(String(b.action || ""))) return siteApi(req, res, me, b);
+  if (/^(dash|challenge|board)/.test(String(b.action || ""))) return dashApi(req, res, me, b);
   if (b.action !== "resetFeed" && (!auth.canSeeArtist(me, slug) || !(await artists.bySlug(slug)))) return send(res, 400, { error: "Unknown artist." });
   const needArtist = () => true;
 
@@ -167,6 +168,38 @@ async function siteApi(req, res, me, b) {
     else if (b.action === "siteReview") await site.setChange(me, b);
     else if (b.action !== "site") return send(res, 400, { error: "Unknown website action." });
     return send(res, 200, { ok: true, ...(await site.adminView(me)) });
+  } catch (e) { return send(res, 400, { error: e.message }); }
+}
+
+// Beam: dashboard, scoreboard and rebooking challenges (lib/analytics.js).
+//   {action:"dash", period?: today|week|month|last30|next30, from?, to?, barber?}   barbers only ever get their own numbers
+//   {action:"dashSettings", settings} · {action:"dashPay", slug, pay}                Owner / Site admin
+//   {action:"challenges"} · {action:"challengeSave", ...} · {action:"challengeDelete", id}
+//   {action:"boardLink", reset?}                                                      the shop TV's private link
+async function dashApi(req, res, me, b) {
+  const an = require("../../lib/analytics"), T = require("../../lib/time");
+  const owner = auth.isFull(me), all = auth.seesAll(me);
+  try {
+    if (b.action === "dash") {
+      let [from, to] = an.range(String(b.period || "week"));
+      const df = b.from && T.parseDate(String(b.from)), dt = b.to && T.parseDate(String(b.to));
+      if (df && dt) { from = T.toUtc(df.y, df.m, df.d, 0, 0); to = T.toUtc(dt.y, dt.m, dt.d, 0, 0) + 864e5; }
+      if (to - from > 400 * 864e5 || to <= from) return send(res, 400, { error: "Pick a shorter date range." });
+      const who = all ? (b.barber ? str(b.barber, 60) : null) : me.artist;
+      if (!all && !who) return send(res, 403, { error: "Your login isn't linked to a barber." });
+      const d = await an.dashboard({ from, to, who, withMoney: true });
+      if (!owner) { delete d.settings; for (const m of [d.money, ...d.barbers.map((x) => x.money)]) if (m) { delete m.net; delete m.expenses; delete m.booth; } }
+      return send(res, 200, { dash: d, challenges: await an.standings(), owner, barbers: all ? (await artists.list()).map((a) => ({ slug: a.slug, name: a.name })) : [] });
+    }
+    if (b.action === "challenges") return send(res, 200, { challenges: await an.standings(), metrics: an.METRICS });
+    if (!owner) return send(res, 403, { error: "Only the Owner or a Site manager can change this." });
+    if (b.action === "dashSettings") return send(res, 200, { settings: await an.saveSettings(b.settings || {}), pay: await an.pay() });
+    if (b.action === "dashPay") { if (!(await artists.bySlug(str(b.slug, 60)))) return send(res, 400, { error: "Unknown barber." }); return send(res, 200, { pay: await an.savePay(str(b.slug, 60), b.pay || {}) }); }
+    if (b.action === "dashConfig") return send(res, 200, { settings: await an.settings(), pay: await an.pay(), barbers: (await artists.list()).map((a) => ({ slug: a.slug, name: a.name })) });
+    if (b.action === "challengeSave") { await an.saveChallenge(b); return send(res, 200, { challenges: await an.standings() }); }
+    if (b.action === "challengeDelete") { await an.deleteChallenge(String(b.id || "")); return send(res, 200, { challenges: await an.standings() }); }
+    if (b.action === "boardLink") { const t = await an.boardToken(Boolean(b.reset)); return send(res, 200, { token: t, url: `/scoreboard?t=${t}` }); }
+    return send(res, 400, { error: "Unknown dashboard action." });
   } catch (e) { return send(res, 400, { error: e.message }); }
 }
 

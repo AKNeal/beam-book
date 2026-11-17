@@ -15,6 +15,12 @@ module.exports = async function handler(req, res) {
   if (!method(req, res, "GET")) return;
   const q = new URL(req.url, "http://x").searchParams;
   if (q.get("ig")) return instagram(req, res, q);
+  if (q.get("board")) { // Beam: the shop TV scoreboard — a private link, no money
+    const an = require("../lib/analytics");
+    if (q.get("board").length < 10 || q.get("board") !== await an.boardToken()) return send(res, 404, { error: "This scoreboard link has been reset. Ask the owner for the new one." });
+    res.setHeader("Cache-Control", "no-store");
+    return send(res, 200, await an.scoreboard());
+  }
   const roster = await artists.list({ publicOnly: true });
 
   if (q.get("photo")) {
