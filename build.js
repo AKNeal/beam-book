@@ -88,3 +88,13 @@ for (const file of fs.readdirSync(SRC).filter((f) => f.endsWith(".html"))) {
 // The front page of a shop is its request form.
 fs.copyFileSync(path.join(OUT, "booking.html"), path.join(OUT, "index.html"));
 console.log(`built ${n} pages`);
+
+// Sandbox builds (STORE_NAMESPACE set): a strip on every page so nobody mistakes it for the live app.
+if (process.env.STORE_NAMESPACE) {
+  const strip = `<div style="position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#f5b301;color:#000;font:600 13px/1.2 system-ui,sans-serif;text-align:center;padding:6px 10px">SANDBOX · test data only · no real emails or texts are sent</div>`;
+  for (const f of fs.readdirSync(OUT).filter((n) => n.endsWith(".html"))) {
+    const file = path.join(OUT, f), html = fs.readFileSync(file, "utf8");
+    if (!html.includes("SANDBOX ·")) fs.writeFileSync(file, html.replace("</body>", `${strip}\n</body>`));
+  }
+  console.log("Sandbox build: banner added");
+}
