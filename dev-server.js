@@ -36,7 +36,7 @@ http.createServer(async (req, res) => {
     const chunks = []; let size = 0;
     for await (const c of req) { size += c.length; if (size > 4.5 * 1024 * 1024) { res.statusCode = 413; return res.end('{"error":"Request too large"}'); } chunks.push(c); }
     const raw = Buffer.concat(chunks).toString();
-    try { req.body = raw && (req.headers["content-type"] || "").includes("json") ? JSON.parse(raw) : {}; }
+    try { req.body = !raw ? {} : (req.headers["content-type"] || "").includes("json") ? JSON.parse(raw) : (req.headers["content-type"] || "").includes("text/plain") ? raw : {}; } // like Vercel
     catch { res.statusCode = 400; return res.end('{"error":"Bad JSON"}'); }
     try { await require(file)(req, res); }
     catch (e) { console.error(e); if (!res.headersSent) { res.statusCode = 500; res.end(JSON.stringify({ error: "Something went wrong on our end. Please call the shop." })); } }

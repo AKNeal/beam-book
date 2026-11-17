@@ -33,9 +33,11 @@ function loggedIn(req) {
 
 module.exports = async function handler(req, res) {
   try {
+    if (req.method === "OPTIONS" && process.env.STORE_NAMESPACE) { importCors(res); res.statusCode = 204; return res.end(); }
     if (req.method === "GET") return await get(req, res);
     if (!method(req, res, "POST")) return;
     const b = body(req);
+    if (b.action === "importSquire" || b.action === "importSquireClear") return await importSquire(req, res, b);
     if (b.action === "login") return await login(req, res, b);
     if (b.action === "logout") { res.setHeader("Set-Cookie", `${COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure(req) ? "; Secure" : ""}`); return send(res, 200, { ok: true }); }
     if (!loggedIn(req)) return send(res, 401, { error: "Log in first." });
@@ -167,7 +169,8 @@ function settingsFrom(b) {
   return out;
 }
 
-async function create(req, res, b) {
+async function create(req, res, b) { return createWith((r, code, data) => send(res, code, data), b); }
+async function createWith(reply, b) {
   const slug = str(b.slug, 40).toLowerCase();
   if (!tenant.SLUG_RE.test(slug) || tenant.RESERVED.has(slug)) throw new Error("Short name: 1–40 lowercase letters, numbers and dashes (e.g. blackwolf).");
   if (await tenant.getRecord(slug)) throw new Error("That short name is taken.");
@@ -195,7 +198,7 @@ async function create(req, res, b) {
     await auth.saveUsers([u]);
     return auth.makeResetLink(urlFor(rec), u, 24 * 7);
   });
-  return send(res, 201, { shop: { ...rec, url: urlFor(rec) }, ownerLink: link });
+  return reply(null, 201, { shop: { ...rec, url: urlFor(rec) }, ownerLink: link });
 }
 
 async function update(req, res, b) {
@@ -252,3 +255,32 @@ async function active(req, res, b) {
 }
 
 function tenantDefaultsCal() { return JSON.parse(JSON.stringify(require("../lib/tenant").DEFAULTS.calendarDefaults)); }
+
+// Sandbox only: copy a shop over from Squire. Sent from Neal's browser while he's signed in to Squire, so it carries its own
+// token (IMPORT_TOKEN, set only on the sandbox) instead of the control-page login. Creates the shop first if it's not here yet.
+function importCors(res) {
+  res.setHeader("Access-Control-Allow-Origin", "https://hub.getsquire.com");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+async function importSquire(req, res, b) {
+  importCors(res);
+  const tok = process.env.IMPORT_TOKEN || "";
+  if (!process.env.STORE_NAMESPACE || tok.length < 20 || !crypto.timingSafeEqual(sha(b.token || ""), sha(tok))) return send(res, 403, { error: "Importing is only open on the sandbox." });
+  const slug = str(b.slug, 40).toLowerCase();
+  let rec = await tenant.getRecord(slug), ownerLink = null;
+  if (!rec) {
+    const s = b.shop || {};
+    let made = null; const send0 = (r, code, data) => { made = data; };
+    await createWith(send0, { slug, kind: "barbershop", name: s.name, ownerName: s.ownerName, ownerEmail: s.ownerEmail, artistName: s.artistName,
+      studio: { name: s.name, timeZone: s.timeZone || "America/Anchorage", phone: s.phone || "", address: s.address || "", instagram: s.instagram || "" } });
+    rec = await tenant.getRecord(slug); ownerLink = made?.ownerLink || null;
+  }
+  const imp = require("../lib/importer");
+  const out = await tenant.runAs(rec.slug, () => (b.action === "importSquire" ? imp.fromSquire(b.data || {}) : imp.clear()));
+  if (!ownerLink && b.ownerLink) ownerLink = await tenant.runAs(rec.slug, async () => {
+    const auth = require("../lib/auth"); const owner = (await auth.users()).find((u) => u.role === "owner");
+    return owner ? auth.makeResetLink(urlFor(rec), owner, 24 * 7) : null;
+  });
+  return send(res, 200, { ok: true, shop: urlFor(rec), ...out, ownerLink });
+}
