@@ -33,6 +33,7 @@ module.exports = async function handler(req, res) {
   if (/^client/.test(String(b.action || ""))) return clientsApi(req, res, me, b);
   if (/^site/.test(String(b.action || ""))) return siteApi(req, res, me, b);
   if (/^(dash|challenge|board)/.test(String(b.action || ""))) return dashApi(req, res, me, b);
+  if (/^pay/.test(String(b.action || ""))) return payApi(req, res, me, b);
   if (b.action !== "resetFeed" && (!auth.canSeeArtist(me, slug) || !(await artists.bySlug(slug)))) return send(res, 400, { error: "Unknown artist." });
   const needArtist = () => true;
 
@@ -200,6 +201,35 @@ async function dashApi(req, res, me, b) {
     if (b.action === "challengeDelete") { await an.deleteChallenge(String(b.id || "")); return send(res, 200, { challenges: await an.standings() }); }
     if (b.action === "boardLink") { const t = await an.boardToken(Boolean(b.reset)); return send(res, 200, { token: t, url: `/scoreboard?t=${t}` }); }
     return send(res, 400, { error: "Unknown dashboard action." });
+  } catch (e) { return send(res, 400, { error: e.message }); }
+}
+
+// Beam: checkout (lib/payments.js). Anyone on the team can check out appointments they can see;
+// Stripe setup and the credit-card fee rate are Owner / Site admin only.
+//   {action:"payDay", date?} · {action:"payQuote", appt, tip?, price?} · {action:"payCash", appt, tip?, price?}
+//   {action:"payCard", appt, tip?, price?} · {action:"payCardStatus", appt} · {action:"payCardConfirm", appt} · {action:"payCardCancel", appt}
+//   {action:"payTestTap", kind:"credit"|"debit"} (test mode) · {action:"paySetup"} · {action:"payConnect"} · {action:"payReader", code?, label?} · {action:"payRates", surchargePct}
+async function payApi(req, res, me, b) {
+  const pay = require("../../lib/payments");
+  const owner = auth.isFull(me);
+  try {
+    if (["paySetup", "payConnect", "payReader", "payRates"].includes(b.action) && !owner) return send(res, 403, { error: "Only the Owner or a Site manager can set up payments." });
+    if (b.action === "paySetup") return send(res, 200, await pay.status());
+    if (b.action === "payConnect") { const base = require("../../lib/http").baseUrl(req); return send(res, 200, { url: await pay.connectLink(`${base}/admin?payments=1`) }); }
+    if (b.action === "payReader") return send(res, 200, await pay.addReader({ code: b.code, label: b.label }));
+    if (b.action === "payRates") { await pay.updateRates(b); return send(res, 200, await pay.status()); }
+    if (b.action === "payTestTap") return send(res, 200, await pay.simulateTap(b.kind));
+    if (b.action === "payDay") return send(res, 200, { appts: await pay.day({ who: auth.seesAll(me) ? null : me.artist, dateKey: b.date }), status: { enabled: pay.enabled(), testMode: pay.testMode() } });
+    const id = str(b.appt, 40), appt = await cal.getAppt(id);
+    if (!appt || !auth.canSeeArtist(me, appt.artist)) return send(res, 404, { error: "That appointment isn't on your calendar." });
+    const o = { tip: b.tip, price: owner || auth.seesAll(me) ? b.price : undefined, by: me.name };
+    if (b.action === "payQuote") return send(res, 200, await pay.quote(id, o));
+    if (b.action === "payCash") return send(res, 200, { paid: await pay.payCash(id, o) });
+    if (b.action === "payCard") return send(res, 200, await pay.startCard(id, o));
+    if (b.action === "payCardStatus") return send(res, 200, await pay.cardStatus(id));
+    if (b.action === "payCardConfirm") return send(res, 200, await pay.confirmCard(id));
+    if (b.action === "payCardCancel") return send(res, 200, await pay.cancelCard(id));
+    return send(res, 400, { error: "Unknown payment action." });
   } catch (e) { return send(res, 400, { error: e.message }); }
 }
 

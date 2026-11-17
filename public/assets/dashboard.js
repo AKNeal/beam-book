@@ -58,7 +58,8 @@
       v.append(el("section", { class: "panel" }, el("h2", {}, "Gross to net"), goal,
         el("table", {}, el("tbody", {},
           row("Gross", $$(m.gross)), row(`Cash discounts ($${S.cashDiscount} × ${S.cashShare}% paying cash)`, "− " + $$(m.disc)),
-          row(S.feesPassedToClient ? "Card fees (passed to client, not taken out)" : `Card fees (${S.cardPct}% + $${S.cardFixed})`, S.feesPassedToClient ? "$0" : "− " + $$(m.card)),
+          row(`Card fees (${S.cardPct}% + $${S.cardFixed}, less what credit-card clients pay toward them)`, "− " + $$(m.card)),
+          m.tips ? row("Tips through checkout (go to barbers, not counted in gross)", $$(m.tips)) : null,
           row("Barber pay (commission / booth)", "− " + $$(m.pay)), m.booth ? row("Booth rent coming in", "+ " + $$(m.booth)) : null,
           row("Shop expenses (this period's share)", "− " + $$(m.expenses)), row(el("strong", {}, "Net"), el("strong", {}, $$(m.net))))),
         el("p", { class: "small muted" }, "Projected numbers use booked appointments at menu price. Tips aren't counted.")));
