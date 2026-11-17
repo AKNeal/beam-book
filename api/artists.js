@@ -78,6 +78,7 @@ module.exports = async function handler(req, res) {
     kind: config.kind, words: config.words, form: config.form || [], negotiate: config.negotiate,
     ageCheck: Boolean(config.ageCheck), policyCheck: Boolean(config.policyCheck), askInstagram: config.askInstagram !== false, summaryOptional: Boolean(config.summaryOptional), sessionLengths: config.sessionLengths,
     instant: Boolean(config.instant),
+    services: config.instant ? (config.services || []).map((x) => ({ id: x.id, name: x.name, price: x.price, durationMin: x.durationMin })) : [],
   });
 };
 
