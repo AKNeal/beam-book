@@ -27,9 +27,9 @@
   <div class="form" aria-label="Booking form, final step">
     <label class="f">Your name</label><div class="box">Jamie Rivers</div>
     <label class="f">Mobile phone</label><div class="box">(907) 555-0100</div>
-    <label class="check"><input type="checkbox" disabled> <span>Text me appointment confirmations and reminders from <span class="shop">the shop</span>. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. <a href="/privacy#sms">Terms &amp; privacy</a></span></label>
+    <label class="check"><input type="checkbox" disabled> <span>Text me appointment confirmations and reminders from <span class="shop">the shop</span>. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. <a href="/terms#sms">Terms</a> &amp; <a href="/privacy">Privacy</a></span></label>
   </div>
-  <p>Texting is not required to book. Only clients who tick the box get texts: a confirmation, a reminder the day before, and notices if the appointment changes. Reply STOP to opt out at any time, HELP for help. Mobile numbers and consent are never shared with third parties for marketing. See the <a href="/privacy">privacy policy and text terms</a>.</p>
+  <p>Texting is not required to book. Only clients who tick the box get texts: a confirmation, a reminder the day before, and notices if the appointment changes. Reply STOP to opt out at any time, HELP for help. Mobile numbers and consent are never shared with third parties for marketing. See the <a href="/terms#sms">Terms &amp; Conditions</a> and <a href="/privacy">Privacy Policy</a>. After booking, clients who opted in get a confirmation text right away.</p>
 </main>
 <script>
 fetch("/api/artists").then((r) => r.json()).then((d) => { const s = d.shop || {}; if (!s.name) return;

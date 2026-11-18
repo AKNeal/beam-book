@@ -116,7 +116,7 @@
       field("email", "Email (optional)", { type: "email", autocomplete: "email", inputmode: "email" }, "For your confirmation and a reminder."),
       el("div", { class: "field" }, el("label", { class: "check" }, el("input", { type: "checkbox", name: "textOk" }),
         el("span", {}, `Text me appointment confirmations and reminders from ${D.shopName || "the shop"}. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out, HELP for help. `,
-          el("a", { href: "/privacy#sms", target: "_blank", rel: "noopener" }, "Terms & privacy")))),
+          el("a", { href: "/terms#sms", target: "_blank", rel: "noopener" }, "Terms"), " & ", el("a", { href: "/privacy", target: "_blank", rel: "noopener" }, "Privacy")))),
       el("div", { class: "field", "data-f": "note" }, el("label", { for: "f-note" }, "Anything we should know? (optional)"), el("textarea", { id: "f-note", name: "note", rows: 2, maxlength: 300 })));
     const err = el("p", { class: "form-error", role: "alert", hidden: true });
     const btn = el("button", { class: "btn sign", type: "submit" }, `Book ${S.service.name}`);
