@@ -90,6 +90,11 @@ module.exports = async function handler(req, res) {
         if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can change the booking form." });
         await artists.setListed(slug, b.listed === true);
         return send(res, 200, { ok: true, artists: await artists.list() });
+      case "removeBarber": {
+        if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can remove a barber." });
+        const name = await artists.remove(slug);
+        return send(res, 200, { ok: true, removed: name, artists: await artists.list() });
+      }
       case "resetFeed":
         await cal.resetFeedToken(auth.seesAll(me) ? null : me.artist);
         return send(res, 200, { ok: true });

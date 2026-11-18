@@ -853,6 +853,21 @@ const valid = (o = {}) => ({
           : { rating, userRatingCount: 40 } });
         process.env.RANK_SOURCE = "places"; // the Places API check only runs and counts when switched on (the server runs with it too)
         delete process.env.GOOGLE_PLACES_KEY;
+        { // Owner removes a barber who came with the shop (no appointments, no login)
+          const A = require("../lib/artists");
+          const n0 = await tenant.runAs("levelup", async () => (await A.list()).length);
+          const extra = await tenant.runAs("levelup", () => A.add("Temp Barber"));
+          await tenant.runAs("levelup", () => A.remove(extra));
+          assert.equal(await tenant.runAs("levelup", async () => (await A.list()).length), n0, "added barber removed");
+          if (n0 > 1) {
+            const first = await tenant.runAs("levelup", async () => (await A.list()).find((a) => !a.added)?.slug);
+            const users = await tenant.runAs("levelup", async () => (await require("../lib/store").getJSON("users")) || []);
+            if (first && !users.some((u) => u.artist === first) && !(await tenant.runAs("levelup", () => require("../lib/calendar").apptsBetween(first, Date.now(), Date.now() + 400 * 864e5))).length) {
+              await tenant.runAs("levelup", () => A.remove(first));
+              assert.ok(!(await tenant.runAs("levelup", () => A.bySlug(first))), "built-in barber removed");
+            }
+          }
+        }
         let r1 = await tenant.runAs("levelup", () => rc.run({ force: true })); assert.equal(r1.skipped, "no key", "no key, no guessing");
         process.env.GOOGLE_PLACES_KEY = "test";
         const day1 = Date.UTC(2026, 10, 12, 20), day2 = Date.UTC(2026, 10, 13, 20); // Thu, Fri (Alaska)

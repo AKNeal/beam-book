@@ -909,7 +909,11 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
         el("div", { style: "display:grid;gap:8px" }, el("label", { class: "switch" }, sw, "Books open"),
           D.me.full && a.added ? el("label", { class: "switch" }, el("input", { type: "checkbox", checked: a.listed, onchange: async (e) => {
             try { const res = await api("/api/admin/books", { body: { action: "listed", slug: a.slug, listed: e.target.checked } }); D.artists = res.artists; toast(e.target.checked ? `${a.name} is on the booking form` : `${a.name} is off the booking form`); }
-            catch (err) { e.target.checked = !e.target.checked; toast(err.message); } } }), "Show on booking form") : null)), profileBox);
+            catch (err) { e.target.checked = !e.target.checked; toast(err.message); } } }), "Show on booking form") : null,
+          D.me.role === "owner" && D.artists.length > 1 ? el("button", { class: "linkbtn small", type: "button", style: "justify-self:start", onclick: async () => {
+            if (!confirm(`Remove ${a.name} from the shop? They come off the booking page, calendar and team lists. Past visits stay in your reports.`)) return;
+            try { const res = await api("/api/admin/books", { body: { action: "removeBarber", slug: a.slug } }); D.artists = res.artists; toast(`${res.removed} removed`); showArtists(); }
+            catch (err) { toast(err.message); } } }, "Remove barber") : null)), profileBox);
       if (wl.length) {
         const emails = wl.map((w) => w.email).join(", ");
         v.append(el("div", { style: "padding:8px 0 16px" }, el("p", { class: "small" }, el("strong", {}, `Waitlist (${wl.length}): `), wl.map((w) => `${w.name} <${w.email}>`).join(", ")),
