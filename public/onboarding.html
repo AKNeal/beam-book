@@ -5,40 +5,56 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Welcome to Beam</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --ink:#16161a; --muted:#6b6b76; --line:#e3e3e8; --soft:#f6f6f8; --accent:#e3262f; --blue:#1d4ed8; --ok:#15803d; --r:12px; }
+  :root { --ink:#0d0d0f; --ink2:#17171b; --ink3:#222228; --text:#f4f4f5; --muted:#a1a1aa; --line:#2e2e35; --accent:#e3262f; --blue:#1d4ed8; --ok:#22c55e; --r:14px; }
   * { box-sizing: border-box; }
-  body { margin: 0; font: 16px/1.5 Inter, system-ui, -apple-system, sans-serif; color: var(--ink); background: #fff; }
-  .top { background: var(--ink); color: #fff; padding: 36px 20px 30px; }
+  body { margin: 0; font: 16px/1.55 Inter, system-ui, -apple-system, sans-serif; color: var(--text); background: var(--ink); }
+  h1, h2 { font-family: Anton, Impact, sans-serif; font-weight: 400; text-transform: uppercase; letter-spacing: .02em; line-height: 1.05; }
+  .top { padding: 44px 20px 34px; text-align: center; background: radial-gradient(ellipse at top, #2a0b0d, var(--ink) 70%); border-bottom: 1px solid var(--line); }
   .top .in, main { max-width: 760px; margin: 0 auto; }
-  .stripe { height: 6px; width: 140px; border-radius: 9px; background: linear-gradient(90deg, var(--accent) 33%, #fff 33% 66%, var(--blue) 66%); margin-bottom: 16px; }
-  h1 { font-size: 34px; line-height: 1.1; margin: 0 0 8px; }
-  .top p { color: #c9c9d1; margin: 0; }
-  main { padding: 10px 20px 80px; }
-  section { border-bottom: 1px solid var(--line); padding: 26px 0; }
-  h2 { font-size: 22px; margin: 0 0 4px; } h2 small { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 6px; }
+  .logo { width: min(240px, 60vw); margin: 0 auto 18px; display: block; filter: drop-shadow(0 10px 30px rgba(0,0,0,.6)); }
+  .stripe { height: 6px; width: 140px; border-radius: 9px; background: linear-gradient(90deg, var(--accent) 33%, #fff 33% 66%, var(--blue) 66%); margin: 0 auto 16px; }
+  h1 { font-size: clamp(2.2rem, 7vw, 3.4rem); margin: 0 0 10px; }
+  .top p { color: #d4d4d8; margin: 0 auto; max-width: 560px; }
+  main { padding: 10px 20px 40px; }
+  section { border-bottom: 1px solid var(--line); padding: 30px 0; }
+  h2 { font-size: 1.9rem; margin: 0 0 4px; } h2 small { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 6px; }
   .lead { color: var(--muted); margin: 0 0 16px; font-size: 15px; }
   label { display: block; font-weight: 600; font-size: 14px; margin: 14px 0 4px; }
   label .hint { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
-  input, textarea, select { width: 100%; font: inherit; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; }
+  input, textarea, select { width: 100%; font: inherit; padding: 11px 13px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--ink2); color: var(--text); }
+  input::placeholder, textarea::placeholder { color: #6b6b76; }
   textarea { min-height: 90px; resize: vertical; }
-  input:focus, textarea:focus { outline: none; border-color: var(--ink); }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  input[type=file] { padding: 8px; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; } @media (max-width: 620px) { .two { grid-template-columns: 1fr; } }
-  .member { border: 1.5px solid var(--line); border-radius: var(--r); padding: 16px; margin: 14px 0; background: var(--soft); }
-  .member h3 { margin: 0; display: flex; align-items: center; gap: 12px; font-size: 18px; }
-  .pic { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: #ddd; flex: none; }
-  .check { display: flex; gap: 8px; align-items: center; font-weight: 400; } .check input { width: auto; }
-  .bar { position: sticky; bottom: 0; background: #fff; border-top: 1px solid var(--line); padding: 14px 20px; }
+  .member { border: 1px solid var(--line); border-radius: var(--r); padding: 18px; margin: 14px 0; background: var(--ink2); }
+  .member h3 { margin: 0; display: flex; align-items: center; gap: 12px; font: 400 1.4rem Anton, Impact, sans-serif; text-transform: uppercase; }
+  .pic { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--ink3); flex: none; border: 2px solid var(--accent); }
+  .check { display: flex; gap: 8px; align-items: center; font-weight: 400; } .check input { width: auto; accent-color: var(--accent); }
+  .bar { position: sticky; bottom: 0; background: rgba(13,13,15,.96); backdrop-filter: blur(8px); border-top: 1px solid var(--line); padding: 14px 20px; }
   .bar .in { max-width: 760px; margin: 0 auto; display: flex; gap: 12px; align-items: center; }
-  button { font: 600 16px Inter, system-ui, sans-serif; background: var(--accent); color: #fff; border: 0; border-radius: 999px; padding: 13px 26px; cursor: pointer; }
+  button { font: 700 15px Inter, system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; background: var(--accent); color: #fff; border: 0; border-radius: 999px; padding: 13px 28px; cursor: pointer; }
   button:disabled { opacity: .5; } #msg { font-size: 14px; color: var(--muted); }
-  .ok { color: var(--ok) !important; font-weight: 600; } .err { color: #b91c1c !important; font-weight: 600; }
+  .ok { color: var(--ok) !important; font-weight: 600; } .err { color: #f87171 !important; font-weight: 600; }
   .center { text-align: center; padding: 80px 20px; color: var(--muted); }
+  footer { text-align: center; padding: 34px 20px 110px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
+  footer img { height: 64px; width: auto; margin: 0 auto 10px; display: block; }
+  footer a { color: var(--text); text-decoration: none; } footer a:hover { color: var(--accent); }
+  footer .small { font-size: 12px; opacity: .7; margin-top: 8px; }
 </style>
 </head>
 <body>
-<div class="top"><div class="in"><div class="stripe"></div><h1 id="hello">Welcome</h1><p>A few questions so we can set up your website and booking. Fill in what you can; you can come back to this link and change anything. Everything saves when you press Save.</p></div></div>
+<div class="top"><div class="in"><img class="logo" id="logo" alt="" hidden><div class="stripe"></div><h1 id="hello">Welcome</h1><p>A few questions so we can set up your website and booking. Fill in what you can; you can come back to this link and change anything. Everything saves when you press Save.</p></div></div>
 <main id="main"><p class="center">Loading…</p></main>
+<footer>
+  <img src="/assets/nmp-mark.webp" alt="" width="215" height="240">
+  <div><span id="shopName">Your shop</span>'s website and booking are built and run by <a href="https://nealmedia.app" target="_blank" rel="noopener"><strong>Neal Media &amp; Production</strong></a></div>
+  <div>North Pole, Alaska</div>
+  <div style="margin-top:6px"><a href="mailto:nealmedia@yahoo.com">nealmedia@yahoo.com</a> · <a href="https://nealmedia.app" target="_blank" rel="noopener">nealmedia.app</a></div>
+  <div class="small">Questions about this form? Reply to Neal any time. Your answers are private to you and Neal Media until they go on your site.</div>
+</footer>
 <div class="bar" id="bar" hidden><div class="in"><button id="save" type="button">Save</button><span id="msg"></span></div></div>
 <script src="/assets/common.js"></script>
 <script>
@@ -52,7 +68,10 @@ async function load() {
   if (!T) { document.getElementById("main").innerHTML = '<p class="center">This page needs your private link. Ask Neal Media for it.</p>'; return; }
   const r = await fetch("/api/artists?onboard=" + encodeURIComponent(T)); const d = await r.json();
   if (!r.ok) { document.getElementById("main").innerHTML = `<p class="center">${d.error || "This link doesn't work."}</p>`; return; }
-  V = d; document.getElementById("hello").textContent = `Welcome to Beam, ${d.shop.name || "friend"}`; document.title = `${d.shop.name} · Onboarding`;
+  V = d; document.getElementById("hello").textContent = `Welcome to Beam, ${d.shop.name || "friend"}`;
+  document.getElementById("shopName").textContent = d.shop.name || "Your shop";
+  if (d.logo) { const lg = document.getElementById("logo"); lg.src = d.logo; lg.alt = d.shop.name; lg.hidden = false; }
+  if (d.accent) document.documentElement.style.setProperty("--accent", d.accent); document.title = `${d.shop.name} · Onboarding`;
   draw(); document.getElementById("bar").hidden = false;
 }
 
