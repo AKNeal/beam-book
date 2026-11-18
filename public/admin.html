@@ -822,9 +822,20 @@
     if (k.monthAvg != null) {
       body.append(el("p", {}, el("strong", {}, `This month's average: #${k.monthAvg}`), " (Friday checks)"));
     }
+    if (D.me.full && k.fee != null) body.append(el("div", { class: "notice", style: "margin-top:12px" },
+      el("strong", {}, `Google ranking fee this month: $${k.fee}${k.feeProjected ? " (projected)" : ""}`),
+      el("div", { class: "small muted" }, `${k.feeProjected ? `From today's average #${k.latestAvg}; the bill uses the month's Friday checks.` : `From the Friday average #${k.monthAvg}.`} Scale: #1 $150 · #2 $100 · #3 $75 · #4–5 $50 · below #5 $0.`)));
     if (!k.pending) body.append(el("div", { class: "rank-foot" },
       el("span", {}, el("strong", {}, `${k.reviews} Google reviews`), ` · ${Number(k.rating).toFixed(1)}★`,
         k.reviewsGained > 0 ? el("span", { style: "color:#15803d;font-weight:700" }, ` · +${k.reviewsGained} since ${rkFmt(k.reviewsSince)}`) : null)));
+    if (D.me.full) { // the owner picks up to 5 searches
+      const boxes = [0, 1, 2, 3, 4].map((i) => el("input", { value: k.searches[i]?.q || "", placeholder: i < 3 ? "" : "Add a search (optional)", style: "margin:4px 0" }));
+      body.append(el("details", { style: "margin-top:16px" }, el("summary", {}, el("strong", {}, "Your searches (up to 5)")),
+        el("p", { class: "small muted" }, "What people type into Google to find a shop like yours. Changes start with the next morning check."), boxes,
+        el("button", { class: "btn sm", type: "button", onclick: async () => {
+          try { const r = await api("/api/admin/books", { body: { action: "rankSearches", searches: boxes.map((b) => b.value.trim()).filter(Boolean) } }); D.rankings = r.rankings || D.rankings; toast("Searches saved"); showRank(); }
+          catch (e) { toast(e.message); } } }, "Save searches")));
+    }
     v.append(body);
   }
 

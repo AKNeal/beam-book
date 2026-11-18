@@ -5,7 +5,7 @@ const PORT = 4600 + Math.floor(Math.random() * 300), BASE = `http://localhost:${
 const TOKEN = "t".repeat(32);
 (async () => {
   const srv = spawn(process.execPath, ["dev-server.js"], { cwd: path.join(__dirname, ".."), stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, PORT: String(PORT), DATA_DIR: DATA, PLATFORM_PASSWORD: "control-pass", SESSION_SECRET: "s3cret", BEAMBOOK_DOMAIN: "localhost", TZ: "UTC", STORE_NAMESPACE: "sandbox", IMPORT_TOKEN: TOKEN } });
+    env: { ...process.env, PORT: String(PORT), DATA_DIR: DATA, PLATFORM_PASSWORD: "control-pass", SESSION_SECRET: "s3cret", BEAMBOOK_DOMAIN: "localhost", TZ: "UTC", STORE_NAMESPACE: "sandbox", IMPORT_TOKEN: TOKEN, RANK_INGEST_TOKEN: "r".repeat(30) } });
   let log = ""; srv.stdout.on("data", (d) => (log += d)); srv.stderr.on("data", (d) => (log += d));
   for (let i = 0; i < 50 && !log.includes("running"); i++) await new Promise((r) => setTimeout(r, 100));
   const post = async (b, host = "localhost") => { const r = await fetch(BASE + "/api/platform", { method: "POST", headers: { "Content-Type": "text/plain", "X-Forwarded-Host": host }, body: JSON.stringify(b) }); return { status: r.status, data: await r.json() }; };
@@ -51,7 +51,21 @@ const TOKEN = "t".repeat(32);
     v = await G("/api/artists"); assert.equal(v.cors, "*");
     assert.equal(v.data.shop.about, "North Pole's barbershop."); assert.equal(v.data.shop.socials.facebook, "https://facebook.com/levelup907"); assert.equal(v.data.shop.instagram, "levelup907");
     const seth = v.data.artists.find((a) => a.slug === "seth-long"); assert.equal(seth.title, "Barber"); assert.equal(seth.instagram, "@sethcuts"); assert.deepEqual(seth.styles, ["Fades", "beards"]);
+    // Google ranking from the morning search task: first ingest sets the searches; due/ingest need the token; fee for the owner only.
+    const RH = { "X-Forwarded-Host": "levelup.localhost", Authorization: "Bearer " + "r".repeat(30) };
+    assert.equal((await fetch(BASE + "/api/artists?rank=due", { headers: { "X-Forwarded-Host": "levelup.localhost" } })).status, 401);
+    let k = await fetch(BASE + "/api/artists?rank=due", { headers: RH }).then((q) => q.json()); assert.equal(k.due, false, "no searches yet");
+    const S3 = { "barbershop North Pole": { rank: 2, top: ["A", "Level Up Barbershop"] }, "barber North Pole AK": { rank: 1, top: ["Level Up Barbershop"] }, "barbershop near me": { rank: null, top: [] } };
+    r = await fetch(BASE + "/api/artists?rank=ingest", { method: "POST", headers: { ...RH, "Content-Type": "application/json" }, body: JSON.stringify({ rating: 4.9, reviews: 120, searches: S3 }) });
+    assert.equal(r.status, 200, await r.text());
+    k = await fetch(BASE + "/api/artists?rank=due", { headers: RH }).then((q) => q.json()); assert.equal(k.due, false); assert.equal(k.searches.length, 3);
+    let inbox = await fetch(BASE + "/api/admin/inbox", { headers: { ...H, Cookie: cookie } }).then((q) => q.json());
+    assert.equal(inbox.rankings.searches[0].rank, 2); assert.equal(inbox.rankings.latestAvg, 4.7); assert.equal(inbox.rankings.fee, 50, "avg 4.7 rounds to #5: +$50"); assert.ok(inbox.rankings.feeProjected);
+    r = await fetch(BASE + "/api/admin/books", { method: "POST", headers: { ...H, Cookie: cookie }, body: JSON.stringify({ action: "rankSearches", searches: [...Object.keys(S3), "fade North Pole", "beard trim North Pole", "sixth"] }) });
+    assert.equal(r.status, 400, "up to 5");
+    r = await fetch(BASE + "/api/admin/books", { method: "POST", headers: { ...H, Cookie: cookie }, body: JSON.stringify({ action: "rankSearches", searches: [...Object.keys(S3), "fade North Pole"] }) });
+    assert.equal((await r.json()).rankings.searches.length, 4);
     x = await post({ action: "importSquireClear", token: TOKEN, slug: "levelup" }); assert.equal(x.data.appointments, 4);
-    console.log("ok - Squire import: shop, team hours, services, calendar, dashboard, onboarding link (shop, socials, team), clean removal");
+    console.log("ok - Squire import: shop, team hours, services, calendar, dashboard, onboarding link (shop, socials, team), Google ranking ingest with fee and owner searches, clean removal");
   } catch (e) { console.error(e); console.error(log.slice(-3000)); process.exitCode = 1; } finally { srv.kill(); }
 })();

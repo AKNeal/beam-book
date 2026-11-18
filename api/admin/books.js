@@ -34,6 +34,11 @@ module.exports = async function handler(req, res) {
   if (/^site/.test(String(b.action || ""))) return siteApi(req, res, me, b);
   if (/^(dash|challenge|board)/.test(String(b.action || ""))) return dashApi(req, res, me, b);
   if (/^pay/.test(String(b.action || ""))) return payApi(req, res, me, b);
+  if (b.action === "rankSearches") { // Owner: the shop's Google searches (up to 5)
+    if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner can change the searches." });
+    try { const rc = require("../../lib/rankcheck"); const searches = await rc.saveSearches(b.searches); return send(res, 200, { rankings: await rc.summary({ searches }) }); }
+    catch (e) { return send(res, 400, { error: e.message }); }
+  }
   if (b.action !== "resetFeed" && (!auth.canSeeArtist(me, slug) || !(await artists.bySlug(slug)))) return send(res, 400, { error: "Unknown artist." });
   const needArtist = () => true;
 

@@ -37,7 +37,7 @@ const valid = (o = {}) => ({
 
 (async () => {
   const srv = spawn(process.execPath, ["dev-server.js"], {
-    cwd: path.join(__dirname, ".."), env: { ...process.env, PORT: String(PORT), DATA_DIR: DATA, PLATFORM_PASSWORD: "control-pass", SESSION_SECRET: "s3cret", BEAMBOOK_DOMAIN: "localhost", TZ: "UTC", EXTCAL_TEST_LOCAL: "1" }, stdio: ["ignore", "pipe", "pipe"],
+    cwd: path.join(__dirname, ".."), env: { ...process.env, PORT: String(PORT), DATA_DIR: DATA, PLATFORM_PASSWORD: "control-pass", SESSION_SECRET: "s3cret", BEAMBOOK_DOMAIN: "localhost", TZ: "UTC", EXTCAL_TEST_LOCAL: "1", RANK_SOURCE: "places" }, stdio: ["ignore", "pipe", "pipe"],
   });
   let log = ""; srv.stdout.on("data", (d) => (log += d)); srv.stderr.on("data", (d) => (log += d));
   for (let i = 0; i < 50 && !log.includes("running"); i++) await new Promise((r) => setTimeout(r, 100));
@@ -851,6 +851,7 @@ const valid = (o = {}) => ({
         const fake = (order, rating) => async (url, opt) => ({ ok: true, json: async () => url.includes("searchText")
           ? { places: order(JSON.parse(opt.body).textQuery).map((id) => ({ id, displayName: { text: id === "ChIJlevelupTEST123" ? "Test Barbershop" : `Shop ${id}` } })) }
           : { rating, userRatingCount: 40 } });
+        process.env.RANK_SOURCE = "places"; // the Places API check only runs and counts when switched on (the server runs with it too)
         delete process.env.GOOGLE_PLACES_KEY;
         let r1 = await tenant.runAs("levelup", () => rc.run({ force: true })); assert.equal(r1.skipped, "no key", "no key, no guessing");
         process.env.GOOGLE_PLACES_KEY = "test";
@@ -860,7 +861,7 @@ const valid = (o = {}) => ({
         const r2 = await tenant.runAs("levelup", () => rc.run({ now: day2, fetchImpl: fake(() => ["ChIJlevelupTEST123", "a"], 4.9) }));
         assert.equal(r2.check.weekly, true, "Friday checks are weekly");
         assert.equal((await tenant.runAs("levelup", () => rc.run({ now: day2, fetchImpl: fake(() => [], 1) }))).skipped, "already checked today");
-        const blind = await tenant.runAs("blackwolf", () => rc.run({ now: day2, fetchImpl: fake(() => [], 1) })); assert.equal(blind.skipped, "not set up");
+        const blind = await tenant.runAs("blackwolf", () => rc.run({ now: day2, fetchImpl: fake(() => [], 1) })); assert.ok(blind.skipped, "no searches, no check");
         delete process.env.GOOGLE_PLACES_KEY;
         cookie = owner;
         y = await call("/api/admin/inbox"); const k = y.data.rankings;

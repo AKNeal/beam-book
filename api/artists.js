@@ -12,8 +12,9 @@ const files = require("../lib/files");
 const { send, method } = require("../lib/http");
 
 module.exports = async function handler(req, res) {
-  if (!method(req, res, "GET")) return;
   const q = new URL(req.url, "http://x").searchParams;
+  if (q.get("rank") === "due" || q.get("rank") === "ingest") return rankApi(req, res, q.get("rank"));
+  if (!method(req, res, "GET")) return;
   if (q.get("ig")) return instagram(req, res, q);
   if (q.get("board")) { // Beam: the shop TV scoreboard — a private link, no money
     const an = require("../lib/analytics");
@@ -153,4 +154,17 @@ async function igDaily(req, res) {
     try { out[shop.slug] = await tenant.runAs(shop.slug, () => ig.daily()); } catch (e) { out[shop.slug] = { error: e.message }; }
   }
   return send(res, 200, out);
+}
+
+// Beam: the morning Google search task (Neal Media's Chrome) asks whether a search is due and sends what it read.
+//   GET  /api/artists?rank=due      POST /api/artists?rank=ingest {searches, rating?, reviews?}      Bearer RANK_INGEST_TOKEN
+async function rankApi(req, res, what) {
+  const crypto = require("crypto"), tok = process.env.RANK_INGEST_TOKEN || "", got = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  const sha = (x) => crypto.createHash("sha256").update(x).digest();
+  if (tok.length < 20 || !crypto.timingSafeEqual(sha(got), sha(tok))) return send(res, 401, { error: "Not allowed." });
+  const rc = require("../lib/rankcheck");
+  if (what === "due") return send(res, 200, await rc.due());
+  if (req.method !== "POST") return send(res, 405, { error: "POST the results." });
+  try { const check = await rc.ingest(require("../lib/http").body(req)); return send(res, 200, { ok: true, check }); }
+  catch (e) { return send(res, 400, { error: e.message }); }
 }
