@@ -15,7 +15,8 @@
   body { font-size: 16px; }
   .shell { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
   .adminbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; min-height: 60px; padding-top: 10px; padding-bottom: 10px; }
-  .adminbar nav { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+  .adminbar nav { display: flex; flex-wrap: wrap; gap: 4px 18px; flex-basis: 100%; }
+  .adminbar .look { margin-left: auto; }
   .adminbar nav a { margin-left: 0; white-space: nowrap; }
   @media (max-width: 480px) { .adminbar .brand { font-size: 18px; } .adminbar nav a { font-size: 14px; } }
   .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 20px 0 12px; }
@@ -223,10 +224,10 @@
 <body class="admin">
 <header class="top"><div class="shell adminbar">
   <div><a class="brand" href="/admin"><img class="shop-logo" data-shop="logo" alt="" hidden><span><b id="shopName" style="font-weight:inherit">Shop</b> · Inbox</span></a><div class="whoami" id="whoami"></div></div>
-  <nav id="nav" hidden><a href="#" id="viewDash">Dashboard</a><a href="#" id="viewCheckout">Checkout</a><a href="#" id="viewDay">Day</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewAppr" hidden>Apprenticeship</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewSite" hidden>Website</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
-  <label class="look">Look <select id="lookSel" aria-label="Look">
+  <label class="look">Theme <select id="lookSel" aria-label="Theme">
     <option value="">Classic</option><option value="floor">Shop Floor</option><option value="chrome">Clean Chrome</option><option value="pole">Barber Pole</option>
   </select></label>
+  <nav id="nav" hidden><a href="#" id="viewDash">Dashboard</a><a href="#" id="viewCheckout">Checkout</a><a href="#" id="viewDay">Day</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewAppr" hidden>Apprenticeship</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewSite" hidden>Website</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
 </div></header>
 <script>(function(){var sel=document.getElementById("lookSel");sel.value=document.documentElement.dataset.look||"";
 sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentElement.dataset.look=v;else delete document.documentElement.dataset.look;try{v?localStorage.setItem("bb-look",v):localStorage.removeItem("bb-look")}catch(e){}});})();</script>
