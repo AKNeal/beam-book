@@ -35,6 +35,16 @@ module.exports = async function handler(req, res) {
   if (/^(dash|challenge|board)/.test(String(b.action || ""))) return dashApi(req, res, me, b);
   if (/^pay/.test(String(b.action || ""))) return payApi(req, res, me, b);
   if (/^appr/.test(String(b.action || ""))) return apprApi(req, res, me, b);
+  if (b.action === "onboardLink") { // Owner: the shop's private setup link (the current one; fresh:true makes a new one and stops the old)
+    if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can make the setup link." });
+    const base = `https://${String(req.headers["x-forwarded-host"] || req.headers.host).split(",")[0]}`;
+    return send(res, 200, { url: await require("../../lib/onboarding").makeLink(base, { keep: b.fresh !== true }) });
+  }
+  if (b.action === "onboardFeedback") { // Owner / Neal Media: what the shop sent from the setup page
+    if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can see this." });
+    const ob = require("../../lib/onboarding");
+    return send(res, 200, { feedback: await ob.feedback(), a2p: await require("../../lib/store").getJSON("onboard:a2p") });
+  }
   if (b.action === "calsyncLinks") { // Owner: each barber's private calendar-sync link (for onboarding pages)
     if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can see sync links." });
     const base = `https://${String(req.headers["x-forwarded-host"] || req.headers.host).split(",")[0]}`, cs = require("../calsync");

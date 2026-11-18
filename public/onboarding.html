@@ -37,6 +37,19 @@
   .bar .in { max-width: 760px; margin: 0 auto; display: flex; gap: 12px; align-items: center; }
   button { font: 700 15px Inter, system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; background: var(--accent); color: #fff; border: 0; border-radius: 999px; padding: 13px 28px; cursor: pointer; }
   button:disabled { opacity: .5; } #msg { font-size: 14px; color: var(--muted); }
+  .steps { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px auto 0; justify-content: center; max-width: 760px; }
+  .steps a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--ink2); color: var(--text); text-decoration: none; font-size: 13px; font-weight: 600; }
+  .steps a.done { border-color: var(--ok); } .steps a.done::before { content: "✓"; color: var(--ok); }
+  .steps a:not(.done)::before { content: "•"; color: var(--muted); }
+  .card { border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; margin: 12px 0; background: var(--ink2); }
+  .row { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .pill { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: var(--ink3); color: var(--muted); }
+  .pill.ok { background: rgba(34,197,94,.15); color: var(--ok) !important; }
+  a.btn, button.line { display: inline-block; font: 700 14px Inter, system-ui, sans-serif; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; padding: 11px 20px; text-decoration: none; }
+  a.btn { background: var(--accent); color: #fff; } button.line { background: transparent; border: 1.5px solid var(--line); color: var(--text); }
+  ol.how { margin: 8px 0 0; padding-left: 22px; color: #d4d4d8; } ol.how li { margin: 6px 0; }
+  table.recs { width: 100%; border-collapse: collapse; font-size: 13px; } table.recs td, table.recs th { text-align: left; padding: 6px; border-bottom: 1px solid var(--line); vertical-align: top; } table.recs code { word-break: break-all; }
+  .fb { border-left: 3px solid var(--line); padding: 4px 10px; margin: 8px 0; color: #d4d4d8; font-size: 14px; }
   .ok { color: var(--ok) !important; font-weight: 600; } .err { color: #f87171 !important; font-weight: 600; }
   .center { text-align: center; padding: 80px 20px; color: var(--muted); }
   footer { text-align: center; padding: 34px 20px 110px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
@@ -46,8 +59,9 @@
 </style>
 </head>
 <body>
-<div class="top"><div class="in"><img class="logo" id="logo" alt="" hidden><div class="stripe"></div><h1 id="hello">Welcome</h1><p>A few questions so we can set up your website and booking. Fill in what you can; you can come back to this link and change anything. Everything saves when you press Save.</p></div></div>
+<div class="top"><div class="in"><nav class="steps" id="steps" aria-label="Setup steps"></nav><img class="logo" id="logo" alt="" hidden><div class="stripe"></div><h1 id="hello">Welcome</h1><p>Everything to get your booking, payments and texting running, in one place. Go step by step; you can come back to this link and change anything. Everything saves when you press Save.</p></div></div>
 <main id="main"><p class="center">Loading…</p></main>
+<main id="setup"></main>
 <footer>
   <img src="/assets/nmp-mark.webp" alt="" width="215" height="240">
   <div><span id="shopName">Your shop</span>'s website and booking are built and run by <a href="https://nealmedia.app" target="_blank" rel="noopener"><strong>Neal Media &amp; Production</strong></a></div>
@@ -55,7 +69,7 @@
   <div style="margin-top:6px"><a href="mailto:nealmedia@yahoo.com">nealmedia@yahoo.com</a> · <a href="https://nealmedia.app" target="_blank" rel="noopener">nealmedia.app</a></div>
   <div class="small">Questions about this form? Reply to Neal any time. Your answers are private to you and Neal Media until they go on your site.</div>
 </footer>
-<div class="bar" id="bar" hidden><div class="in"><button id="save" type="button">Save</button><span id="msg"></span></div></div>
+<div class="bar" id="bar" hidden><div class="in"><button id="save" type="button">Save shop details</button><span id="msg"></span></div></div>
 <script src="/assets/common.js"></script>
 <script>
 const q = new URLSearchParams(location.search), T = q.get("t") || "";
@@ -72,13 +86,13 @@ async function load() {
   document.getElementById("shopName").textContent = d.shop.name || "Your shop";
   if (d.logo) { const lg = document.getElementById("logo"); lg.src = d.logo; lg.alt = d.shop.name; lg.hidden = false; }
   if (d.accent) document.documentElement.style.setProperty("--accent", d.accent); document.title = `${d.shop.name} · Onboarding`;
-  draw(); document.getElementById("bar").hidden = false;
+  draw(); document.getElementById("bar").hidden = false; loadSetup();
 }
 
 function draw() {
   const m = document.getElementById("main"); m.textContent = "";
   const sh = V.shop, x = V.extra || {};
-  m.append(el("section", { id: "s-shop" }, el("h2", {}, "1. Your shop"), el("p", { class: "lead" }, "What clients see on your website and booking page."),
+  m.append(el("section", { id: "s-shop" }, el("h2", {}, "1. Your shop ", el("small", {}, "details, team, socials")), el("p", { class: "lead" }, "What clients see on your website and booking page."),
     el("div", { class: "two" }, f("Shop phone", "phone", sh.phone, { type: "tel" }), f("Shop email", "email", sh.email, { type: "email" })),
     f("Address", "address", sh.address, { ph: "Street, city, state, zip" }),
     f("About the shop", "about", sh.about, { long: true, hint: "Your story, the vibe, what you're known for. A few sentences is perfect.", rows: 5 }),
@@ -86,11 +100,11 @@ function draw() {
     f("Hours note", "hoursNote", sh.hoursNote, { hint: "Anything about hours beyond each barber's schedule (holidays, late nights)." }),
     el("div", { class: "two" }, f("Parking", "parking", sh.parking), f("Ways to pay", "payments", sh.payments, { ph: "Cash, cards, Apple Pay…" }))));
 
-  m.append(el("section", { id: "s-social" }, el("h2", {}, "2. Website and socials"), el("p", { class: "lead" }, "We'll promote these on your website. Paste a link or an @handle; leave blank what you don't use."),
+  m.append(el("section", { id: "s-social" }, el("h2", {}, "Website and socials"), el("p", { class: "lead" }, "We'll promote these on your website. Paste a link or an @handle; leave blank what you don't use."),
     f("Current website (if any)", "website", sh.website),
     el("div", { class: "two" }, ...Object.keys(V.socialLabels).map((k) => f(V.socialLabels[k], "so_" + k, V.socials[k], { ph: k === "instagram" ? "@levelup907" : k === "google" ? "Your Google Business link" : "" })))));
 
-  const team = el("section", { id: "s-team" }, el("h2", {}, "3. Meet the team"), el("p", { class: "lead" }, "This becomes the Meet the Team page. Add a photo, a title and a short bio for each person. Untick anyone who shouldn't be on the website."));
+  const team = el("section", { id: "s-team" }, el("h2", {}, "Meet the team"), el("p", { class: "lead" }, "This becomes the Meet the Team page. Add a photo, a title and a short bio for each person. Untick anyone who shouldn't be on the website."));
   for (const t of V.team) {
     const img = el("img", { class: "pic", src: t.photo || "data:image/gif;base64,R0lGODlhAQABAAAAACw=", alt: "" });
     const file = el("input", { type: "file", accept: "image/*", onchange: async (e) => { const fl = e.target.files[0]; if (!fl) return; const d = await window.BW.shrink(fl, 1000, 0.82); photos[t.slug] = d; img.src = d; } });
@@ -105,7 +119,7 @@ function draw() {
   }
   m.append(team);
 
-  m.append(el("section", { id: "s-more" }, el("h2", {}, "4. Promotions and policies"),
+  m.append(el("section", { id: "s-more" }, el("h2", {}, "Promotions and policies"),
     f("What should we promote right now?", "x_promote", x.promote, { long: true, hint: "Specials, events, products, new barbers, gift cards." }),
     f("Cancellation and no-show policy", "x_policy", x.policy, { long: true, rows: 3, hint: "e.g. 2 hours' notice to change or cancel; no-shows pay a fee." }),
     f("Prizes for the team's rebooking challenges", "x_prizes", x.prizes, { ph: "e.g. $100 cash, a day off" }),
@@ -125,9 +139,112 @@ async function save() {
   try {
     const r = await fetch("/api/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Couldn't save. Try again.");
-    photos = {}; msg.className = "ok"; msg.textContent = "Saved. Thank you! You can come back and change anything.";
+    photos = {}; msg.className = "ok"; msg.textContent = "Saved. Thank you! You can come back and change anything."; post({ action: "onboardDone", step: "details" }).then(loadSetup);
   } catch (e) { msg.className = "err"; msg.textContent = e.message; }
   b.disabled = false;
+}
+
+// ----- Setup steps: get paid, calendars, texting, email, try it, feedback -----
+let SU = null;
+async function post(body) {
+  const r = await fetch("/api/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ t: T, ...body }) });
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Something went wrong. Try again."); return d;
+}
+async function loadSetup() { try { SU = await post({ action: "onboardSetup" }); drawSetup(); } catch (e) { console.warn(e); } }
+const pill = (ok, yes, no) => el("span", { class: "pill" + (ok ? " ok" : "") }, ok ? yes : no);
+const note = () => el("p", { class: "small", role: "status", style: "margin:8px 0 0;color:var(--muted)" });
+function says(n, ok, m) { n.className = ok ? "ok" : "err"; n.textContent = m; }
+
+function drawSetup() {
+  const S = SU, m = document.getElementById("setup"); m.textContent = "";
+  const cal = S.calendars.filter((c) => c.synced).length;
+  const st = [["s-shop", "Your shop", Boolean(S.done.details || V.submittedAt)], ["pay", "Get paid", S.pay.ready], ["cal", "Calendars", S.calendars.length > 0 && cal === S.calendars.length],
+    ["text", "Texting", Boolean(S.a2p) && S.texting], ["email", "Email", !S.emailDomain || S.emailDomain.done], ["test", "Try it", Boolean(S.done.test)], ["feedback", "Feedback", S.feedback.length > 0]];
+  const nav = document.getElementById("steps"); nav.textContent = "";
+  st.forEach(([id, label, ok]) => nav.append(el("a", { href: "#" + id, class: ok ? "done" : "" }, label)));
+
+  // 2. Get paid
+  const payMsg = note();
+  m.append(el("section", { id: "pay" }, el("h2", {}, "2. Get paid by card"),
+    el("p", { class: "lead" }, "Card payments go straight to your bank. Neal Media handles the Stripe side for you: refunds, disputes and reports. You fill in one secure Stripe form (your ID and bank account, about 5 minutes) and never need a Stripe login."),
+    el("div", { class: "card" }, el("div", { class: "row" }, el("b", {}, "Card payments"),
+      pill(S.pay.ready, "Ready to take cards", S.pay.connected ? (S.pay.details ? "Stripe is reviewing" : "Form not finished") : "Not set up")),
+      S.pay.ready ? el("p", { class: "small", style: "color:var(--muted)" }, "All set. Payouts land in your bank automatically.") :
+        el("p", {}, el("button", { type: "button", onclick: async (e) => { e.target.disabled = true; payMsg.textContent = "Opening Stripe…";
+          try { location.href = (await post({ action: "onboardStripe" })).url; } catch (er) { says(payMsg, false, er.message); e.target.disabled = false; } } }, S.pay.connected ? "Finish the Stripe form" : "Set up card payments")),
+      payMsg),
+    el("p", { class: "small", style: "color:var(--muted)" }, "Cash still works the same: clients who pay cash get $5 off at checkout.")));
+
+  // 3. Calendars
+  const calBox = el("section", { id: "cal" }, el("h2", {}, "3. Sync calendars"),
+    el("p", { class: "lead" }, "Each barber connects the calendar they already use (iPhone, Google, or the one Squire sends appointments to). Online booking then skips anything they're busy with, so nothing gets double-booked while Squire is still running. Clients never see what's on it."));
+  S.calendars.forEach((c) => {
+    const n = note();
+    calBox.append(el("div", { class: "card" }, el("div", { class: "row" }, el("b", {}, c.name), pill(c.synced, "Synced", "Not synced yet")),
+      el("div", { class: "row", style: "justify-content:flex-start;margin-top:10px" },
+        el("a", { class: "btn", href: c.link, target: "_blank", rel: "noopener" }, c.synced ? "Open" : "Sync now"),
+        el("button", { class: "line", type: "button", onclick: async () => { try { await navigator.clipboard.writeText(c.link); says(n, true, "Link copied. Text it to " + c.name.split(" ")[0] + "."); } catch { says(n, false, c.link); } } }, "Copy link to send")), n));
+  });
+  calBox.append(el("p", {}, el("button", { class: "line", type: "button", onclick: loadSetup }, "Refresh")));
+  m.append(calBox);
+
+  // 4. Texting
+  const a = S.a2p || {}, tMsg = note(), tf = (lbl, k, o = {}) => f(lbl, "a2p_" + k, a[k], o);
+  const testPhone = el("input", { type: "tel", placeholder: "Your cell, e.g. 907-555-0123", style: "max-width:260px" }), testMsg = note();
+  m.append(el("section", { id: "text" }, el("h2", {}, "4. Texting"),
+    el("p", { class: "lead" }, "Texting is the main way clients hear from the shop: booking confirmations, reminders the day before, and changes. It comes from Level Up's own 907 number. Phone carriers require every business that texts to be registered, so we need your business details once. Only Neal Media sees them."),
+    el("div", { class: "card" }, el("div", { class: "row" }, el("b", {}, "Business details for texting"), pill(Boolean(S.a2p), "Sent to Neal Media", "Needed")),
+      tf("Legal business name", "legalName", { hint: "Exactly as it's registered (e.g. Level Up Barbershop LLC). If you don't have a business registration, use your own name." }),
+      el("label", {}, "Business type", el("select", { name: "a2p_businessType" }, ["", "LLC", "Corporation", "Partnership", "Sole proprietor (no EIN)"].map((o) => el("option", { value: o, selected: a.businessType === o }, o || "Pick one")))),
+      el("div", { class: "two" }, f("EIN (business tax ID)", "a2p_ein", "", { ph: a.einSet ? "Saved " + a.ein + " (type to change)" : "12-3456789", hint: "From your IRS letter. Leave blank if you're a sole proprietor." }), tf("Business website", "website", { ph: "levelupbarbershop907.com" })),
+      tf("Business street address", "street"),
+      el("div", { class: "two" }, tf("City", "city"), tf("State", "state", { ph: "AK" })), tf("ZIP", "zip", { mode: "numeric" }),
+      el("div", { class: "two" }, tf("Contact name", "contactName"), tf("Contact email", "contactEmail", { type: "email" })),
+      tf("Contact cell", "contactPhone", { type: "tel", hint: "Sole proprietors get a one-time code here to confirm." }),
+      el("p", {}, el("button", { type: "button", onclick: async (e) => {
+        const b = {}; ["legalName", "businessType", "ein", "street", "city", "state", "zip", "contactName", "contactEmail", "contactPhone", "website"].forEach((k) => { const x = document.querySelector(`[name="a2p_${k}"]`); if (x) b[k] = x.value; });
+        e.target.disabled = true; try { await post({ action: "onboardA2p", a2p: b }); says(tMsg, true, "Sent to Neal Media. Carriers usually approve in 1 to 3 weeks."); loadSetup(); } catch (er) { says(tMsg, false, er.message); } e.target.disabled = false; } }, "Send details")), tMsg),
+    el("div", { class: "card" }, el("div", { class: "row" }, el("b", {}, "Send yourself a test text"), pill(S.texting, "Texting is on", "Turning on soon")),
+      S.texting ? el("div", { class: "row", style: "justify-content:flex-start;margin-top:10px" }, testPhone, el("button", { type: "button", onclick: async (e) => {
+        e.target.disabled = true; try { await post({ action: "onboardTestText", phone: testPhone.value }); says(testMsg, true, "Sent. Check your phone."); } catch (er) { says(testMsg, false, er.message); } e.target.disabled = false; } }, "Send test"))
+        : el("p", { class: "small", style: "color:var(--muted)" }, "Neal Media is setting up the shop's 907 number. Once the carriers approve it, you can send a test from here."), testMsg)));
+
+  // 5. Email
+  if (S.emailDomain) {
+    const d = S.emailDomain, eMsg = note();
+    const copy = (v) => el("button", { class: "line", type: "button", style: "padding:4px 10px;font-size:11px", onclick: () => navigator.clipboard && navigator.clipboard.writeText(v).then(() => says(eMsg, true, "Copied")) }, "Copy");
+    m.append(el("section", { id: "email" }, el("h2", {}, "5. Email from your domain"),
+      el("p", { class: "lead" }, "Booking emails can come from @levelupbarbershop907.com instead of a Neal Media address. This doesn't change your website, your current email or Squire. It only adds 4 records in Squarespace."),
+      el("div", { class: "card" }, el("div", { class: "row" }, el("b", {}, d.label), pill(d.done, "Done", "To do")),
+        el("p", { style: "white-space:pre-line;color:#d4d4d8;font-size:14px" }, d.details),
+        el("div", { style: "overflow-x:auto" }, el("table", { class: "recs" }, el("tr", {}, el("th", {}, "Type"), el("th", {}, "Host"), el("th", {}, "Value")),
+          d.records.map((r) => el("tr", {}, el("td", {}, r.type), el("td", {}, el("code", {}, r.host), " ", copy(r.host)), el("td", {}, el("code", {}, r.value), " ", copy(r.value)))))),
+        el("p", {}, el("button", { type: "button", onclick: async () => { try { await post({ action: "onboardDnsDone", done: !d.done }); loadSetup(); } catch (er) { says(eMsg, false, er.message); } } }, d.done ? "Not done yet" : "I added them")), eMsg)));
+  } else m.append(el("section", { id: "email" }, el("h2", {}, "5. Email"), el("p", { class: "lead" }, "Nothing to do here. Booking emails come from Neal Media's address for now.")));
+
+  // 6. Try it
+  m.append(el("section", { id: "test" }, el("h2", {}, "6. Try it out"),
+    el("p", { class: "lead" }, "Walk through it like a client, then like the shop. Use your own name and cell so you see exactly what clients get."),
+    el("ol", { class: "how" },
+      el("li", {}, "Book yourself: ", el("a", { href: S.links.booking, target: "_blank", rel: "noopener", style: "color:var(--text)" }, "open the booking page"), ", pick a barber, a service and a time. Tick \"Text me a confirmation\"."),
+      el("li", {}, "Check your phone and email for the confirmation."),
+      el("li", {}, "Open ", el("a", { href: S.links.inbox, target: "_blank", rel: "noopener", style: "color:var(--text)" }, "your inbox"), ". The booking is on the Calendar and the Day view."),
+      el("li", {}, "In Checkout, ring it up as cash to see the $5 discount, then cancel the test booking from the inbox."),
+      el("li", {}, "Anything confusing or wrong? Tell us below.")),
+    el("p", {}, el("button", { type: "button", onclick: async () => { await post({ action: "onboardDone", step: "test", done: !S.done.test }).catch(() => {}); loadSetup(); } }, S.done.test ? "Tested ✓ (undo)" : "I tried it"))));
+
+  // 7. Feedback
+  const fMsg = note(), area = el("select", {}, ["Booking page", "Inbox", "Checkout", "Texting", "Calendar", "Website", "Payments", "Something else"].map((o) => el("option", { value: o }, o)));
+  const mood = el("select", {}, ["", "Love it", "It's OK", "Confusing", "Broken"].map((o) => el("option", { value: o }, o || "How's it feel?")));
+  const txt = el("textarea", { rows: 4, placeholder: "What worked, what didn't, what you wish it did." });
+  m.append(el("section", { id: "feedback" }, el("h2", {}, "7. Feedback"),
+    el("p", { class: "lead" }, "This system is built for your shop. Tell us anything, any time. It goes straight to Neal Media, and you can come back and add more."),
+    el("div", { class: "two" }, el("label", {}, "About", area), el("label", {}, "Feeling", mood)), el("label", {}, "Your feedback", txt),
+    el("p", {}, el("button", { type: "button", onclick: async (e) => { e.target.disabled = true;
+      try { await post({ action: "onboardFeedback", area: area.value, mood: mood.value, text: txt.value, from: (V.shop && V.shop.name) || "" }); txt.value = ""; says(fMsg, true, "Thanks! Neal Media got it."); loadSetup(); } catch (er) { says(fMsg, false, er.message); } e.target.disabled = false; } }, "Send feedback")), fMsg,
+    S.feedback.length ? el("div", {}, el("p", { class: "small", style: "color:var(--muted);margin-top:16px" }, "What you've sent:"),
+      S.feedback.slice().reverse().map((x) => el("div", { class: "fb" }, el("b", {}, x.area + (x.mood ? " · " + x.mood : "")), " ", el("span", { style: "color:var(--muted);font-size:12px" }, new Date(x.at).toLocaleDateString()), el("div", {}, x.text)))) : null));
+  if (location.hash && !drawSetup.jumped) { drawSetup.jumped = true; const t = document.querySelector(location.hash); if (t) t.scrollIntoView(); }
 }
 document.getElementById("save").addEventListener("click", save);
 load();

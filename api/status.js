@@ -99,9 +99,46 @@ async function get(req, res) {
   return send(res, 200, await view(r, q.get("t")));
 }
 
+// The shop's private setup link (onboarding.html): details, get paid, calendars, texting, email, try it, feedback.
+async function onboard(req, res, b) {
+  if ((await store.hit(`rl:onboard:${ip(req)}`, 3600)) > 300) return send(res, 429, { error: "Too many tries. Wait a bit and try again." });
+  const ob = require("../lib/onboarding");
+  if (!(await ob.check(b.t))) return send(res, 404, { error: "This link has expired. Ask Neal Media for a new one." });
+  const base = `https://${String(req.headers["x-forwarded-host"] || req.headers.host).split(",")[0]}`;
+  try {
+    switch (b.action) {
+      case "onboardSave": return send(res, 200, await ob.save(b));
+      case "onboardSetup": return send(res, 200, await ob.setup(base));
+      case "onboardStripe": {
+        const pay = require("../lib/payments");
+        if (!pay.enabled()) return send(res, 400, { error: "Card payments are almost ready. Neal Media is finishing the last step; check back soon." });
+        return send(res, 200, { url: await pay.connectLink(`${base}/onboarding?shop=${encodeURIComponent(config.tenant)}&t=${encodeURIComponent(str(b.t, 60))}#pay`) });
+      }
+      case "onboardTestText": {
+        if ((await store.hit(`rl:onboardsms:${ip(req)}`, 3600)) > 5) return send(res, 429, { error: "That's enough test texts for now. Try again in an hour." });
+        const sms = require("../lib/sms");
+        if (!sms.smsReady()) return send(res, 400, { error: "Texting isn't switched on yet. Neal Media is finishing it." });
+        if (!sms.toE164(b.phone)) return send(res, 400, { error: "Enter a US cell number." });
+        const r = await sms.sendSms(b.phone, "This is a test text from your booking system. Clients get their confirmations and reminders like this. Reply STOP to opt out.");
+        return send(res, 200, { ok: !r.error, ...r });
+      }
+      case "onboardDone": return send(res, 200, { done: await ob.markDone(str(b.step, 20), b.done !== false) });
+      case "onboardDnsDone": {
+        const site = require("../lib/site");
+        await site.saveItem({ key: "email_dns", done: b.done !== false });
+        return send(res, 200, { ok: true });
+      }
+      case "onboardA2p": return send(res, 200, { ok: true, a2p: await ob.saveA2p(b.a2p || {}) });
+      case "onboardFeedback": return send(res, 200, { ok: true, item: await ob.addFeedback(b) });
+      default: return send(res, 400, { error: "Unknown action." });
+    }
+  } catch (e) { return send(res, 400, { error: e.message }); }
+}
+
 async function post(req, res) {
-  if ((await store.hit(`rl:status:${ip(req)}`, 3600)) > 30) return send(res, 429, { error: "Too many tries. Please call the shop." });
   const b = body(req);
+  if (/^onboard/.test(String(b.action || ""))) return onboard(req, res, b);
+  if ((await store.hit(`rl:status:${ip(req)}`, 3600)) > 30) return send(res, 429, { error: "Too many tries. Please call the shop." });
   if (b.action === "onboardSave") { // Beam: the shop's private onboarding page (lib/onboarding.js)
     const ob = require("../lib/onboarding");
     if (!(await ob.check(b.t))) return send(res, 404, { error: "This link has expired. Ask Neal Media for a new one." });

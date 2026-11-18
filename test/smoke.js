@@ -558,6 +558,25 @@ const valid = (o = {}) => ({
         cookie = "";
         open = (await call(`/api/schedule?id=${cid}&t=${ctok}`)).data.days;
         assert.ok(open.flatMap((d) => d.slots).some((x) => x.start === target), "removing the calendar frees the time");
+        { // Shop setup link: setup status, texting sign-up, steps, feedback
+          cookie = real;
+          const OL = await call("/api/admin/books", { body: { action: "onboardLink" } }); assert.equal(OL.status, 200, JSON.stringify(OL.data));
+          const ot = new URL(OL.data.url).searchParams.get("t");
+          cookie = "";
+          let o = await call("/api/status", { body: { action: "onboardSetup", t: "nope" } }); assert.equal(o.status, 404);
+          o = await call("/api/status", { body: { action: "onboardSetup", t: ot } }); assert.equal(o.status, 200, JSON.stringify(o.data));
+          assert.ok(Array.isArray(o.data.calendars) && o.data.links.booking.endsWith("/appointment")); assert.equal(o.data.texting, false);
+          o = await call("/api/status", { body: { action: "onboardA2p", t: ot, a2p: { legalName: "Test Shop LLC", ein: "12345", contactEmail: "a@example.com" } } }); assert.equal(o.status, 400, "bad EIN refused");
+          o = await call("/api/status", { body: { action: "onboardA2p", t: ot, a2p: { legalName: "Test Shop LLC", ein: "12-3456789", businessType: "LLC", contactEmail: "a@example.com" } } });
+          assert.equal(o.status, 200, JSON.stringify(o.data)); assert.equal(o.data.a2p.ein, "••-•••6789", "EIN masked when shown back");
+          o = await call("/api/status", { body: { action: "onboardTestText", t: ot, phone: "9075550123" } }); assert.equal(o.status, 400, "no texting without Twilio");
+          o = await call("/api/status", { body: { action: "onboardDone", t: ot, step: "test" } }); assert.ok(o.data.done.test);
+          o = await call("/api/status", { body: { action: "onboardFeedback", t: ot, area: "Inbox", text: "Love the day view" } }); assert.equal(o.status, 200);
+          o = await call("/api/status", { body: { action: "onboardSetup", t: ot } }); assert.equal(o.data.feedback.length, 1); assert.equal(o.data.a2p.legalName, "Test Shop LLC");
+          cookie = real;
+          o = await call("/api/admin/books", { body: { action: "onboardFeedback" } }); assert.equal(o.data.feedback[0].text, "Love the day view");
+          cookie = "";
+        }
         { // Barber's own calendar-sync link (onboarding pages): no login, key-checked
           cookie = real;
           const L = await call("/api/admin/books", { body: { action: "calsyncLinks" } }); assert.equal(L.status, 200, JSON.stringify(L.data));
