@@ -16,7 +16,7 @@ const TOKEN = "t".repeat(32);
       teamOrder: ["Kiley K", "Snow D", "Seth Long"],
       team: [{ name: "Snow D", category: "snows services", hours: { 2: "12:00-18:00", 3: "09:00-18:00", 6: "09:00-18:00" } },
         { name: "Seth Long", category: "licensed barber services", hours: { 3: "09:00-18:00" } }],
-      catalog: { "snows services": [["Standard Haircut", 55, 30, true], ["Beard Trim w/ Razor", 25, 15, true]], "licensed barber services": [["Haircut", 50, 45, true], ["Beard trim, w/ razor", 25, 30, true], ["Hidden thing", 5, 15, false]] },
+      catalog: { "snows services": [["Standard Haircut", 55, 30, true], ["Beard Trim w/ Razor", 25, 15, true], ["Kids Cut", 45, 30, true]], "licensed barber services": [["Haircut", 50, 45, true], ["Beard trim, w/ razor", 25, 30, true], ["Hidden thing", 5, 15, false], ["Kids Cut", 40, 30, true]] },
       days, raw: ["Standard Haircut", "Beard Trim w/ Razor, Standard Haircut", "Haircut", "Beard trim, w/ razor"],
       rows: [[0, 600, 30, 1, "Jo Client", 0, 1], [1, 600, 45, 1, "Jo Client", 1, 0], [2, 660, 45, 2, "Al Other", 2, 0], [3, 720, 30, 2, "Al Other", 3, 0], [3, 600, 30, 0, "Nobody", 0, 0]],
       blocks: [[3, 780, 30, 1]],
@@ -25,9 +25,12 @@ const TOKEN = "t".repeat(32);
     assert.equal(x.status, 403);
     x = await post({ action: "importSquire", token: TOKEN, slug: "levelup", shop: { name: "Level Up Barbershop", ownerName: "Snow", ownerEmail: "snow@example.com", artistName: "Snow D" }, data });
     assert.equal(x.status, 200, JSON.stringify(x.data));
-    assert.equal(x.data.appointments, 4, "rows for unknown team members are skipped"); assert.equal(x.data.bookedAhead, 1); assert.equal(x.data.services, 4, "hidden services left out"); assert.ok(x.data.ownerLink);
+    assert.equal(x.data.appointments, 4, "rows for unknown team members are skipped"); assert.equal(x.data.bookedAhead, 1); assert.equal(x.data.services, 6, "hidden services left out; the same name priced by two barbers stays two services"); assert.ok(x.data.ownerLink);
     x = await post({ action: "importSquire", token: TOKEN, slug: "levelup", data });
     assert.equal(x.data.appointments, 4, "running it again replaces, doesn't double");
+    { const sch = await fetch(BASE + "/api/schedule?instant=1", { headers: { "X-Forwarded-Host": "levelup.localhost" } }).then((q) => q.json());
+      const kids = sch.services.filter((q) => q.name === "Kids Cut").map((q) => [q.price, q.barbers.join(",")]).sort();
+      assert.deepEqual(kids, [[40, "seth-long"], [45, "snow-d"]], "each barber's own Kids Cut price"); }
     // Owner logs in through the link and reads the dashboard.
     const link = new URL((await post({ action: "importSquire", token: TOKEN, slug: "levelup", data, ownerLink: true })).data.ownerLink);
     const H = { "Content-Type": "application/json", "X-Forwarded-Host": "levelup.localhost" };
