@@ -8,8 +8,9 @@
 <link rel="icon" href="/assets/brand/beam-icon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=Press+Start+2P&family=Anton&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&family=Alfa+Slab+One&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
+<script>try{var lk=localStorage.getItem("bb-look");if(lk&&/^(floor|chrome|pole)$/.test(lk))document.documentElement.dataset.look=lk}catch(e){}</script>
 <style>
   body { font-size: 16px; }
   .shell { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
@@ -18,7 +19,7 @@
   .adminbar nav a { margin-left: 0; white-space: nowrap; }
   @media (max-width: 480px) { .adminbar .brand { font-size: 18px; } .adminbar nav a { font-size: 14px; } }
   .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 20px 0 12px; }
-  .tab { border: 1.5px solid var(--line); background: #fff; border-radius: 99px; padding: 6px 14px; font: 600 14px var(--body); cursor: pointer; color: var(--ink); }
+  .tab { border: 1.5px solid var(--line); background: var(--white); border-radius: 99px; padding: 6px 14px; font: 600 14px var(--body); cursor: pointer; color: var(--ink); }
   .tab[aria-pressed="true"] { border: 1.5px dashed var(--sign-dark); background: var(--soft); }
   .tab .n { color: var(--graphite); font-weight: 400; margin-left: 4px; }
   .filters { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -28,14 +29,14 @@
   .list { border-top: 1.5px solid var(--ink); max-height: calc(100vh - 220px); overflow: auto; }
   @media (max-width: 860px) { .list { max-height: none; } }
   .item { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: transparent; padding: 12px 10px; cursor: pointer; font: inherit; color: inherit; }
-  .item:hover { background: #fff; }
+  .item:hover { background: var(--white); }
   .item[aria-current="true"] { background: var(--soft); box-shadow: inset 3px 0 0 var(--sign-dark); }
   .item .who { font-weight: 700; }
   .item .what { color: var(--graphite); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .item .meta { font-size: 13px; color: var(--graphite); margin-top: 4px; }
   .st { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; margin-left: 6px; }
   .st.new { color: var(--ink); } .st.quoted, .st.deposit, .st.scheduling { color: #8a5a00; } .st.booked { color: var(--ok); } .st.done, .st.declined { color: var(--graphite); }
-  .panel { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
   .facts { display: grid; grid-template-columns: 140px 1fr; gap: 6px 14px; margin: 16px 0; font-size: 15px; }
   .facts dt { color: var(--graphite); } .facts dd { margin: 0; }
   .pics { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin: 12px 0; }
@@ -174,13 +175,61 @@
     .award-q { font-size: 12px; } .award-ahead { display: none; }
   }
 
+
+  /* ---------- Looks: one dropdown in the header, remembered on this device (from Artemis's Level Up dashboard).
+     Classic = the shop's own light inbox. Shop Floor and Clean Chrome keep the shop's accent color; Barber Pole has its own. */
+  .look { display: inline-flex; align-items: center; gap: 8px; font: 700 12px var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--graphite); }
+  .look select { font: 600 14px var(--body); letter-spacing: 0; text-transform: none; color: var(--ink); background: var(--white); border: 1px solid var(--line); border-radius: 99px; padding: 6px 10px; cursor: pointer; }
+  html[data-look] header.top { position: sticky; top: 0; z-index: 30; }
+  /* Classic inbox for a dark-mode shop: the inbox is light, so derive the soft and link colors for light (fixes unreadable selected tabs). */
+  html:not(.light):not([data-look]) body.admin { --soft: color-mix(in srgb, var(--sign) 12%, #ffffff) !important;
+    --sign-dark: color-mix(in srgb, var(--sign) 72%, #000000) !important; --gold-bright: color-mix(in srgb, var(--sign) 72%, #000000) !important; }
+  html[data-look="floor"] body.admin {
+    color-scheme: dark;
+    --snow: #0d0d0f; --white: #17171b; --ink: #f4f4f5; --graphite: #a1a1aa; --line: #2e2e35; --field: #3f3f46; --night: #07090b;
+    --danger-soft: #3a1f1c; --error: #ff8a80; --ok: #4ade80; --radius: 12px; --btn-hover: #ffffff;
+    --head: Anton, Impact, "Arial Narrow", sans-serif; --body: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --sign-dark: color-mix(in srgb, var(--sign) 65%, #ffffff) !important; --gold-bright: color-mix(in srgb, var(--sign) 65%, #ffffff) !important;
+    --gold: var(--sign) !important; --soft: color-mix(in srgb, var(--sign) 16%, #0d0d0f) !important;
+  }
+  html[data-look="floor"] header.top { background: #17171b; border-bottom: 1px solid #2e2e35; }
+  html[data-look="floor"] h1, html[data-look="floor"] h2 { font-weight: 400; text-transform: uppercase; letter-spacing: .01em; }
+  html[data-look="chrome"] body.admin {
+    color-scheme: light;
+    --snow: #eef0f4; --white: #ffffff; --ink: #15171c; --graphite: #6b7280; --line: #dfe2e8; --field: #cfd3da; --radius: 16px; --btn-hover: #000;
+    --head: Oswald, Impact, sans-serif; --body: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --sign-dark: color-mix(in srgb, var(--sign) 75%, #000000) !important; --gold-bright: color-mix(in srgb, var(--sign) 75%, #000000) !important;
+    --gold: color-mix(in srgb, var(--sign) 85%, #000000) !important; --soft: color-mix(in srgb, var(--sign) 10%, #ffffff) !important;
+  }
+  html[data-look="chrome"] header.top { background: #ffffff; border-bottom: 1px solid #dfe2e8; }
+  html[data-look="chrome"] .panel, html[data-look="chrome"] .dash .kpi, html[data-look="chrome"] .dash .ch { box-shadow: 0 1px 2px rgba(16,24,40,.05), 0 4px 14px rgba(16,24,40,.04); }
+  html[data-look="chrome"] h1, html[data-look="chrome"] h2 { font-weight: 600; text-transform: uppercase; }
+  html[data-look="pole"] body.admin {
+    color-scheme: light;
+    --snow: #f3ead7; --white: #fffaf0; --ink: #1b2540; --graphite: #6e6550; --line: #d8c7a2; --field: #c9b68e; --radius: 6px; --btn-hover: #1b2540;
+    --head: "Alfa Slab One", Georgia, serif; --body: "Source Sans 3", system-ui, sans-serif;
+    --sign: #b3121f !important; --sign-hover: #d42a36 !important; --on-sign: #ffffff !important; --sign-dark: #b3121f !important;
+    --gold: #1f4e9c !important; --gold-bright: #1f4e9c !important; --soft: #efe3c8 !important;
+  }
+  html[data-look="pole"] header.top { background: #1b2540; color: #fffaf0; position: sticky; }
+  html[data-look="pole"] header.top::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 6px; pointer-events: none;
+    background: repeating-linear-gradient(-45deg, #b3121f 0 14px, #fffaf0 14px 28px, #1f4e9c 28px 42px, #fffaf0 42px 56px); }
+  html[data-look="pole"] header.top a, html[data-look="pole"] header.top .look { color: #fffaf0; }
+  html[data-look="pole"] header.top .whoami { color: #d8c7a2; }
+  html[data-look="pole"] .panel { box-shadow: 3px 3px 0 var(--line); }
+  html[data-look="pole"] h1, html[data-look="pole"] h2 { font-weight: 400; }
 </style>
 </head>
 <body class="admin">
 <header class="top"><div class="shell adminbar">
   <div><a class="brand" href="/admin"><img class="shop-logo" data-shop="logo" alt="" hidden><span><b id="shopName" style="font-weight:inherit">Shop</b> · Inbox</span></a><div class="whoami" id="whoami"></div></div>
   <nav id="nav" hidden><a href="#" id="viewDash">Dashboard</a><a href="#" id="viewCheckout">Checkout</a><a href="#" id="viewDay">Day</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewSite" hidden>Website</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
+  <label class="look">Look <select id="lookSel" aria-label="Look">
+    <option value="">Classic</option><option value="floor">Shop Floor</option><option value="chrome">Clean Chrome</option><option value="pole">Barber Pole</option>
+  </select></label>
 </div></header>
+<script>(function(){var sel=document.getElementById("lookSel");sel.value=document.documentElement.dataset.look||"";
+sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentElement.dataset.look=v;else delete document.documentElement.dataset.look;try{v?localStorage.setItem("bb-look",v):localStorage.removeItem("bb-look")}catch(e){}});})();</script>
 
 <main class="shell" id="app">
   <p id="bootMsg" class="authbox" role="alert" hidden></p>

@@ -11,13 +11,13 @@
 
   const css = `
   .dash h1{font-size:44px;margin:28px 0 6px}.dash .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin:16px 0}
-  .dash .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}.dash .kpi b{display:block;font-size:28px;line-height:1.15}
+  .dash .kpi{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}.dash .kpi b{display:block;font-size:28px;line-height:1.15}
   .dash .kpi span{font-size:13px;color:var(--graphite)}.dash .kpi.hot{border:2px solid var(--ink)}
   .dash table{width:100%;border-collapse:collapse;font-size:15px}.dash th,.dash td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}.dash th{font-size:13px;color:var(--graphite);font-weight:600}
   .dash td.n,.dash th.n{text-align:right}.dash .bars{display:flex;align-items:flex-end;gap:3px;height:120px;margin:12px 0 4px}
   .dash .bars i{flex:1;background:var(--ink);border-radius:3px 3px 0 0;min-height:2px;position:relative}.dash .bars i.fut{background:repeating-linear-gradient(45deg,#999 0 3px,#ccc 3px 6px)}
   .dash .prog{height:10px;background:var(--line);border-radius:99px;overflow:hidden}.dash .prog i{display:block;height:100%;background:#d32f2f;border-radius:99px}.dash .prog i.ok{background:#15803d}
-  .dash .ch{border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin:10px 0;background:#fff}.dash .ch h3{margin:0 0 4px}
+  .dash .ch{border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin:10px 0;background:var(--white)}.dash .ch h3{margin:0 0 4px}
   .dash .ch .r{display:grid;grid-template-columns:160px 1fr 70px;gap:10px;align-items:center;font-size:14px;margin:6px 0}
   .dash section.panel{margin:18px 0}.dash .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:640px){.dash .two{grid-template-columns:1fr}}
   .dash label{display:block;font-size:14px;margin:8px 0}.dash label input,.dash label select,.dash label textarea{display:block;width:100%;margin-top:4px}

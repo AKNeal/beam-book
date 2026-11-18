@@ -12,7 +12,7 @@
   .ck h1{font-size:44px;margin:28px 0 6px}.ck .appt{display:grid;grid-template-columns:80px 1fr auto;gap:10px;align-items:center;padding:12px 10px;border-bottom:1px solid var(--line);cursor:pointer;background:transparent;border-left:0;border-right:0;border-top:0;width:100%;text-align:left;font:inherit;color:inherit}
   .ck .appt[aria-current="true"]{background:var(--soft)}.ck .paid{color:#15803d;font-weight:700;font-size:13px}.ck .due{color:var(--graphite);font-size:13px}
   .ck .grid2{display:grid;grid-template-columns:minmax(260px,1fr) minmax(300px,1.2fr);gap:24px;align-items:start}@media(max-width:860px){.ck .grid2{grid-template-columns:1fr}}
-  .ck .tips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.ck .tips button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .ck .tips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.ck .tips button[aria-pressed="true"]{background:var(--ink);color:var(--white)}
   .ck .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}.ck .opt{border:2px solid var(--line);border-radius:var(--radius);padding:14px}
   .ck .opt b{display:block;font-size:30px}.ck .opt small{color:var(--graphite)}.ck .big{width:100%;padding:14px;font-size:17px;margin-top:10px}
   .ck .state{border:2px dashed var(--ink);border-radius:var(--radius);padding:16px;margin:12px 0;font-size:16px}
