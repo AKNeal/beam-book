@@ -558,6 +558,18 @@ const valid = (o = {}) => ({
         cookie = "";
         open = (await call(`/api/schedule?id=${cid}&t=${ctok}`)).data.days;
         assert.ok(open.flatMap((d) => d.slots).some((x) => x.start === target), "removing the calendar frees the time");
+        { // Barber's own calendar-sync link (onboarding pages): no login, key-checked
+          cookie = real;
+          const L = await call("/api/admin/books", { body: { action: "calsyncLinks" } }); assert.equal(L.status, 200, JSON.stringify(L.data));
+          const lk = new URL(L.data.links.find((x) => x.slug === "nathan-ealey").url);
+          const qb = lk.searchParams.get("b"), qk = lk.searchParams.get("k");
+          cookie = "";
+          let g = await call(`/api/calsync?b=${qb}&k=${qk.replace(/.$/, (c) => (c === "0" ? "1" : "0"))}`); assert.equal(g.status, 404, "wrong key refused");
+          g = await call(`/api/calsync?b=${qb}&k=${qk}`); assert.equal(g.status, 200); assert.equal(g.data.calendars.length, 0);
+          g = await call("/api/calsync", { body: { b: qb, k: qk, name: "iPhone", url: icsUrl } }); assert.equal(g.status, 200, JSON.stringify(g.data));
+          assert.equal(g.data.calendars[0].events, 1, "all-day off by default from the sync page"); assert.ok(!JSON.stringify(g.data).includes("Sleeve"), "no event details");
+          g = await call("/api/calsync", { body: { b: qb, k: qk, remove: g.data.calendars[0].id } }); assert.equal(g.data.calendars.length, 0);
+        }
         cookie = real;
         await call("/api/admin/update", { body: { id: cid, action: "delete" } });
       } finally { icsSrv.close(); }

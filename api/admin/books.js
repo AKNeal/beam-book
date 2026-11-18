@@ -35,6 +35,11 @@ module.exports = async function handler(req, res) {
   if (/^(dash|challenge|board)/.test(String(b.action || ""))) return dashApi(req, res, me, b);
   if (/^pay/.test(String(b.action || ""))) return payApi(req, res, me, b);
   if (/^appr/.test(String(b.action || ""))) return apprApi(req, res, me, b);
+  if (b.action === "calsyncLinks") { // Owner: each barber's private calendar-sync link (for onboarding pages)
+    if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can see sync links." });
+    const base = `https://${String(req.headers["x-forwarded-host"] || req.headers.host).split(",")[0]}`, cs = require("../calsync");
+    return send(res, 200, { links: (await artists.list()).map((a) => ({ slug: a.slug, name: a.name, url: cs.linkFor(base, a.slug) })) });
+  }
   if (b.action === "rankSearches") { // Owner: the shop's Google searches (up to 5)
     if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner can change the searches." });
     try { const rc = require("../../lib/rankcheck"); const searches = await rc.saveSearches(b.searches); return send(res, 200, { rankings: await rc.summary({ searches }) }); }

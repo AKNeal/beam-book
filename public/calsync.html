@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Sync your calendar</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#0d0d0f; --ink2:#17171b; --ink3:#222228; --text:#f4f4f5; --muted:#a1a1aa; --line:#2e2e35; --accent:#e3262f; --blue:#1d4ed8; --ok:#22c55e; --r:14px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.55 Inter, system-ui, -apple-system, sans-serif; color: var(--text); background: var(--ink); }
+  h1, h2 { font-family: Anton, Impact, sans-serif; font-weight: 400; text-transform: uppercase; letter-spacing: .02em; line-height: 1.05; }
+  .top { padding: 40px 20px 28px; text-align: center; background: radial-gradient(ellipse at top, #2a0b0d, var(--ink) 70%); border-bottom: 1px solid var(--line); }
+  .stripe { height: 6px; width: 140px; border-radius: 9px; background: linear-gradient(90deg, var(--accent) 33%, #fff 33% 66%, var(--blue) 66%); margin: 0 auto 16px; }
+  h1 { font-size: clamp(2rem, 7vw, 3rem); margin: 0 0 8px; }
+  .top p { color: #d4d4d8; margin: 0 auto; max-width: 560px; }
+  main { max-width: 720px; margin: 0 auto; padding: 10px 20px 48px; }
+  section { border-bottom: 1px solid var(--line); padding: 26px 0; }
+  h2 { font-size: 1.6rem; margin: 0 0 8px; }
+  .muted { color: var(--muted); } .small { font-size: 14px; }
+  details { background: var(--ink2); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; margin: 10px 0; }
+  summary { cursor: pointer; font-weight: 700; }
+  ol { margin: 10px 0 0; padding-left: 22px; } li { margin: 4px 0; }
+  label { display: block; font-weight: 600; font-size: 14px; margin: 14px 0 4px; }
+  input[type=text], input[type=url] { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--ink3); color: var(--text); font: inherit; }
+  .check { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+  button { font: 700 15px Inter, sans-serif; border: 0; border-radius: 99px; padding: 12px 22px; background: var(--accent); color: #fff; cursor: pointer; margin-top: 16px; }
+  button[disabled] { opacity: .6; cursor: wait; }
+  .linkbtn { background: none; color: var(--muted); padding: 0; margin: 0 0 0 10px; font-weight: 600; text-decoration: underline; }
+  .cal { display: flex; justify-content: space-between; gap: 10px; background: var(--ink2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 8px 0; }
+  .ok { color: var(--ok); } .err { color: #fca5a5; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="top"><div class="stripe"></div><h1 id="title">Sync your calendar</h1><p id="sub">Connect the calendar you already use, so online booking never lands on top of something you've got going on.</p></div>
+<main>
+  <p id="bad" class="err" hidden></p>
+  <div id="app" hidden>
+    <section>
+      <h2>How it works</h2>
+      <p>Beam checks your calendar every few minutes and treats anything on it as busy. Clients booking online only see open times. They never see what's on your calendar.</p>
+      <p class="muted small">If you still take bookings in Squire, connect the calendar Squire puts your appointments into, so nothing gets double-booked while both are running.</p>
+    </section>
+    <section>
+      <h2>1. Get your calendar link</h2>
+      <details open><summary>iPhone (iCloud calendar)</summary>
+        <ol>
+          <li>Open the <b>Calendar</b> app and tap <b>Calendars</b> at the bottom.</li>
+          <li>Tap the <b>ⓘ</b> next to the calendar your appointments are on. It has to be under <b>iCloud</b>, not "On My iPhone".</li>
+          <li>Turn on <b>Public Calendar</b>, then tap <b>Share Link…</b> → <b>Copy</b>.</li>
+          <li>Paste it below. It starts with <code>webcal://</code>.</li>
+        </ol>
+      </details>
+      <details><summary>Google Calendar</summary>
+        <ol>
+          <li>On a computer, open <b>calendar.google.com</b> → the gear icon → <b>Settings</b>.</li>
+          <li>On the left, under <b>Settings for my calendars</b>, click your calendar.</li>
+          <li>Scroll to <b>Integrate calendar</b> and copy <b>Secret address in iCal format</b>.</li>
+          <li>Paste it below.</li>
+        </ol>
+      </details>
+      <details><summary>Squire</summary>
+        <p class="small">If Squire is set to send your appointments to your iPhone or Google calendar, connect that calendar using the steps above. If Squire gives you its own calendar link (starts with <code>webcal://</code> or ends in <code>.ics</code>), you can paste that instead.</p>
+      </details>
+    </section>
+    <section>
+      <h2>2. Connect it</h2>
+      <form id="f">
+        <label for="url">Calendar link</label>
+        <input id="url" type="url" inputmode="url" autocomplete="off" placeholder="webcal://… or https://…" required>
+        <label for="name">Name it <span class="muted small">(just for you)</span></label>
+        <input id="name" type="text" maxlength="60" placeholder="My iPhone calendar">
+        <label class="check"><input id="allDay" type="checkbox"> All-day events block my whole day (leave off if you keep birthdays and reminders on it)</label>
+        <button id="go" type="submit">Connect calendar</button>
+        <p id="msg" class="small" role="status"></p>
+      </form>
+    </section>
+    <section>
+      <h2>Connected</h2>
+      <div id="cals"><p class="muted">Nothing yet.</p></div>
+    </section>
+  </div>
+</main>
+<script>
+(function () {
+  var p = new URLSearchParams(location.search), b = p.get("b") || "", k = p.get("k") || "";
+  var $ = function (id) { return document.getElementById(id); };
+  function api(body) {
+    var opt = body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.assign({ b: b, k: k }, body)) } : {};
+    return fetch("/api/calsync" + (body ? "" : "?b=" + encodeURIComponent(b) + "&k=" + encodeURIComponent(k)), opt)
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "Something went wrong."); return j; }); });
+  }
+  function draw(d) {
+    $("title").textContent = "Sync your calendar, " + d.name.split(" ")[0];
+    $("sub").textContent = "Connect the calendar you already use to your " + d.shop + " booking page, so online bookings never land on top of something you've got going on.";
+    var box = $("cals"); box.textContent = "";
+    if (!d.calendars.length) { box.innerHTML = '<p class="muted">Nothing yet.</p>'; return; }
+    d.calendars.forEach(function (c) {
+      var row = document.createElement("div"); row.className = "cal";
+      var left = document.createElement("div");
+      var t = document.createElement("b"); t.textContent = c.name; left.appendChild(t);
+      var s = document.createElement("div"); s.className = "small " + (c.error ? "err" : "ok");
+      s.textContent = c.error ? "Problem reading it: " + c.error : "Synced ✓ " + c.events + " upcoming busy time" + (c.events === 1 ? "" : "s") + " found";
+      left.appendChild(s);
+      var rm = document.createElement("button"); rm.className = "linkbtn"; rm.type = "button"; rm.textContent = "Disconnect";
+      rm.onclick = function () { if (confirm("Disconnect " + c.name + "?")) api({ remove: c.id }).then(draw).catch(function (e) { alert(e.message); }); };
+      row.appendChild(left); row.appendChild(rm); box.appendChild(row);
+    });
+  }
+  api().then(function (d) { $("app").hidden = false; draw(d); }).catch(function (e) { $("bad").textContent = e.message; $("bad").hidden = false; });
+  $("f").onsubmit = function (ev) {
+    ev.preventDefault(); var go = $("go"), msg = $("msg"); go.disabled = true; msg.className = "small"; msg.textContent = "Reading your calendar…";
+    api({ url: $("url").value, name: $("name").value, allDay: $("allDay").checked })
+      .then(function (d) { draw(d); $("url").value = ""; $("name").value = ""; msg.className = "small ok"; msg.textContent = "Connected. You're all set."; })
+      .catch(function (e) { msg.className = "small err"; msg.textContent = e.message; })
+      .then(function () { go.disabled = false; });
+  };
+})();
+</script>
+</body>
+</html>
