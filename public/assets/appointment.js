@@ -115,7 +115,8 @@
       field("phone", "Mobile phone", { type: "tel", autocomplete: "tel", inputmode: "tel", required: true }, "So the shop can reach you about your appointment."),
       field("email", "Email (optional)", { type: "email", autocomplete: "email", inputmode: "email" }, "For your confirmation and a reminder."),
       el("div", { class: "field" }, el("label", { class: "check" }, el("input", { type: "checkbox", name: "textOk" }),
-        "Text me a confirmation and a reminder the day before. Reply STOP any time.")),
+        el("span", {}, `Text me appointment confirmations and reminders from ${D.shopName || "the shop"}. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out, HELP for help. `,
+          el("a", { href: "/privacy#sms", target: "_blank", rel: "noopener" }, "Terms & privacy")))),
       el("div", { class: "field", "data-f": "note" }, el("label", { for: "f-note" }, "Anything we should know? (optional)"), el("textarea", { id: "f-note", name: "note", rows: 2, maxlength: 300 })));
     const err = el("p", { class: "form-error", role: "alert", hidden: true });
     const btn = el("button", { class: "btn sign", type: "submit" }, `Book ${S.service.name}`);
