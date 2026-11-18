@@ -1,4 +1,5 @@
-// Instant booking: pick a service, then a barber (or anyone), then a time, then your details. Booked right away.
+// Instant booking: pick a barber (or first available), then one of THEIR services (each barber prices their own), then a
+// time, then your details. Booked right away. ?barber=<slug> ("Book with Snow") starts at that barber's menu.
 (async () => {
   const { api, el } = BW;
   const app = document.getElementById("app"), intro = document.getElementById("intro");
@@ -35,44 +36,57 @@
   }
 
   function render() {
-    intro.textContent = `Pick a service${D.barbers.length > 1 ? ", a barber" : ""} and a time. You're booked right away. Times are shop time (${D.timeZone}).`;
+    const many = D.barbers.length > 1;
+    intro.textContent = `${many ? "Pick your barber, then a service" : "Pick a service"} and a time. You're booked right away. Times are shop time (${D.timeZone}).`;
     app.textContent = "";
+    if (!many && !S.barber) S.barber = D.barbers[0].slug;
+    const offers = (s, slug) => !s.barbers || !s.barbers.length || s.barbers.includes(slug);
+    const bookable = (s) => !s.barbers || !s.barbers.length || s.barbers.some((b) => D.barbers.some((x) => x.slug === b));
+    const card = { type: "button", class: "choice", style: "text-align:left;font:inherit;color:inherit;display:flex;align-items:center;gap:14px" };
+    const face = (b) => b.photo ? el("img", { src: b.photo, alt: "", width: 52, height: 52, style: "width:52px;height:52px;border-radius:50%;object-fit:cover;flex:none" })
+      : el("span", { "aria-hidden": "true", style: "width:52px;height:52px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--soft);color:var(--ink);font:700 18px var(--head)" },
+        b.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase());
 
-    // 1. Service
+    // 1. Barber (each barber has their own menu and prices)
+    if (many) {
+      if (!S.barber) {
+        const list = el("div", { class: "choices" });
+        list.append(el("button", { ...card, onclick: () => { S.barber = "any"; S.service = null; render(); } },
+          el("span", { "aria-hidden": "true", style: "width:52px;height:52px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--sign);color:var(--on-sign, #fff);font:700 22px var(--head)" }, "⚡"),
+          el("span", {}, el("strong", { style: "display:block" }, "First available"), el("span", {}, "Whoever has the soonest opening"))));
+        for (const b of D.barbers) list.append(el("button", { ...card, onclick: () => { S.barber = b.slug; if (S.service && !offers(S.service, b.slug)) S.service = null; render(); } },
+          face(b), el("span", {}, el("strong", { style: "display:block" }, b.name), el("span", {}, "See their services and prices"))));
+        app.append(step(1, "Barber", false, list));
+        return;
+      }
+      const who = S.barber === "any" ? null : D.barbers.find((b) => b.slug === S.barber);
+      app.append(step(1, "Barber", true, el("p", { style: "margin:0;display:flex;align-items:center;gap:12px" }, who ? face(who) : null, el("strong", {}, who ? who.name : "First available")),
+        () => { S.barber = null; S.service = null; S.days = null; render(); }));
+    }
+
+    // 2. Service: this barber's own menu; for First available, every bookable service (with the barber's name when two barbers price it differently)
+    const n = many ? 2 : 1;
     if (!S.service) {
       const list = el("div", { class: "choices" });
-      // Only services someone on the booking page offers; with a barber picked (e.g. "Book with Snow"), only theirs.
-      const offered = D.services.filter((s) => !s.barbers || !s.barbers.length || s.barbers.some((b) => D.barbers.some((x) => x.slug === b)))
-        .filter((s) => !S.barber || S.barber === "any" || !s.barbers || !s.barbers.length || s.barbers.includes(S.barber));
-      if (S.barber && S.barber !== "any") list.append(el("p", { class: "muted small", style: "margin:0 0 10px" }, `Services with ${nameOf(S.barber)}. `,
-        el("a", { href: "#", onclick: (e) => { e.preventDefault(); S.barber = null; render(); } }, "See everyone's")));
-      for (const s of offered) {
-        list.append(el("button", { type: "button", class: "choice", style: "text-align:left;font:inherit;color:inherit", onclick: () => { S.service = s; S.barber = S.barber && (!s.barbers || s.barbers.includes(S.barber)) ? S.barber : null; if (D.barbers.length === 1) S.barber = D.barbers[0].slug; S.barber ? loadTimes() : render(); } },
-          el("strong", {}, s.name), el("span", {}, [s.priceLabel, mins(s.durationMin)].filter(Boolean).join(" · "))));
+      const menu = D.services.filter(bookable).filter((s) => S.barber === "any" || offers(s, S.barber));
+      const dupe = (s) => menu.filter((x) => x.name.toLowerCase() === s.name.toLowerCase()).length > 1;
+      for (const s of menu) {
+        const by = S.barber === "any" && dupe(s) && s.barbers ? s.barbers.map(nameOf).filter(Boolean).join(", ") : "";
+        list.append(el("button", { type: "button", class: "choice", style: "text-align:left;font:inherit;color:inherit",
+          onclick: () => { S.service = s; if (S.barber === "any") { const pool = D.barbers.filter((b) => offers(s, b.slug)); if (pool.length === 1) S.barber = pool[0].slug; } loadTimes(); } },
+          el("strong", {}, s.name), el("span", {}, [s.priceLabel, mins(s.durationMin), by].filter(Boolean).join(" · "))));
       }
-      app.append(step(1, "Service", false, list));
+      if (!menu.length) list.append(el("p", { class: "muted" }, "Nothing bookable online with this barber yet. Pick someone else or call the shop."));
+      app.append(step(n, "Service", false, list));
       return;
     }
-    app.append(step(1, "Service", true, el("p", { style: "margin:0" }, el("strong", {}, S.service.name), ` · ${[S.service.priceLabel, mins(S.service.durationMin)].filter(Boolean).join(" · ")}`),
+    app.append(step(n, "Service", true, el("p", { style: "margin:0" }, el("strong", {}, S.service.name), ` · ${[S.service.priceLabel, mins(S.service.durationMin)].filter(Boolean).join(" · ")}`),
       () => { S.service = null; S.days = null; render(); }));
 
-    // 2. Barber
-    const pool = D.barbers.filter((b) => !S.service.barbers || S.service.barbers.includes(b.slug));
-    if (!S.barber) {
-      const list = el("div", { class: "choices" });
-      if (pool.length > 1) list.append(el("button", { type: "button", class: "choice", style: "text-align:left;font:inherit;color:inherit", onclick: () => { S.barber = "any"; loadTimes(); } },
-        el("strong", {}, "First available"), el("span", {}, "See the most open times")));
-      for (const b of pool) list.append(el("button", { type: "button", class: "choice", style: "text-align:left;font:inherit;color:inherit", onclick: () => { S.barber = b.slug; loadTimes(); } }, el("strong", {}, b.name)));
-      app.append(step(2, "Barber", false, list));
-      return;
-    }
-    app.append(step(2, "Barber", true, el("p", { style: "margin:0" }, el("strong", {}, S.barber === "any" ? "First available" : nameOf(S.barber))),
-      pool.length > 1 ? () => { S.barber = null; S.days = null; render(); } : null));
-
     // 3. Time
-    if (!S.days) { app.append(step(3, "Time", false, el("p", { class: "muted" }, "Finding open times…"))); return; }
+    if (!S.days) { app.append(step(n + 1, "Time", false, el("p", { class: "muted" }, "Finding open times…"))); return; }
     if (!S.days.length) {
-      app.append(step(3, "Time", false, el("div", { class: "panel" }, el("h3", {}, "No open times"),
+      app.append(step(n + 1, "Time", false, el("div", { class: "panel" }, el("h3", {}, "No open times"),
         el("p", { style: "margin:0" }, `Nothing open in the next few weeks${S.barber !== "any" ? ` with ${nameOf(S.barber).split(" ")[0]}. Try First available` : ""}${D.phone ? `, or call ${D.phone}` : ""}.`))));
       return;
     }
@@ -85,11 +99,11 @@
       }
       const grid = el("div", { class: "slot-grid" });
       for (const s of S.day.slots) grid.append(el("button", { type: "button", class: "slot", onclick: () => { S.slot = s; render(); } }, s.label));
-      app.append(step(3, "Time", false, el("div", {}, dayRow, el("div", { class: "slots" }, el("h2", {}, S.day.label), grid))));
+      app.append(step(n + 1, "Time", false, el("div", {}, dayRow, el("div", { class: "slots" }, el("h2", {}, S.day.label), grid))));
       return;
     }
     const who = S.barber === "any" ? nameOf(S.slot.barber) : nameOf(S.barber);
-    app.append(step(3, "Time", true, el("p", { style: "margin:0" }, el("strong", {}, `${S.day.label} at ${S.slot.label}`), who ? ` with ${who}` : ""),
+    app.append(step(n + 1, "Time", true, el("p", { style: "margin:0" }, el("strong", {}, `${S.day.label} at ${S.slot.label}`), who ? ` with ${who}` : ""),
       () => { S.slot = null; render(); }));
 
     // 4. You
@@ -122,7 +136,7 @@
         if (x.data?.taken) { S.slot = null; setTimeout(loadTimes, 1200); }
       }
     });
-    app.append(step(4, "Your details", false, f));
+    app.append(step(n + 2, "Your details", false, f));
   }
 
   function done(r) {
