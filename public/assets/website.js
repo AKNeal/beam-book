@@ -64,7 +64,7 @@
       return wrap;
     }
     var btn = el("button", { class: "btn sm line", type: "button", onclick: function () { editing = editing === it.key ? null : it.key; redraw(); } },
-      editing === it.key ? "Close" : done ? "Edit" : /^photo/.test(it.type) ? "Upload" : it.type === "form" ? "Answer" : "Add");
+      editing === it.key ? "Close" : it.type === "task" ? (done ? "View" : "Open") : done ? "Edit" : /^photo/.test(it.type) ? "Upload" : it.type === "form" ? "Answer" : "Add");
     wrap.append(el("div", { class: "ck-row" },
       el("span", { class: "led", role: "img", "aria-label": done ? "Done" : it.optional ? "Optional" : it.skipped ? "Skipped" : "Still needed" }),
       el("span", { class: "t", title: it.hint || "" }, it.label),
@@ -83,7 +83,22 @@
     }
     if (it.hint) box.append(el("p", { class: "small muted hint" }, it.hint));
     var btns = el("div", { class: "row-btns" });
-    if (it.type === "form") {
+    if (it.type === "task") {
+      if (it.details) box.append(el("p", { style: "white-space:pre-line;margin:6px 0 10px" }, it.details));
+      if (it.records && it.records.length) {
+        var copyBtn = function (v) { return el("button", { class: "btn sm line", type: "button", onclick: function () { if (navigator.clipboard) navigator.clipboard.writeText(v).then(function () { ctxToast("Copied"); }); } }, "Copy"); };
+        box.append(el("div", { style: "overflow-x:auto" }, el("table", { class: "ck-records", style: "width:100%;border-collapse:collapse;font-size:14px" },
+          el("thead", {}, el("tr", {}, ["Type", "Host", "Value", it.records.some(function (r) { return r.priority; }) ? "Priority" : null].filter(Boolean).map(function (h) { return el("th", { style: "text-align:left;padding:6px;border-bottom:1px solid var(--line)" }, h); }))),
+          el("tbody", {}, it.records.map(function (r) {
+            return el("tr", {},
+              el("td", { style: "padding:6px;border-bottom:1px solid var(--line)" }, r.type),
+              el("td", { style: "padding:6px;border-bottom:1px solid var(--line);white-space:nowrap" }, el("code", {}, r.host), " ", copyBtn(r.host)),
+              el("td", { style: "padding:6px;border-bottom:1px solid var(--line);word-break:break-all" }, el("code", {}, r.value), " ", copyBtn(r.value)),
+              it.records.some(function (x) { return x.priority; }) ? el("td", { style: "padding:6px;border-bottom:1px solid var(--line)" }, r.priority || "") : null);
+          })))));
+      }
+      btns.append(el("button", { class: "btn sm", type: "button", onclick: function () { save({ done: !it.value }, it.value ? "Back on the list" : "Marked done. Thanks!"); } }, it.value ? "Not done yet" : "Mark done"));
+    } else if (it.type === "form") {
       var ans = it.value || {}, inputs = {};
       box.append(el("p", { class: "small muted hint" }, "Private: only you and Neal Media see these answers."));
       (it.questions || []).forEach(function (q) {
