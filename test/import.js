@@ -39,6 +39,28 @@ const TOKEN = "t".repeat(32);
     assert.equal(dash.cuts, 4); assert.equal(dash.money.gross, 55 + 80 + 50 + 25, "prices from the catalog, multi-service visits add up");
     assert.equal(dash.rebookRate, null, "Squire doesn't say when visits were booked, so no rebook rate from imports");
     assert.equal(dash.newClients, 2);
+    // Squire history (Appointments CSV): when visits were booked, cash/card, tips, no-shows, and an older visit the calendar didn't have.
+    const us = (iso) => { const [y, m, dd] = iso.split("-"); return `${+m}/${+dd}/${y}`; };
+    const hrow = (staff, day, time, client, service, cost, extra = {}) => ({ staff, date: us(day), time, client, service, cost: String(cost), dur: "30", status: "Completed", ...extra });
+    const rows = [
+      hrow("Snow D", days[0], "10:00 am", "Jo Client", "Standard Haircut", 55, { pay: "Cash", tip: "10", cdate: us(d(-30)), ctime: "9:00 am" }),
+      hrow("Snow D", days[1], "10:00 am", "Jo Client", "Beard Trim w/ Razor, Standard Haircut", 80, { pay: "Squire Card", cdate: us(days[0]), ctime: "10:15 am" }),
+      hrow("Seth Long", days[3], "12:00 pm", "Al Other", "Beard trim, w/ razor", 25, { status: "Upcoming", cdate: us(days[2]), ctime: "11:30 am" }),
+      hrow("Snow D", d(-10), "2:00 pm", "Ghost", "Standard Haircut", 55, { status: "No-Show" }),
+      hrow("Seth Long", d(-25), "9:00 am", "Pat Old", "Haircut", 50, { pay: "Cash" }),
+      hrow("Kiley K", d(-5), "9:00 am", "Somebody", "Haircut", 50, { pay: "Cash" }),
+    ];
+    r = await fetch(BASE + "/api/admin/books", { method: "POST", headers: { ...H, Cookie: cookie }, body: JSON.stringify({ action: "squireHistory", rows }) });
+    const hx = await r.json(); assert.equal(r.status, 200, JSON.stringify(hx)); assert.equal(hx.rows, 5); assert.deepEqual(hx.unknownBarbers, ["Kiley K"]);
+    r = await fetch(BASE + "/api/admin/books", { method: "POST", headers: { ...H, Cookie: cookie }, body: JSON.stringify({ action: "dash", from: d(-30), to: d(10) }) });
+    const dh = (await r.json()).dash;
+    assert.equal(dh.cuts, 5, "the older visit from history is added"); assert.equal(dh.money.gross, 55 + 80 + 50 + 25 + 50);
+    assert.equal(dh.rebookable, 3); assert.equal(dh.rebooks, 2, "booked-in-the-chair visits count from the history's booking times");
+    assert.equal(dh.money.paidCash, 2); assert.equal(dh.money.paidCard, 1); assert.equal(dh.money.tips, 10); assert.equal(dh.noShows, 1);
+    r = await fetch(BASE + "/api/admin/books", { method: "POST", headers: { ...H, Cookie: cookie }, body: JSON.stringify({ action: "squireHistoryClear" }) });
+    assert.equal(r.status, 200);
+    r = await fetch(BASE + "/api/admin/books", { method: "POST", headers: { ...H, Cookie: cookie }, body: JSON.stringify({ action: "dash", from: d(-30), to: d(10) }) });
+    assert.equal((await r.json()).dash.cuts, 4, "removing the history puts it back");
     // Onboarding link: owner fills shop details, socials and team; the website reads them back publicly.
     const ob = new URL((await post({ action: "importSquire", token: TOKEN, slug: "levelup", data, onboardLink: true })).data.onboardLink);
     const G = (u) => fetch(BASE + u, { headers: { "X-Forwarded-Host": "levelup.localhost" } }).then(async (q) => ({ status: q.status, data: await q.json(), cors: q.headers.get("access-control-allow-origin") }));
@@ -66,6 +88,6 @@ const TOKEN = "t".repeat(32);
     r = await fetch(BASE + "/api/admin/books", { method: "POST", headers: { ...H, Cookie: cookie }, body: JSON.stringify({ action: "rankSearches", searches: [...Object.keys(S3), "fade North Pole"] }) });
     assert.equal((await r.json()).rankings.searches.length, 4);
     x = await post({ action: "importSquireClear", token: TOKEN, slug: "levelup" }); assert.equal(x.data.appointments, 4);
-    console.log("ok - Squire import: shop, team hours, services, calendar, dashboard, onboarding link (shop, socials, team), Google ranking ingest with fee and owner searches, clean removal");
+    console.log("ok - Squire import: shop, team hours, services, calendar, dashboard, appointment history (rebooks, cash/card, tips, no-shows), onboarding link (shop, socials, team), Google ranking ingest with fee and owner searches, clean removal");
   } catch (e) { console.error(e); console.error(log.slice(-3000)); process.exitCode = 1; } finally { srv.kill(); }
 })();

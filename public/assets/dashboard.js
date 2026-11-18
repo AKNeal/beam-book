@@ -53,6 +53,7 @@
     else tiles.push(kp($$(mineOnly ? m.take ?? m.pay : m.pay), mineOnly ? "My take (estimate, before tips)" : "Barber pay (estimate)", true));
     tiles.push(kp(d.cuts, `Appointments (${d.done} done, ${d.upcoming} ahead)`), kp(pct(d.rebookRate), `Rebook rate (${d.rebooks} of ${d.rebookable})`, true), kp(d.newClients, "New clients"),
       kp(d.avgTicket == null ? "–" : "$" + d.avgTicket.toFixed(2), "Average ticket"), kp(pct(d.utilization), "Chair utilization (booked vs open hours)"));
+    if (d.noShowRate != null) tiles.push(kp(pct(d.noShowRate), `No-show rate (${d.noShows} no-shows, ${d.cancelled} cancelled; Squire history)`));
     if (m.tips) tiles.push(kp($$(m.tips), mineOnly ? "My tips (through checkout)" : "Tips to barbers (through checkout)"));
     v.append(el("div", { class: "kpis" }, tiles));
 
@@ -122,7 +123,7 @@
     }
 
     v.append(challengesPanel(owner));
-    if (owner) v.append(boardPanel(), settingsPanel());
+    if (owner) v.append(boardPanel(), historyPanel(), settingsPanel());
   }
 
   function row(a, b) { return el("tr", {}, el("td", {}, a), el("td", { class: "n" }, b)); }
@@ -187,6 +188,46 @@
     return el("section", { class: "panel" }, el("h2", {}, "Shop TV scoreboard"),
       el("p", { class: "muted" }, "A full-screen page for the TV in the shop: live challenges, this week's rebook and cut leaders, and who's open now. It never shows money."),
       el("button", { class: "btn line", type: "button", onclick: () => get(false) }, "Show the link"), out);
+  }
+
+  // ---------- Squire history (Appointments CSV export) ----------
+  // Read in the browser; only the columns below are sent. Emails and phones never leave this computer.
+  function parseCsv(text) {
+    const rows = []; let row = [], f = "", q = false; text = text.replace(/^\uFEFF/, "");
+    for (let i = 0; i < text.length; i++) { const c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+      else if (c === '"') q = true; else if (c === ",") { row.push(f); f = ""; }
+      else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(f); f = ""; if (row.some((x) => x !== "")) rows.push(row); row = []; }
+      else f += c; }
+    row.push(f); if (row.some((x) => x !== "")) rows.push(row);
+    const head = (rows.shift() || []).map((h) => h.trim());
+    return rows.map((r) => Object.fromEntries(head.map((h, i) => [h, (r[i] ?? "").trim()])));
+  }
+  function historyPanel() {
+    const out = el("p", { class: "small" });
+    const input = el("input", { type: "file", accept: ".csv,text/csv", multiple: true });
+    input.addEventListener("change", async () => {
+      const files = [...input.files]; if (!files.length) return;
+      let rows = [];
+      for (const f of files) {
+        const r = parseCsv(await f.text());
+        if (r.length && !("Staff First Name" in r[0] && "Date" in r[0])) { out.textContent = `${f.name} doesn't look like a Squire Appointments export.`; return; }
+        rows = rows.concat(r.map((x) => ({ staff: `${x["Staff First Name"] || ""} ${x["Staff Last Name"] || ""}`.trim(), date: x["Date"], time: x["Time"],
+          cdate: x["Created At"], ctime: x["Created Time"], pay: x["Payment"], tip: x["Tip"], cost: x["Service Cost"], status: x["Status"],
+          client: `${x["Client First Name"] || ""} ${x["Client Last Name"] || ""}`.trim(), service: x["Service Name"], dur: x["Duration"] })));
+      }
+      out.textContent = `Sending ${rows.length} appointments…`;
+      try {
+        let last = null; for (let i = 0; i < rows.length; i += 1500) last = await call({ action: "squireHistory", rows: rows.slice(i, i + 1500) });
+        out.textContent = `Done: ${rows.length} appointments read. History now covers ${last.from} to ${last.to}.` + (last.unknownBarbers.length ? ` Not matched to a barber on Beam: ${last.unknownBarbers.join(", ")}.` : "");
+        show(ctx);
+      } catch (e) { out.textContent = e.message; }
+    });
+    return el("details", { class: "panel" }, el("summary", {}, el("h2", { style: "display:inline" }, "Squire history")),
+      el("p", {}, "Bring in past appointments so the dashboard has your history from day one: rebook rates, cash vs card, tips and no-shows."),
+      el("p", { class: "small muted" }, "In Squire: Reports → More → Appointments → pick dates (30 days max per file) → Export CSV. Pick one or more files here. Only the appointment details are sent; client emails and phone numbers stay on this computer. Uploading the same dates again just updates them."),
+      el("label", {}, "Squire Appointments CSV files", input), out,
+      el("button", { class: "btn sm line", type: "button", onclick: async () => { if (!confirmDelete("Squire history")) return; try { const r = await call({ action: "squireHistoryClear" }); ctx.toast(`Removed ${r.months} months of Squire history`); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Remove Squire history"));
   }
 
   // ---------- settings ----------

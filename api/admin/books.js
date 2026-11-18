@@ -30,7 +30,7 @@ module.exports = async function handler(req, res) {
   const slug = str(b.slug, 60);
   if (/^ig[A-Z]/.test(String(b.action || ""))) return instagram(req, res, me, b.action);
   if (b.action === "bookingSettings") return bookingSettings(req, res, me, b);
-  if (/^client/.test(String(b.action || ""))) return clientsApi(req, res, me, b);
+  if (/^(client|squireHistory)/.test(String(b.action || ""))) return clientsApi(req, res, me, b);
   if (/^site/.test(String(b.action || ""))) return siteApi(req, res, me, b);
   if (/^(dash|challenge|board)/.test(String(b.action || ""))) return dashApi(req, res, me, b);
   if (/^pay/.test(String(b.action || ""))) return payApi(req, res, me, b);
@@ -148,6 +148,20 @@ async function clientsApi(req, res, me, b) {
           lastVisit: r?.lastVisit, lastService: r?.lastService, notes: r?.notes }));
         return send(res, 200, { ok: true, ...(await clients.importRows(rows, { textOk: b.textOk === true })) });
       }
+      case "squireHistory": {
+        if (!ownerOnly()) return;
+        if ((await store.hit(`rl:import:${me.id}`, 3600)) > 200) return send(res, 429, { error: "That's a lot of imports. Try again in an hour." });
+        // Only these fields are read; emails, phones and every other column never leave the owner's computer.
+        const rows = (Array.isArray(b.rows) ? b.rows : []).map((r) => ({ staff: r?.staff, date: r?.date, time: r?.time, cdate: r?.cdate, ctime: r?.ctime,
+          pay: r?.pay, tip: r?.tip, cost: r?.cost, status: r?.status, client: r?.client, service: r?.service, dur: r?.dur }));
+        return send(res, 200, { ok: true, ...(await require("../../lib/squirehist").importRows(rows)) });
+      }
+      case "squireHistoryStatus":
+        if (!ownerOnly()) return;
+        return send(res, 200, await require("../../lib/squirehist").status());
+      case "squireHistoryClear":
+        if (!ownerOnly()) return;
+        return send(res, 200, { ok: true, ...(await require("../../lib/squirehist").clear()) });
       case "clientsRemoveAll":
         if (!ownerOnly()) return;
         if (b.confirm !== "DELETE ALL") return send(res, 400, { error: 'Type DELETE ALL to confirm.' });
