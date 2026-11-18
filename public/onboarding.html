@@ -87,6 +87,8 @@ async function load() {
   if (d.logo) { const lg = document.getElementById("logo"); lg.src = d.logo; lg.alt = d.shop.name; lg.hidden = false; }
   if (d.accent) document.documentElement.style.setProperty("--accent", d.accent); document.title = `${d.shop.name} · Onboarding`;
   draw(); document.getElementById("bar").hidden = false; loadSetup();
+  // The Save bar is for step 1 only: show it while step 1 is on screen.
+  if ("IntersectionObserver" in window) new IntersectionObserver((es) => { document.getElementById("bar").hidden = !es[0].isIntersecting; }).observe(document.getElementById("main"));
 }
 
 function draw() {
