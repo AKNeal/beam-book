@@ -13,7 +13,6 @@
   body { margin: 0; font: 16px/1.55 Inter, system-ui, -apple-system, sans-serif; color: var(--text); background: var(--ink); }
   h1, h2 { font-family: Anton, Impact, sans-serif; font-weight: 400; text-transform: uppercase; letter-spacing: .02em; line-height: 1.05; }
   .top { padding: 40px 20px 28px; text-align: center; background: radial-gradient(ellipse at top, #2a0b0d, var(--ink) 70%); border-bottom: 1px solid var(--line); }
-  .stripe { height: 6px; width: 140px; border-radius: 9px; background: linear-gradient(90deg, var(--accent) 33%, #fff 33% 66%, var(--blue) 66%); margin: 0 auto 16px; }
   h1 { font-size: clamp(2rem, 7vw, 3rem); margin: 0 0 8px; }
   .top p { color: #d4d4d8; margin: 0 auto; max-width: 560px; }
   main { max-width: 720px; margin: 0 auto; padding: 10px 20px 48px; }
@@ -35,7 +34,7 @@
 </style>
 </head>
 <body>
-<div class="top"><div class="stripe"></div><h1 id="title">Sync your calendar</h1><p id="sub">Connect the calendar you already use, so online booking never lands on top of something you've got going on.</p></div>
+<div class="top"><h1 id="title">Sync your calendar</h1><p id="sub">Connect the calendar you already use, so online booking never lands on top of something you've got going on.</p></div>
 <main>
   <p id="bad" class="err" hidden></p>
   <div id="app" hidden>

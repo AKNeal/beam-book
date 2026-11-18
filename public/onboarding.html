@@ -14,7 +14,6 @@
   .top { padding: 44px 20px 34px; text-align: center; background: radial-gradient(ellipse at top, #2a0b0d, var(--ink) 70%); border-bottom: 1px solid var(--line); }
   .top .in, main { max-width: 760px; margin: 0 auto; }
   .logo { width: min(240px, 60vw); margin: 0 auto 18px; display: block; filter: drop-shadow(0 10px 30px rgba(0,0,0,.6)); }
-  .stripe { height: 6px; width: 140px; border-radius: 9px; background: linear-gradient(90deg, var(--accent) 33%, #fff 33% 66%, var(--blue) 66%); margin: 0 auto 16px; }
   h1 { font-size: clamp(2.2rem, 7vw, 3.4rem); margin: 0 0 10px; }
   .top p { color: #d4d4d8; margin: 0 auto; max-width: 560px; }
   main { padding: 10px 20px 40px; }
@@ -26,6 +25,10 @@
   input, textarea, select { width: 100%; font: inherit; padding: 11px 13px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--ink2); color: var(--text); }
   input::placeholder, textarea::placeholder { color: #6b6b76; }
   textarea { min-height: 90px; resize: vertical; }
+  /* Short fields: phone, email, city… don't need the full page width */
+  input:not([type=file]):not([type=checkbox]), select { max-width: 380px; display: block; }
+  input[name=address], input[name=a2p_street], input[name=website], input[name=x_photos] { max-width: 560px; }
+  .two { max-width: 774px; }
   input:focus, textarea:focus { outline: none; border-color: var(--accent); }
   input[type=file] { padding: 8px; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; } @media (max-width: 620px) { .two { grid-template-columns: 1fr; } }
@@ -59,7 +62,7 @@
 </style>
 </head>
 <body>
-<div class="top"><div class="in"><nav class="steps" id="steps" aria-label="Setup steps"></nav><img class="logo" id="logo" alt="" hidden><div class="stripe"></div><h1 id="hello">Welcome</h1><p>Everything to get your booking, payments and texting running, in one place. Go step by step; you can come back to this link and change anything. Everything saves when you press Save.</p></div></div>
+<div class="top"><div class="in"><nav class="steps" id="steps" aria-label="Setup steps"></nav><img class="logo" id="logo" alt="" hidden><h1 id="hello">Welcome</h1><p>Everything to get your booking, payments and texting running, in one place. Go step by step; you can come back to this link and change anything. Everything saves when you press Save.</p></div></div>
 <main id="main"><p class="center">Loading…</p></main>
 <main id="setup"></main>
 <footer>
