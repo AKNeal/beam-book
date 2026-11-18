@@ -34,6 +34,7 @@ module.exports = async function handler(req, res) {
   if (/^site/.test(String(b.action || ""))) return siteApi(req, res, me, b);
   if (/^(dash|challenge|board)/.test(String(b.action || ""))) return dashApi(req, res, me, b);
   if (/^pay/.test(String(b.action || ""))) return payApi(req, res, me, b);
+  if (/^appr/.test(String(b.action || ""))) return apprApi(req, res, me, b);
   if (b.action === "rankSearches") { // Owner: the shop's Google searches (up to 5)
     if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner can change the searches." });
     try { const rc = require("../../lib/rankcheck"); const searches = await rc.saveSearches(b.searches); return send(res, 200, { rankings: await rc.summary({ searches }) }); }
@@ -262,5 +263,56 @@ async function bookingSettings(req, res, me, b) {
     if (b.depositPolicy !== undefined) set.depositPolicy = String(b.depositPolicy).trim().slice(0, 600);
     const saved = await tenant.saveRecord({ ...rec, ...set });
     return send(res, 200, { ok: true, instant: Boolean(saved.instant), services: saved.services || [], changeCutoffHours: saved.changeCutoffHours ?? 2, words: saved.words, form: saved.form, negotiate: saved.negotiate, ageCheck: saved.ageCheck, policyCheck: saved.policyCheck, askInstagram: saved.askInstagram !== false, sessionLengths: saved.sessionLengths });
+  } catch (e) { return send(res, 400, { error: e.message }); }
+}
+
+// ---------- apprentice portal (lib/apprentice.js) ----------
+//   {action:"apprView", slug?}                       an apprentice sees their own; Owner / Site manager see any (no slug: the list)
+//   {action:"apprLog", date, hours, note, slug?}     an apprentice logs their own hours (waiting for sign-off); the Owner's are signed off
+//   {action:"apprDelete", id}                        an apprentice removes their own hours that aren't signed off yet
+//   {action:"apprReview", slug, id, approve}         Owner: approve true | false | "delete"
+//   {action:"apprCheck", slug, id, on}               Owner: tick a checkoff
+//   {action:"apprSet", slug, on} · {action:"apprStart", slug, date}
+//   {action:"apprSettings", goalHours} · {action:"apprChecklist", items} · {action:"apprMaterials", items}
+async function apprApi(req, res, me, b) {
+  const A = require("../../lib/apprentice"), artists = require("../../lib/artists");
+  const full = auth.isFull(me), mine = me.artist && (await A.list()).includes(me.artist);
+  const by = me.name || "Owner";
+  const needFull = () => { if (!full) { send(res, 403, { error: "Only the Owner or a Site manager can do that." }); return false; } return true; };
+  try {
+    switch (b.action) {
+      case "apprView": {
+        if (full && !b.slug) {
+          const roster = await artists.list(), slugs = await A.list();
+          const people = []; for (const s of slugs) { const a = roster.find((x) => x.slug === s); if (a) { const v = await A.view(s); people.push({ slug: s, name: a.name, approvedHours: v.approvedHours, pendingHours: v.pendingHours, pct: v.pct, checksDone: v.checksDone, checksTotal: v.checksTotal }); } }
+          return send(res, 200, { owner: true, apprentices: people, team: roster.map((a) => ({ slug: a.slug, name: a.name })), settings: await A.settings(), checklist: await A.checklist(), materials: await A.materials() });
+        }
+        const slug = full ? str(b.slug, 60) : me.artist;
+        if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
+        const a = await artists.bySlug(slug); if (!a) return send(res, 404, { error: "That team member isn't here." });
+        return send(res, 200, { owner: full, name: a.name, ...(await A.view(slug)) });
+      }
+      case "apprLog": {
+        const slug = full && b.slug ? str(b.slug, 60) : me.artist;
+        if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
+        await A.logHours(slug, { date: b.date, hours: b.hours, note: b.note, approved: full }, by);
+        return send(res, 200, { ok: true, ...(await A.view(slug)) });
+      }
+      case "apprDelete":
+        if (!mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
+        await A.deleteOwnPending(me.artist, str(b.id, 20)); return send(res, 200, { ok: true, ...(await A.view(me.artist)) });
+      case "apprReview": if (!needFull()) return; await A.reviewHours(str(b.slug, 60), str(b.id, 20), b.approve === "delete" ? "delete" : Boolean(b.approve), by); return send(res, 200, { ok: true, ...(await A.view(str(b.slug, 60))) });
+      case "apprCheck": if (!needFull()) return; await A.setCheck(str(b.slug, 60), str(b.id, 20), Boolean(b.on), by); return send(res, 200, { ok: true, ...(await A.view(str(b.slug, 60))) });
+      case "apprStart": if (!needFull()) return; await A.setStart(str(b.slug, 60), b.date); return send(res, 200, { ok: true, ...(await A.view(str(b.slug, 60))) });
+      case "apprSet": {
+        if (!needFull()) return;
+        if (!(await artists.bySlug(str(b.slug, 60)))) return send(res, 404, { error: "That team member isn't here." });
+        return send(res, 200, { ok: true, list: await A.setApprentice(str(b.slug, 60), Boolean(b.on)) });
+      }
+      case "apprSettings": if (!needFull()) return; await A.saveSettings(b); return send(res, 200, { ok: true, settings: await A.settings() });
+      case "apprChecklist": if (!needFull()) return; return send(res, 200, { ok: true, checklist: await A.saveChecklist(b.items) });
+      case "apprMaterials": if (!needFull()) return; return send(res, 200, { ok: true, materials: await A.saveMaterials(b.items) });
+      default: return send(res, 400, { error: "Unknown action." });
+    }
   } catch (e) { return send(res, 400, { error: e.message }); }
 }

@@ -64,6 +64,14 @@ const TOKEN = "t".repeat(32);
     assert.equal(r.status, 200);
     r = await fetch(BASE + "/api/admin/books", { method: "POST", headers: { ...H, Cookie: cookie }, body: JSON.stringify({ action: "dash", from: d(-30), to: d(10) }) });
     assert.equal((await r.json()).dash.cuts, 4, "removing the history puts it back");
+    // Apprentice portal: the owner makes Seth an apprentice, logs signed-off hours, ticks a checkoff; the list shows progress.
+    { const A = (b) => fetch(BASE + "/api/admin/books", { method: "POST", headers: { ...H, Cookie: cookie }, body: JSON.stringify(b) }).then(async (q) => ({ status: q.status, data: await q.json() }));
+      assert.equal((await A({ action: "apprSet", slug: "seth-long", on: true })).status, 200);
+      let a = await A({ action: "apprLog", slug: "seth-long", date: d(-1), hours: 8, note: "Fades on the floor" }); assert.equal(a.data.approvedHours, 8);
+      assert.equal((await A({ action: "apprLog", slug: "seth-long", date: d(5), hours: 8 })).status, 400, "no future hours");
+      a = await A({ action: "apprCheck", slug: "seth-long", id: "m1", on: true }); assert.equal(a.data.checksDone, 1); assert.equal(a.data.checksTotal, 8);
+      a = await A({ action: "apprView" }); assert.equal(a.data.apprentices[0].approvedHours, 8); assert.equal(a.data.settings.goalHours, 1650);
+      assert.equal((await A({ action: "apprMaterials", items: [{ title: "Vol 1", url: "javascript:alert(1)" }, { title: "Vol 2", url: "https://example.com/v2" }] })).data.materials.length, 1, "https links only"); }
     // Onboarding link: owner fills shop details, socials and team; the website reads them back publicly.
     const ob = new URL((await post({ action: "importSquire", token: TOKEN, slug: "levelup", data, onboardLink: true })).data.onboardLink);
     const G = (u) => fetch(BASE + u, { headers: { "X-Forwarded-Host": "levelup.localhost" } }).then(async (q) => ({ status: q.status, data: await q.json(), cors: q.headers.get("access-control-allow-origin") }));
@@ -91,6 +99,6 @@ const TOKEN = "t".repeat(32);
     r = await fetch(BASE + "/api/admin/books", { method: "POST", headers: { ...H, Cookie: cookie }, body: JSON.stringify({ action: "rankSearches", searches: [...Object.keys(S3), "fade North Pole"] }) });
     assert.equal((await r.json()).rankings.searches.length, 4);
     x = await post({ action: "importSquireClear", token: TOKEN, slug: "levelup" }); assert.equal(x.data.appointments, 4);
-    console.log("ok - Squire import: shop, team hours, services, calendar, dashboard, appointment history (rebooks, cash/card, tips, no-shows), onboarding link (shop, socials, team), Google ranking ingest with fee and owner searches, clean removal");
+    console.log("ok - Squire import: shop, team hours, services, calendar, dashboard, appointment history (rebooks, cash/card, tips, no-shows), apprentice portal, onboarding link (shop, socials, team), Google ranking ingest with fee and owner searches, clean removal");
   } catch (e) { console.error(e); console.error(log.slice(-3000)); process.exitCode = 1; } finally { srv.kill(); }
 })();

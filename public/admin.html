@@ -223,7 +223,7 @@
 <body class="admin">
 <header class="top"><div class="shell adminbar">
   <div><a class="brand" href="/admin"><img class="shop-logo" data-shop="logo" alt="" hidden><span><b id="shopName" style="font-weight:inherit">Shop</b> · Inbox</span></a><div class="whoami" id="whoami"></div></div>
-  <nav id="nav" hidden><a href="#" id="viewDash">Dashboard</a><a href="#" id="viewCheckout">Checkout</a><a href="#" id="viewDay">Day</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewSite" hidden>Website</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
+  <nav id="nav" hidden><a href="#" id="viewDash">Dashboard</a><a href="#" id="viewCheckout">Checkout</a><a href="#" id="viewDay">Day</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewAppr" hidden>Apprenticeship</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewSite" hidden>Website</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
   <label class="look">Look <select id="lookSel" aria-label="Look">
     <option value="">Classic</option><option value="floor">Shop Floor</option><option value="chrome">Clean Chrome</option><option value="pole">Barber Pole</option>
   </select></label>
@@ -282,6 +282,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
   <div id="rankView" hidden></div>
   <div id="dashView" hidden></div>
   <div id="checkoutView" hidden></div>
+  <div id="apprView" hidden></div>
 </main>
 
 <script>
@@ -306,6 +307,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
 <script src="/assets/website.js"></script>
 <script src="/assets/dashboard.js"></script>
 <script src="/assets/checkout.js"></script>
+<script src="/assets/apprentice.js"></script>
 <script>
 (() => {
   const { api, el, datetime, date } = BW;
@@ -338,6 +340,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     await load();
     rankBadge();
     if (["owner", "admin"].includes(ME.role)) window.BBSite.nudge("siteNudge", showSite, { calendar: () => { showCalendar(); let n = 0; const t = setInterval(() => { const f = $("calFeed"); if (f || ++n > 40) { clearInterval(t); if (f) f.scrollIntoView({ behavior: "smooth", block: "start" }); } }, 100); }, team: showTeam, account: showAccount });
+    $("viewAppr").hidden = !(D.instant && (["owner", "admin"].includes(ME.role) || (D.apprentices || []).includes(ME.artist)));
     $("viewDay").hidden = !D.instant; // request-style shops (gutters, tattoo) use Calendar; Day is for walk-in shops
     if (q.get("ig")) { // back from connecting Instagram
       const ok = q.get("ig") === "connected";
@@ -412,7 +415,8 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
   $("viewSite").addEventListener("click", (e) => { e.preventDefault(); showSite(); });
   $("viewDash").addEventListener("click", (e) => { e.preventDefault(); window.BBDash.show({ only, toast, D }); });
   $("viewCheckout").addEventListener("click", (e) => { e.preventDefault(); window.BBCheckout.show({ only, toast, D }); });
-  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView", "siteView", "rankView", "dashView", "checkoutView"];
+  $("viewAppr").addEventListener("click", (e) => { e.preventDefault(); window.BBAppr.show({ only, toast, D }); });
+  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView", "siteView", "rankView", "dashView", "checkoutView", "apprView"];
   function only(v) { for (const x of views) $(x).hidden = x !== v; window.scrollTo({ top: 0 }); }
 
   // ---------- Requests ----------
