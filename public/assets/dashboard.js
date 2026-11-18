@@ -21,7 +21,10 @@
   .dash .ch .r{display:grid;grid-template-columns:160px 1fr 70px;gap:10px;align-items:center;font-size:14px;margin:6px 0}
   .dash section.panel{margin:18px 0}.dash .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:640px){.dash .two{grid-template-columns:1fr}}
   .dash label{display:block;font-size:14px;margin:8px 0}.dash label input,.dash label select,.dash label textarea{display:block;width:100%;margin-top:4px}
-  .dash .lowrb{color:#b91c1c;font-weight:700}.dash .goodrb{color:#15803d;font-weight:700}`;
+  .dash .lowrb{color:#b91c1c;font-weight:700}.dash .goodrb{color:#15803d;font-weight:700}
+  .dash .heat{display:grid;grid-template-columns:44px repeat(13,minmax(0,1fr));gap:3px;font-size:12px;align-items:center}.dash .heat i{display:block;height:22px;border-radius:4px;background:var(--line)}
+  .dash .heat span{color:var(--graphite);text-align:center}.dash .mix{display:flex;height:16px;border-radius:99px;overflow:hidden;margin:8px 0}.dash .mix i{display:block;height:100%}
+  .dash .nr{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}`;
 
   function style() { if (!document.getElementById("dashCss")) document.head.append(el("style", { id: "dashCss" }, css)); }
 
@@ -47,14 +50,19 @@
     const kp = (val, label, hot) => el("div", { class: "kpi" + (hot ? " hot" : "") }, el("b", {}, val), el("span", {}, label));
     const tiles = [kp($$(m.gross), "Gross (booked + done)", true), kp($$(m.earned), "Earned so far"), kp($$(m.projected), "Still on the books (projected)")];
     if (owner && !barber) tiles.push(kp($$(m.net), "Net to the shop", true));
-    else tiles.push(kp($$(m.pay), mineOnly ? "My pay (estimate)" : "Barber pay (estimate)", true));
-    tiles.push(kp(d.cuts, `Appointments (${d.done} done, ${d.upcoming} ahead)`), kp(pct(d.rebookRate), `Rebook rate (${d.rebooks} of ${d.rebookable})`, true), kp(d.newClients, "New clients"));
+    else tiles.push(kp($$(mineOnly ? m.take ?? m.pay : m.pay), mineOnly ? "My take (estimate, before tips)" : "Barber pay (estimate)", true));
+    tiles.push(kp(d.cuts, `Appointments (${d.done} done, ${d.upcoming} ahead)`), kp(pct(d.rebookRate), `Rebook rate (${d.rebooks} of ${d.rebookable})`, true), kp(d.newClients, "New clients"),
+      kp(d.avgTicket == null ? "–" : "$" + d.avgTicket.toFixed(2), "Average ticket"), kp(pct(d.utilization), "Chair utilization (booked vs open hours)"));
+    if (m.tips) tiles.push(kp($$(m.tips), mineOnly ? "My tips (through checkout)" : "Tips to barbers (through checkout)"));
     v.append(el("div", { class: "kpis" }, tiles));
 
     // Net breakdown (owner, whole shop)
     if (owner && !barber) {
       const S = d.settings;
-      const goal = period === "month" && S.monthlyGoal ? el("p", {}, el("strong", {}, `Monthly goal ${$$(S.monthlyGoal)}: `), `${Math.round(100 * m.gross / S.monthlyGoal)}% booked`) : null;
+      const gp = S.monthlyGoal ? Math.round(100 * m.gross / S.monthlyGoal) : 0;
+      const goal = period === "month" && S.monthlyGoal ? el("div", { style: "margin:6px 0 14px" },
+        el("p", { style: "margin:0 0 6px" }, el("strong", {}, `Monthly goal ${$$(S.monthlyGoal)}: `), `${gp}% (earned + booked)`),
+        el("div", { class: "prog" }, el("i", { class: gp >= 100 ? "ok" : "", style: `width:${Math.min(100, gp)}%` }))) : null;
       v.append(el("section", { class: "panel" }, el("h2", {}, "Gross to net"), goal,
         el("table", {}, el("tbody", {},
           row("Gross", $$(m.gross)), row(`Cash discounts ($${S.cashDiscount} × ${S.cashShare}% paying cash)`, "− " + $$(m.disc)),
@@ -86,6 +94,32 @@
 
     if (d.services.length) v.append(el("section", { class: "panel" }, el("h2", {}, "Top services"),
       el("table", {}, el("tbody", {}, d.services.map((s) => row(`${s.name} × ${s.count}`, $$(s.gross)))))));
+
+    // Payment mix (from checkout)
+    const nCash = m.paidCash || 0, nCard = m.paidCard || 0;
+    if (nCash + nCard) v.append(el("section", { class: "panel" }, el("h2", {}, "Payment mix"),
+      el("div", { class: "mix", role: "img", "aria-label": `${nCash} cash, ${nCard} card` }, el("i", { style: `width:${100 * nCash / (nCash + nCard)}%;background:var(--ink)` }), el("i", { style: `width:${100 * nCard / (nCash + nCard)}%;background:var(--sign)` })),
+      el("p", { class: "small" }, `Cash ${nCash} (${Math.round(100 * nCash / (nCash + nCard))}%) · Card ${nCard} (${Math.round(100 * nCard / (nCash + nCard))}%). Checkouts through Beam only.`)));
+
+    // Busiest hours (last 8 weeks of finished visits)
+    const H = d.heat || {}, hv = Object.values(H);
+    if (hv.length) {
+      const max = Math.max(1, ...hv), hours = Array.from({ length: 13 }, (_, i) => i + 8), days = [[2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"], [1, "Mon"]];
+      const lab = (h) => (h % 12 || 12) + (h < 12 ? "a" : "p");
+      v.append(el("section", { class: "panel" }, el("h2", {}, "Busiest hours"), el("p", { class: "small muted" }, "Finished appointments over the last 8 weeks. Darker = busier."),
+        el("div", { class: "heat" }, [el("span", {}), ...hours.map((h) => el("span", {}, lab(h))),
+          ...days.filter(([wd]) => hours.some((h) => H[`${wd}-${h}`])).flatMap(([wd, name]) => [el("span", { style: "text-align:left" }, name),
+            ...hours.map((h) => { const n = H[`${wd}-${h}`] || 0; return el("i", { title: `${name} ${lab(h)}: ${n}`, style: n ? `background:color-mix(in srgb, var(--sign) ${Math.round(15 + 85 * n / max)}%, transparent)` : "" }); })])])));
+    }
+
+    // Needs a rebook
+    if (d.needsRebook && d.needsRebook.length) {
+      const nm = d.names || {};
+      v.append(el("section", { class: "panel" }, el("h2", {}, "Needs a rebook"),
+        el("p", { class: "small muted" }, "Seen in the last 3 weeks with nothing on the books. Oldest first: reach out before they book somewhere else."),
+        d.needsRebook.map((c) => el("div", { class: "nr" }, el("span", {}, el("strong", {}, c.name), mineOnly ? "" : ` · ${nm[c.barber] || ""}`),
+          el("span", { class: "muted" }, `${c.service ? c.service + " · " : ""}${c.daysAgo === 0 ? "today" : c.daysAgo === 1 ? "yesterday" : c.daysAgo + " days ago"}`)))));
+    }
 
     v.append(challengesPanel(owner));
     if (owner) v.append(boardPanel(), settingsPanel());
