@@ -90,7 +90,7 @@ async function get(req, res) {
     })).catch(() => ({}));
     const P = require("../lib/plans");
     const plan = P.planOf(rec);
-    return send(res, 200, { shop: { ...rec, plan, url: urlFor(rec), ...counts, bill: P.bill(plan, counts.usage?.texts || 0) }, plans: P.PLANS });
+    return send(res, 200, { shop: { ...rec, plan, url: urlFor(rec), ...counts, bill: P.bill(plan, counts.usage?.texts || 0, counts.usage?.emails || 0) }, plans: P.PLANS });
   }
   const shops = (await tenant.listShops()).map((r) => ({ slug: r.slug, name: r.studio?.name || r.slug, city: r.studio?.city || "",
     hosts: r.hosts || [], active: r.active !== false, createdAt: r.createdAt, url: urlFor(r), plan: require("../lib/plans").planOf(r) }));

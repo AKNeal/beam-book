@@ -824,10 +824,10 @@ const valid = (o = {}) => ({
         let y = await control({ action: "update", slug: "levelup", plan: "gold" }); assert.equal(y.status, 400, "unknown plan refused");
         y = await control({ action: "update", slug: "levelup", messaging: { emailFrom: "not an email" } }); assert.equal(y.status, 400);
         y = await control({ action: "update", slug: "levelup", messaging: { smsFrom: "12" } }); assert.equal(y.status, 400);
-        y = await control({ action: "update", slug: "levelup", plan: "shop_ai", messaging: { emailFrom: "Level Up <bookings@levelup.example>", smsFrom: "(907) 555-0177" } });
-        assert.equal(y.status, 200, JSON.stringify(y.data)); assert.equal(y.data.shop.plan, "shop_ai"); assert.equal(y.data.shop.messaging.smsFrom, "+19075550177");
+        y = await control({ action: "update", slug: "levelup", plan: "core", messaging: { emailFrom: "Level Up <bookings@levelup.example>", smsFrom: "(907) 555-0177" } });
+        assert.equal(y.status, 200, JSON.stringify(y.data)); assert.equal(y.data.shop.plan, "core"); assert.equal(y.data.shop.messaging.smsFrom, "+19075550177");
         y = await control(); y = await fetch(BASE + "/api/platform?shop=levelup", { headers: { Cookie: control.c } }).then((r) => r.json());
-        assert.equal(y.shop.plan, "shop_ai"); assert.equal(y.shop.bill.price, 249); assert.equal(y.shop.bill.allowance, 3500); assert.ok(y.plans.core);
+        assert.equal(y.shop.plan, "core"); assert.equal(y.shop.bill.price, 150); assert.equal(y.shop.bill.adminFeePct, 1); assert.ok(y.plans.core);
         const tenant = require("../lib/tenant"), email = require("../lib/email"), sms = require("../lib/sms"), P = require("../lib/plans");
         tenant.cache?.clear?.();
         assert.equal(await tenant.runAs("levelup", async () => email.fromFor()), "Level Up <bookings@levelup.example>");
@@ -836,10 +836,10 @@ const valid = (o = {}) => ({
         assert.equal(await tenant.runAs("blackwolf", async () => email.fromFor()), '"Black Wolf Tattoo Club" <bookings@nealmedia.app>', "shared sender carries the shop's name");
         delete process.env.EMAIL_FROM;
         assert.equal(sms.segments("x".repeat(160)), 1); assert.equal(sms.segments("x".repeat(161)), 2); assert.equal(sms.segments("é".repeat(71)), 2);
-        assert.deepEqual(P.bill("shop", 2100), { plan: "shop", price: 199, allowance: 2000, texts: 2100, overTexts: 100, overage: 3, total: 202 });
-        assert.equal(P.bill("core", 10).total, 150);
+        assert.equal(P.bill("core", 4000, 2300).total, 150, "flat: no text or email limits"); assert.equal(P.bill("shop", 10).plan, "core", "old plans fall back to the flat plan");
+        assert.equal(P.bill("core", 4000, 2300).sendCost, 50.92);
         await control({ action: "update", slug: "levelup", plan: "core", messaging: { smsFrom: "" } });
-        ok("plans and messaging: plan picked on the control page, own email/text senders validated, shared sender uses the shop's name, monthly bill with overage");
+        ok("plans and messaging: plan picked on the control page, own email/text senders validated, shared sender uses the shop's name, flat $150 bill with usage and send cost");
       }
 
       // Google ranking: daily check per shop (Places API, mocked here), awards summary in the inbox
