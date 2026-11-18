@@ -49,6 +49,7 @@ const f = (label, name, val, o = {}) => el("label", {}, label, o.hint ? el("span
   o.long ? el("textarea", { name, placeholder: o.ph || "", rows: o.rows || 4 }, val || "") : el("input", { name, value: val || "", placeholder: o.ph || "", type: o.type || "text", inputmode: o.mode || null }));
 
 async function load() {
+  if (!T) { document.getElementById("main").innerHTML = '<p class="center">This page needs your private link. Ask Neal Media for it.</p>'; return; }
   const r = await fetch("/api/artists?onboard=" + encodeURIComponent(T)); const d = await r.json();
   if (!r.ok) { document.getElementById("main").innerHTML = `<p class="center">${d.error || "This link doesn't work."}</p>`; return; }
   V = d; document.getElementById("hello").textContent = `Welcome to Beam, ${d.shop.name || "friend"}`; document.title = `${d.shop.name} · Onboarding`;

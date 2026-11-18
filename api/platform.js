@@ -298,6 +298,11 @@ async function importSquire(req, res, b) {
     if (want && EMAIL_RE.test(want) && owner.email !== want && !owner.hash) { // only before the owner has set a password
       owner.email = want; if (b.ownerName) owner.name = str(b.ownerName, 60); await auth.saveUsers(users);
     }
+    if (want && EMAIL_RE.test(want) && owner.email !== want) { // the owner already has a login: give this person their own Owner login
+      let u = users.find((x) => x.email === want);
+      if (!u) { u = { id: id(8), name: str(b.ownerName, 60) || "Owner", email: want, role: "owner", artist: null, hash: "", mustChange: false, ver: 0, active: true, createdAt: new Date().toISOString(), createdBy: "Beam" }; users.push(u); await auth.saveUsers(users); }
+      ownerEmail = u.email; return auth.makeResetLink(urlFor(rec), u, 24 * 7);
+    }
     ownerEmail = owner.email;
     return auth.makeResetLink(urlFor(rec), owner, 24 * 7);
   });
