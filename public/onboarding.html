@@ -197,18 +197,20 @@ function drawSetup() {
   const a = S.a2p || {}, tMsg = note(), tf = (lbl, k, o = {}) => f(lbl, "a2p_" + k, a[k], o);
   const testPhone = el("input", { type: "tel", placeholder: "Your cell, e.g. 907-555-0123", style: "max-width:260px" }), testMsg = note();
   m.append(el("section", { id: "text" }, el("h2", {}, "4. Texting"),
-    el("p", { class: "lead" }, "Texting is the main way clients hear from the shop: booking confirmations, reminders the day before, and changes. It comes from Level Up's own 907 number. Phone carriers require every business that texts to be registered, so we need your business details once. Only Neal Media sees them."),
+    el("p", { class: "lead" }, "Texting is the main way clients hear from the shop: booking confirmations, reminders the day before, and changes. Phone carriers require every business that texts to be registered. To get you running fast, texts start under Neal Media's registration; once your details below are in, we register Level Up under its own name and switch over. You don't need to do anything else. Only Neal Media sees these details."),
     el("div", { class: "card" }, el("div", { class: "row" }, el("b", {}, "Business details for texting"), pill(Boolean(S.a2p), "Sent to Neal Media", "Needed")),
       tf("Legal business name", "legalName", { hint: "Exactly as it's registered (e.g. Level Up Barbershop LLC). If you don't have a business registration, use your own name." }),
       el("label", {}, "Business type", el("select", { name: "a2p_businessType" }, ["", "LLC", "Corporation", "Partnership", "Sole proprietor (no EIN)"].map((o) => el("option", { value: o, selected: a.businessType === o }, o || "Pick one")))),
-      el("div", { class: "two" }, f("EIN (business tax ID)", "a2p_ein", "", { ph: a.einSet ? "Saved " + a.ein + " (type to change)" : "12-3456789", hint: "From your IRS letter. Leave blank if you're a sole proprietor." }), tf("Business website", "website", { ph: "levelupbarbershop907.com" })),
+      el("div", { class: "two" }, f("EIN (business tax ID)", "a2p_ein", "", { ph: a.einSet ? "Saved " + a.ein + " (type to change)" : "12-3456789", hint: "From your IRS EIN letter (CP 575). Leave blank if you're a sole proprietor." }), tf("Business website", "website", { ph: "levelupbarbershop907.com" })),
+      el("label", {}, "Business industry", el("select", { name: "a2p_industry" }, ["", "Personal care / beauty", "Professional services", "Retail", "Other"].map((o) => el("option", { value: o, selected: (a.industry || "Personal care / beauty") === o }, o || "Pick one")))),
       tf("Business street address", "street"),
       el("div", { class: "two" }, tf("City", "city"), tf("State", "state", { ph: "AK" })), tf("ZIP", "zip", { mode: "numeric" }),
-      el("div", { class: "two" }, tf("Contact name", "contactName"), tf("Contact email", "contactEmail", { type: "email" })),
-      tf("Contact cell", "contactPhone", { type: "tel", hint: "Sole proprietors get a one-time code here to confirm." }),
+      el("p", { class: "small", style: "color:var(--muted);margin:18px 0 0" }, "Authorized contact: the owner or manager carriers can reach about the registration."),
+      el("div", { class: "two" }, tf("Full name", "contactName"), tf("Title", "contactTitle", { ph: "Owner" })),
+      el("div", { class: "two" }, tf("Email", "contactEmail", { type: "email" }), tf("Cell", "contactPhone", { type: "tel", hint: "Sole proprietors get a one-time code here to confirm." })),
       el("p", {}, el("button", { type: "button", onclick: async (e) => {
-        const b = {}; ["legalName", "businessType", "ein", "street", "city", "state", "zip", "contactName", "contactEmail", "contactPhone", "website"].forEach((k) => { const x = document.querySelector(`[name="a2p_${k}"]`); if (x) b[k] = x.value; });
-        e.target.disabled = true; try { await post({ action: "onboardA2p", a2p: b }); says(tMsg, true, "Sent to Neal Media. Carriers usually approve in 1 to 3 weeks."); loadSetup(); } catch (er) { says(tMsg, false, er.message); } e.target.disabled = false; } }, "Send details")), tMsg),
+        const b = {}; ["legalName", "businessType", "ein", "industry", "street", "city", "state", "zip", "website", "contactName", "contactTitle", "contactEmail", "contactPhone"].forEach((k) => { const x = document.querySelector(`[name="a2p_${k}"]`); if (x) b[k] = x.value; });
+        e.target.disabled = true; try { await post({ action: "onboardA2p", a2p: b }); says(tMsg, true, "Sent to Neal Media. We'll register Level Up under its own name and switch your texts over."); loadSetup(); } catch (er) { says(tMsg, false, er.message); } e.target.disabled = false; } }, "Send details")), tMsg),
     el("div", { class: "card" }, el("div", { class: "row" }, el("b", {}, "Send yourself a test text"), pill(S.texting, "Texting is on", "Turning on soon")),
       S.texting ? el("div", { class: "row", style: "justify-content:flex-start;margin-top:10px" }, testPhone, el("button", { type: "button", onclick: async (e) => {
         e.target.disabled = true; try { await post({ action: "onboardTestText", phone: testPhone.value }); says(testMsg, true, "Sent. Check your phone."); } catch (er) { says(testMsg, false, er.message); } e.target.disabled = false; } }, "Send test"))
