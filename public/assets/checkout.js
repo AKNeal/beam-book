@@ -55,7 +55,7 @@
       [["None", 0], ["15%", pct(0.15)], ["20%", pct(0.2)], ["25%", pct(0.25)]].map(([l, t]) => el("button", { class: "btn sm line", type: "button", "aria-pressed": String(tip === t), onclick: async () => { tip = t; await requote(); drawPay(); } }, l + (t ? ` (${$$(t)})` : ""))),
       el("input", { type: "number", min: 0, step: "0.01", placeholder: "Other $", style: "width:100px", onchange: async (e) => { tip = Math.max(0, Number(e.target.value) || 0); await requote(); drawPay(); } }))));
     p.append(el("div", { class: "opts" },
-      el("div", { class: "opt" }, el("small", {}, "Cash"), el("b", {}, $$(Q.cash.total)), el("small", {}, Q.cash.discount ? `includes ${$$(Q.cash.discount)} cash discount` : ""),
+      el("div", { class: "opt" }, el("small", {}, "Cash"), el("b", {}, $$(Q.cash.total)), el("small", {}, Q.cash.discount ? el("strong", {}, `Pay cash, save ${$$(Q.cash.discount)}`) : ""),
         el("button", { class: "btn big", type: "button", disabled: Boolean(state), onclick: cash }, "Paid cash")),
       el("div", { class: "opt" }, el("small", {}, "Card"), el("b", {}, $$(Q.card.total)), el("small", {}, Q.surchargePct > 0 ? `credit cards +${Q.surchargePct}% (${$$(Q.card.creditFee)}); debit no fee` : "no card fee"),
         el("button", { class: "btn big", type: "button", disabled: !Q.cardReady || Boolean(state), onclick: card }, Q.cardReady ? "Card on reader" : "Reader not set up"))));
