@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Text message opt-in</title>
+<style>
+  body { margin: 0; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2937; background: #fafafa; }
+  main { max-width: 640px; margin: 0 auto; padding: 36px 20px 60px; }
+  h1 { font-size: 1.6rem; margin: 0 0 6px; } .muted { color: #6b7280; font-size: 14px; }
+  .form { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; margin: 22px 0; }
+  label.f { display: block; font-weight: 600; font-size: 14px; margin: 12px 0 4px; }
+  .box { border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 12px; color: #9ca3af; }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; font-size: 14px; }
+  .check input { margin-top: 4px; width: 18px; height: 18px; }
+  ol li { margin: 4px 0; } a { color: #1d4ed8; }
+</style>
+</head>
+<body>
+<main>
+  <h1>How clients opt in to texts</h1>
+  <p class="muted"><span class="shop">This shop</span> · online booking by Neal Media &amp; Production (Beam)</p>
+  <ol>
+    <li>The client books online at <a href="/appointment">/appointment</a>: picks a barber, a service and a time.</li>
+    <li>On the last step they enter their name and mobile number. Below that is an <strong>optional, unchecked</strong> box, shown here exactly as clients see it:</li>
+  </ol>
+  <div class="form" aria-label="Booking form, final step">
+    <label class="f">Your name</label><div class="box">Jamie Rivers</div>
+    <label class="f">Mobile phone</label><div class="box">(907) 555-0100</div>
+    <label class="check"><input type="checkbox" disabled> <span>Text me appointment confirmations and reminders from <span class="shop">the shop</span>. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to opt out, HELP for help. <a href="/privacy#sms">Terms &amp; privacy</a></span></label>
+  </div>
+  <p>Texting is not required to book. Only clients who tick the box get texts: a confirmation, a reminder the day before, and notices if the appointment changes. Reply STOP to opt out at any time, HELP for help. Mobile numbers and consent are never shared with third parties for marketing. See the <a href="/privacy">privacy policy and text terms</a>.</p>
+</main>
+<script>
+fetch("/api/artists").then((r) => r.json()).then((d) => { const s = d.shop || {}; if (!s.name) return;
+  document.title = s.name + " · Text message opt-in"; document.querySelectorAll(".shop").forEach((n) => { n.textContent = s.name; }); }).catch(() => {});
+</script>
+</body>
+</html>
