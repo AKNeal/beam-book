@@ -41,7 +41,12 @@
     // 1. Service
     if (!S.service) {
       const list = el("div", { class: "choices" });
-      for (const s of D.services) {
+      // Only services someone on the booking page offers; with a barber picked (e.g. "Book with Snow"), only theirs.
+      const offered = D.services.filter((s) => !s.barbers || !s.barbers.length || s.barbers.some((b) => D.barbers.some((x) => x.slug === b)))
+        .filter((s) => !S.barber || S.barber === "any" || !s.barbers || !s.barbers.length || s.barbers.includes(S.barber));
+      if (S.barber && S.barber !== "any") list.append(el("p", { class: "muted small", style: "margin:0 0 10px" }, `Services with ${nameOf(S.barber)}. `,
+        el("a", { href: "#", onclick: (e) => { e.preventDefault(); S.barber = null; render(); } }, "See everyone's")));
+      for (const s of offered) {
         list.append(el("button", { type: "button", class: "choice", style: "text-align:left;font:inherit;color:inherit", onclick: () => { S.service = s; S.barber = S.barber && (!s.barbers || s.barbers.includes(S.barber)) ? S.barber : null; if (D.barbers.length === 1) S.barber = D.barbers[0].slug; S.barber ? loadTimes() : render(); } },
           el("strong", {}, s.name), el("span", {}, [s.priceLabel, mins(s.durationMin)].filter(Boolean).join(" · "))));
       }

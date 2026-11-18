@@ -288,6 +288,7 @@ async function importSquire(req, res, b) {
       for (const k of ["phone", "address", "instagram", "contactEmail", "website"]) if (!st[k] && b.studio[k]) st[k] = String(b.studio[k]).slice(0, 200);
       await tenant.saveRecord({ ...cur, studio: st });
     }
+    if (b.theme && /^#[0-9a-f]{6}$/i.test(b.theme.accent || "")) { const cur = await tenant.getRecord(rec.slug); await tenant.saveRecord({ ...cur, theme: { ...(cur.theme || {}), accent: b.theme.accent } }); }
     return r;
   });
   let ownerEmail = null;
