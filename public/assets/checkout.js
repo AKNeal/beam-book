@@ -57,7 +57,7 @@
     p.append(el("div", { class: "opts" },
       el("div", { class: "opt" }, el("small", {}, "Cash"), el("b", {}, $$(Q.cash.total)), el("small", {}, Q.cash.discount ? `includes ${$$(Q.cash.discount)} cash discount` : ""),
         el("button", { class: "btn big", type: "button", disabled: Boolean(state), onclick: cash }, "Paid cash")),
-      el("div", { class: "opt" }, el("small", {}, "Card"), el("b", {}, $$(Q.card.total)), el("small", {}, `credit cards +${Q.surchargePct}% (${$$(Q.card.creditFee)}); debit no fee`),
+      el("div", { class: "opt" }, el("small", {}, "Card"), el("b", {}, $$(Q.card.total)), el("small", {}, Q.surchargePct > 0 ? `credit cards +${Q.surchargePct}% (${$$(Q.card.creditFee)}); debit no fee` : "no card fee"),
         el("button", { class: "btn big", type: "button", disabled: !Q.cardReady || Boolean(state), onclick: card }, Q.cardReady ? "Card on reader" : "Reader not set up"))));
     if (state) p.append(state);
   }
@@ -113,7 +113,7 @@
       const rate = el("input", { type: "number", min: 0, max: 3, step: "0.1", value: S.surchargePct, style: "width:90px" });
       body.append(el("p", { style: "margin-top:16px" }, el("strong", {}, "Credit card fee passed to the client: "), rate, "% ",
         el("button", { class: "btn sm line", type: "button", onclick: async () => { try { await call({ action: "payRates", surchargePct: rate.value }); ctx.toast("Saved"); } catch (e) { ctx.toast(e.message); } } }, "Save")),
-        el("p", { class: "small muted" }, "Credit cards only (never debit), at most 3% and no more than what cards cost the shop. Post a sign at the counter. The cash discount is set in Dashboard settings."));
+        el("p", { class: "small muted" }, "Leave at 0 if your menu prices are card prices and cash gets a discount (the usual setup). If you add a fee: credit cards only (never debit), at most 3% and no more than what cards cost the shop, and it must be posted at the counter and on your site. The cash discount is set in Dashboard settings."));
       box.append(body);
     });
     if (/[?&]payments=1/.test(location.search)) setTimeout(() => (box.open = true), 0);
