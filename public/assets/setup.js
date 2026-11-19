@@ -3,7 +3,7 @@
 (function () {
   const { el, api } = window.BW;
   const call = (body) => api("/api/admin/books", { body });
-  let ctx = null, R = null, who = "me";
+  let ctx = null, R = null; const who = "me"; // just your own list
   const css = `.su h1{font-size:44px;margin:28px 0 6px}.su .prog{height:12px;background:var(--line);border-radius:99px;overflow:hidden;margin:8px 0 4px}.su .prog i{display:block;height:100%;background:var(--sign);border-radius:99px}
   .su .it{display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:start;padding:14px 0;border-bottom:1px solid var(--line)}.su .it input[type=checkbox]{width:22px;height:22px;margin-top:2px;accent-color:var(--sign)}
   .su .it.done .t{text-decoration:line-through;opacity:.6}.su .t{font-weight:700}.su .d{white-space:pre-line;color:var(--graphite);font-size:15px;margin-top:4px}.su .who{font-size:12px;color:var(--graphite)}
@@ -22,14 +22,6 @@
     const v = document.getElementById("setupView"); v.textContent = "";
     v.append(el("h1", {}, "Setup checklist"));
     const me = R.items.filter((i) => i.mine);
-    if (R.full) {
-      const ppl = (R.people || []).filter((p) => R.items.some((i) => i.user === p.id));
-      // Tabs show first names only ("Isacc"), unless two people share a first name.
-      const first = (p) => String(p.name || "").trim().split(/\s+/)[0] || p.name;
-      const tab = (p) => ppl.filter((q) => first(q).toLowerCase() === first(p).toLowerCase()).length > 1 ? p.name : first(p);
-      v.append(el("div", { class: "people" }, [["me", "Mine"], ["all", "Everyone"], ...ppl.map((p) => [p.id, tab(p)])].map(([k, l]) =>
-        el("button", { class: "btn sm" + (who === k ? "" : " line"), type: "button", onclick: () => { who = k; draw(); } }, l))));
-    }
     const list = who === "me" ? me : who === "all" ? R.items : R.items.filter((i) => i.user === who);
     const done = list.filter((i) => i.done).length;
     v.append(el("section", { class: "panel" },
@@ -58,7 +50,7 @@
   function editor() {
     const i = editing || {};
     const f = el("form", { id: "suForm" },
-      el("label", {}, "Whose list", el("select", { name: "user", required: true }, (R.people || []).map((p) => el("option", { value: p.id, selected: (i.user || (who !== "me" && who !== "all" ? who : "")) === p.id }, p.name)))),
+      el("label", {}, "Whose list", el("select", { name: "user", required: true }, (R.people || []).map((p) => el("option", { value: p.id, selected: (i.user || R.items.find((x) => x.mine)?.user || "") === p.id }, p.name)))),
       el("label", {}, "What needs doing", el("input", { name: "title", value: i.title || "", required: true, maxlength: 120 })),
       el("label", {}, "How (optional)", el("textarea", { name: "details", rows: 4 }, i.details || "")),
       el("div", { class: "two" }, el("label", {}, "Button label (optional)", el("input", { name: "linkLabel", value: i.link?.label || "" })), el("label", {}, "Button link (https://… or /page)", el("input", { name: "linkUrl", value: i.link?.url || "" }))),
