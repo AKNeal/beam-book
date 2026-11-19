@@ -249,19 +249,29 @@ async function dashApi(req, res, me, b) {
       const df = b.from && T.parseDate(String(b.from)), dt = b.to && T.parseDate(String(b.to));
       if (df && dt) { from = T.toUtc(df.y, df.m, df.d, 0, 0); to = T.toUtc(dt.y, dt.m, dt.d, 0, 0) + 864e5; }
       if (to - from > 400 * 864e5 || to <= from) return send(res, 400, { error: "Pick a shorter date range." });
-      const who = all ? (b.barber ? str(b.barber, 60) : null) : me.artist;
-      if (!all && !who) return send(res, 403, { error: "Your login isn't linked to a barber." });
-      // The Administrator (Neal Media) runs the shop's site but doesn't see the shop's money.
-      const hideMoney = me.role === "admin";
+      // Whole-shop numbers and money: the Owner only. Everyone else gets their own dashboard (their numbers and their pay),
+      // or, with no barber linked (an Administrator / Staff login), the shop's counts without any dollar amounts.
+      const isOwner = me.role === "owner";
+      const who = isOwner ? (b.barber ? str(b.barber, 60) : null) : me.artist || null;
+      const hideMoney = !isOwner && !who;
       const d = await an.dashboard({ from, to, who, withMoney: !hideMoney });
       if (hideMoney) { delete d.avgTicket; d.services = d.services.map(({ gross, ...x }) => x); d.daily = d.daily.map(({ gross, ...x }) => x); }
       d.weekly = await an.weekly({ who });
-      if (!owner) { delete d.settings; for (const m of [d.money, ...d.barbers.map((x) => x.money)]) if (m) { delete m.net; delete m.expenses; delete m.booth; } }
-      return send(res, 200, { dash: d, hideMoney, challenges: await an.standings(), owner, barbers: all ? (await artists.list()).map((a) => ({ slug: a.slug, name: a.name })) : [] });
+      if (!isOwner) { delete d.settings; for (const m of [d.money, ...d.barbers.map((x) => x.money)]) if (m) { delete m.net; delete m.expenses; delete m.booth; } }
+      return send(res, 200, { dash: d, hideMoney, mine: Boolean(who && !isOwner), challenges: await an.standings(), owner, isOwner, barbers: isOwner ? (await artists.list()).map((a) => ({ slug: a.slug, name: a.name })) : [] });
+    }
+    if (b.action === "dashDay") { // the Day screen: projected earnings for the day (own; the Owner sees every barber)
+      const d0 = T.parseDate(String(b.date || "")); if (!d0) return send(res, 400, { error: "Pick a day." });
+      const from = T.toUtc(d0.y, d0.m, d0.d, 0, 0), to = from + 864e5, isOwner = me.role === "owner";
+      if (!isOwner && !me.artist) return send(res, 200, { rows: [] });
+      const d = await an.dashboard({ from, to, who: isOwner ? null : me.artist, withMoney: true });
+      const rows = d.barbers.filter((x) => x.cuts).map((x) => ({ slug: x.slug, name: x.name, cuts: x.cuts, done: x.done, gross: x.money.gross, earned: x.money.earned, projected: x.money.projected,
+        take: x.money.take, tips: x.money.tips || 0, model: x.pay?.model || "commission", rate: x.pay?.rate ?? 50 }));
+      return send(res, 200, { rows, owner: isOwner });
     }
     if (b.action === "challenges") return send(res, 200, { challenges: await an.standings(), metrics: an.METRICS });
     if (!owner) return send(res, 403, { error: "Only the Owner or a Administrator can change this." });
-    if (me.role === "admin" && ["dashSettings", "dashPay", "dashConfig"].includes(b.action)) return send(res, 403, { error: "The shop's money settings are for the Owner." });
+    if (me.role !== "owner" && ["dashSettings", "dashPay", "dashConfig"].includes(b.action)) return send(res, 403, { error: "The shop's money settings are for the Owner." });
     if (b.action === "dashSettings") return send(res, 200, { settings: await an.saveSettings(b.settings || {}), pay: await an.pay() });
     if (b.action === "dashPay") { if (!(await artists.bySlug(str(b.slug, 60)))) return send(res, 400, { error: "Unknown barber." }); return send(res, 200, { pay: await an.savePay(str(b.slug, 60), b.pay || {}) }); }
     if (b.action === "dashConfig") return send(res, 200, { settings: await an.settings(), pay: await an.pay(), barbers: (await artists.list()).map((a) => ({ slug: a.slug, name: a.name })) });

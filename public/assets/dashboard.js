@@ -46,7 +46,7 @@
 
   function draw() {
     const v = document.getElementById("dashView"); v.textContent = "";
-    const d = R.dash, m = d.money || {}, owner = R.owner, mineOnly = !R.barbers.length;
+    const d = R.dash, m = d.money || {}, owner = R.owner, mineOnly = Boolean(R.mine);
     v.append(el("h1", {}, mineOnly ? "My numbers" : "Dashboard"));
     const sel = R.barbers.length > 1 ? el("select", { "aria-label": "Barber", onchange: (e) => { barber = e.target.value; show(ctx); } },
       el("option", { value: "" }, "Whole shop"), R.barbers.map((b) => el("option", { value: b.slug }, b.name))) : null;
@@ -59,7 +59,7 @@
     const hide = R.hideMoney, tiles = [];
     if (!hide) {
       tiles.push(kp($$(m.gross), "Gross (booked + done)", true), kp($$(m.earned), "Earned so far"), kp($$(m.projected), "Still on the books (projected)"));
-      if (owner && !barber) tiles.push(kp($$(m.net), "Net to the shop", true));
+      if (R.isOwner && !barber) tiles.push(kp($$(m.net), "Net to the shop", true));
       else tiles.push(kp($$(mineOnly ? m.take ?? m.pay : m.pay), mineOnly ? "My take (estimate, before tips)" : "Barber pay (estimate)", true));
     }
     tiles.push(kp(d.cuts, `Appointments (${d.done} done, ${d.upcoming} ahead)`), kp(pct(d.rebookRate), `Rebook rate (${d.rebooks} of ${d.rebookable})`, true), kp(d.newClients, "New clients"));
@@ -67,12 +67,12 @@
     tiles.push(kp(pct(d.utilization), "Chair utilization (booked vs open hours)"));
     if (d.noShowRate != null) tiles.push(kp(pct(d.noShowRate), `No-show rate (${d.noShows} no-shows, ${d.cancelled} cancelled; Squire history)`));
     if (m.tips && !hide) tiles.push(kp($$(m.tips), mineOnly ? "My tips (through checkout)" : "Tips to barbers (through checkout)"));
-    if (hide) v.append(el("p", { class: "small muted", style: "margin:12px 0 0" }, "Dollar amounts are hidden on Administrator logins. The Owner sees them."));
+    if (hide) v.append(el("p", { class: "small muted", style: "margin:12px 0 0" }, "The shop's money is on the Owner's dashboard only."));
     v.append(el("div", { class: "kpis" }, tiles));
     v.append(chartsPanel(d));
 
     // Net breakdown (owner, whole shop)
-    if (owner && !barber && !hide) {
+    if (R.isOwner && !barber && !hide) {
       const S = d.settings;
       const gp = S.monthlyGoal ? Math.round(100 * m.gross / S.monthlyGoal) : 0;
       const goal = period === "month" && S.monthlyGoal ? el("div", { style: "margin:6px 0 14px" },
@@ -137,7 +137,7 @@
     }
 
     v.append(challengesPanel(owner), ...rebookPanels());
-    if (owner) v.append(boardPanel(), historyPanel(), ...(hide ? [] : [settingsPanel()]));
+    if (owner) v.append(boardPanel(), historyPanel(), ...(R.isOwner ? [settingsPanel()] : []));
   }
 
   // ---------- graphs: week by week ----------

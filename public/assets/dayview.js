@@ -22,6 +22,28 @@
     return to > from ? { from: from, to: to } : null;
   }
 
+  // Projected earnings for the day: a barber sees their own; the Owner sees every barber.
+  var money = function (n) { return "$" + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 }); };
+  function earningsPanel(key) {
+    var sec = el("section", { class: "panel dv-earn", style: "margin-top:18px" }, el("h2", { style: "margin-top:0" }, key === ctx.D.today ? "Today's earnings" : "Earnings for the day"), el("p", { class: "muted" }, "Adding it up…"));
+    BW.api("/api/admin/books", { body: { action: "dashDay", date: key } }).then(function (r) {
+      sec.lastChild.remove();
+      if (!r.rows.length) { sec.append(el("p", { class: "muted" }, r.owner ? "Nothing booked this day." : "Nothing on your books this day.")); return; }
+      r.rows.forEach(function (x) {
+        sec.append(el("div", { class: "dv-earnrow" },
+          el("div", {}, el("strong", {}, r.owner ? x.name : "Your projected take"), el("div", { class: "small muted" }, x.cuts + " appointment" + (x.cuts === 1 ? "" : "s") + " · " + x.done + " done · " +
+            (x.model === "booth" ? "booth rent" : x.model === "owner" ? "owner" : (x.rate + "% commission")))),
+          el("div", { class: "dv-earnnums" },
+            el("div", {}, el("b", {}, money(x.take)), el("span", {}, "projected take")),
+            el("div", {}, el("b", {}, money(x.earned)), el("span", {}, "services done")),
+            el("div", {}, el("b", {}, money(x.projected)), el("span", {}, "still booked")),
+            x.tips ? el("div", {}, el("b", {}, money(x.tips)), el("span", {}, "tips")) : null)));
+      });
+      sec.append(el("p", { class: "small muted", style: "margin-bottom:0" }, "At menu prices, before tips, after the cash discount. Your take uses your pay setup (commission or booth rent)."));
+    }).catch(function (e) { sec.lastChild.textContent = e.message; });
+    return sec;
+  }
+
   function show(c) { ctx = c; ctx.only("dayView"); day = day || ctx.D.today; render(); }
 
   function render() {
@@ -52,6 +74,7 @@
     var y = function (m) { return ((Math.max(lo, Math.min(hi, m)) - lo) / STEP) * ROW; };
 
     // Header: date and navigation
+    if (!document.getElementById("dvEarnCss")) document.head.append(el("style", { id: "dvEarnCss" }, ".dv-earnrow{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.dv-earnnums{display:flex;gap:18px;flex-wrap:wrap}.dv-earnnums div{min-width:90px}.dv-earnnums b{display:block;font-size:24px;line-height:1.1}.dv-earnnums span{font-size:12px;color:var(--graphite)}.dv-earnnums div:first-child b{color:var(--sign-dark)}"));
     var picker = el("input", { type: "date", value: day, "aria-label": "Pick a day", style: "width:auto" });
     picker.addEventListener("change", function () { if (picker.value) { day = picker.value; render(); } });
     var count = cols.reduce(function (n, c) { return n + c.items.filter(function (i) { return i.kind === "appt"; }).length; }, 0);
@@ -119,7 +142,7 @@
       grid.append(col);
     });
     wrap.append(grid);
-    v.append(wrap, el("p", { class: "small muted", style: "margin:12px 0 48px" }, "Tap a booking to open it. Shaded times are outside working hours. Change hours and time off on the Calendar page."));
+    v.append(wrap, earningsPanel(day), el("p", { class: "small muted", style: "margin:12px 0 48px" }, "Tap a booking to open it. Shaded times are outside working hours. Change hours and time off on the Calendar page."));
   }
 
   window.BBDay = { show: show };
