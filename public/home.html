@@ -149,6 +149,16 @@
   .card p { margin: 0; color: var(--muted); }
 
   .band { background: var(--bg-2); border-block: 1px solid var(--line); }
+  /* Date picker (assets/datepicker.js) in Beam's colors: same shapes as the shops' pickers */
+  .bdp, .bdp-trigger, .bdp-scrim { --white: #ffffff; --ink: #0D2236; --graphite: #5b6b7b; --line: #e3e8ee; --field: #d5dce4; --sign: #1265B8; --on-sign: #ffffff; --radius: 12px; --body: inherit; }
+  .bdp .bdp-d.on button, .bdp .bdp-chip.on { background: linear-gradient(135deg, #2BB0FF, #1265B8); }
+  .bdp .bdp-done { background: linear-gradient(135deg, #2BB0FF, #1265B8); }
+  .concierge { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
+  .concierge .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: s; }
+  .concierge .steps li { position: relative; padding: 16px 18px 16px 58px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); color: var(--muted); counter-increment: s; }
+  .concierge .steps li::before { content: counter(s); position: absolute; left: 16px; top: 15px; width: 28px; height: 28px; border-radius: 50%; background: var(--grad); color: #fff; font-weight: 700; display: grid; place-items: center; font-size: 14px; }
+  .concierge .steps b { color: var(--text); display: block; }
+  @media (max-width: 860px) { .concierge { grid-template-columns: 1fr; gap: 28px; } }
   .types { display: flex; flex-wrap: wrap; gap: 10px; }
   .types span { background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 10px 18px; font-weight: 600; }
   .split { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
@@ -387,6 +397,23 @@
     </div>
   </section>
 
+  <section id="concierge">
+    <div class="wrap concierge">
+      <div class="sec-head" style="margin:0;text-align:left">
+        <span class="kicker">Concierge web building</span>
+        <h2>Don't have a website? We'll build it for you.</h2>
+        <p>Neal Media designs and builds your business a complete website with Beam booking built in. You tell us about the business; we handle the design, the writing, the setup and the launch. Then we keep it running.</p>
+        <p style="margin-top:22px"><button class="btn btn-primary" type="button" data-call data-need="Concierge website build">Talk to us about a website</button></p>
+      </div>
+      <ol class="steps">
+        <li><b>A quick call</b>We learn about your business, your clients and the look you want.</li>
+        <li><b>We build it</b>Your pages, photos, services and prices, with booking, texts and your calendar already connected.</li>
+        <li><b>You check it</b>Look it over, test a booking and tell us what to change.</li>
+        <li><b>It goes live</b>On your own domain, and we stay on hand for updates.</li>
+      </ol>
+    </div>
+  </section>
+
   <section class="final">
     <div class="wrap">
       <div class="final-box">
@@ -447,6 +474,13 @@
         <label><span>Business name <em>(optional)</em></span><input name="business" autocomplete="organization" maxlength="120"></label>
         <label>Phone <input name="phone" type="tel" autocomplete="tel" inputmode="tel" required maxlength="40"></label>
         <label><span>Email <em>(optional)</em></span><input name="email" type="email" autocomplete="email" maxlength="120"></label>
+        <label class="full">What are you looking for?
+          <select name="need">
+            <option>Beam booking for my business</option>
+            <option>Concierge website build (with Beam)</option>
+            <option>Not sure yet</option>
+          </select>
+        </label>
         <label>Type of business
           <select name="type">
             <option value="">Choose one</option>
@@ -458,6 +492,7 @@
             <option>Something else</option>
           </select>
         </label>
+        <label><span>Best day to call <em>(optional)</em></span><input name="day" type="date" data-min="today" placeholder="Pick a day"></label>
         <label>Best time to call
           <select name="when">
             <option value="">Any time</option>
@@ -494,6 +529,8 @@
 
   const open = (e) => {
     e && e.preventDefault();
+    const need = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.need;
+    if (need) form.need.value = /Concierge/.test(need) ? "Concierge website build (with Beam)" : need;
     form.hidden = false; done.hidden = true; err.textContent = "";
     if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
     setTimeout(() => form.name.focus(), 50);
@@ -524,5 +561,6 @@
   });
 })();
 </script>
+<script src="/assets/datepicker.js"></script>
 </body>
 </html>

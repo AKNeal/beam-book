@@ -167,7 +167,7 @@
       var base = pick || (minD && minD > today() ? minD : today());
       view = new Date(base.getFullYear(), base.getMonth(), 1);
       pop = document.createElement("div"); pop.className = "bdp"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-label", "Choose a date");
-      if (matchMedia("(max-width:560px)").matches) { scrim = document.createElement("div"); scrim.className = "bdp-scrim"; document.body.appendChild(scrim); scrim.addEventListener("click", function () { close(false); }); document.body.appendChild(pop); }
+      if (matchMedia("(max-width:560px)").matches) { scrim = document.createElement("div"); scrim.className = "bdp-scrim"; var host = input.closest("dialog") || document.body; host.appendChild(scrim); scrim.addEventListener("click", function () { close(false); }); host.appendChild(pop); }
       else wrap.appendChild(pop);
       pop.addEventListener("change", function (e) {
         var sl = e.target.closest("[data-sel]"); if (!sl) return;

@@ -31,6 +31,8 @@ module.exports = async function handler(req, res) {
     email: str(b.email, 120).toLowerCase(),
     type: str(b.type, 60),
     when: str(b.when, 60),
+    day: /^\d{4}-\d{2}-\d{2}$/.test(str(b.day, 10)) ? str(b.day, 10) : "",
+    need: str(b.need, 80),
     notes: str(b.notes, 1500),
   };
   if (f.name.length < 2) return send(res, 400, { error: "Please enter your name." });
@@ -39,7 +41,7 @@ module.exports = async function handler(req, res) {
 
   const rows = [
     ["Name", f.name], ["Business", f.business], ["Phone", f.phone], ["Email", f.email],
-    ["Business type", f.type], ["Best time to call", f.when], ["Notes", f.notes],
+    ["Looking for", f.need], ["Business type", f.type], ["Best day to call", f.day ? new Date(`${f.day}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" }) : ""], ["Best time to call", f.when], ["Notes", f.notes],
   ].filter(([, v]) => v);
   const subject = `Beam call request: ${f.name}${f.business ? ` (${f.business})` : ""}`;
   const text = [`New call request from the Beam website`, "", ...rows.map(([k, v]) => `${k}: ${v}`), "", `Sent ${new Date().toISOString()}`].join("\n");
