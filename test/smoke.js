@@ -897,9 +897,17 @@ const valid = (o = {}) => ({
       assert.equal(slot.barber, "mike-fade");
       x = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "any", start: slot.start, name: "J", phone: "12" } });
       assert.equal(x.status, 400); assert.ok(x.data.fields.name && x.data.fields.phone);
-      x = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "any", start: slot.start, name: "Client 3 Test", phone: "907-555-1003", email: "three@example.com", textOk: true } });
-      assert.equal(x.status, 200, JSON.stringify(x.data)); assert.equal(x.data.barber, "Mike Fade");
-      x = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: slot.start, name: "Someone Else", phone: "907-555-2222" } });
+      { // paying: must choose; cash needs the agreement
+        let pz = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "any", start: slot.start, name: "Client 3 Test", phone: "907-555-1003" } });
+        assert.equal(pz.status, 400); assert.ok(pz.data.fields.pay, "must choose how to pay");
+        pz = await call("/api/schedule", { body: { instant: true, pay: "cash", service: svc.id, barber: "any", start: slot.start, name: "Client 3 Test", phone: "907-555-1003" } });
+        assert.equal(pz.status, 400); assert.ok(pz.data.fields.cashAgree, "cash needs the agreement");
+        const g = await call("/api/schedule?instant=1"); assert.ok(g.data.pay.ask && /confirmed as soon as you book/.test(g.data.bookingTerms));
+        const gt = await call(`/api/schedule?instant=1&service=${svc.id}&barber=any`); assert.ok(/pay in cash/.test(gt.data.cashTerms));
+      }
+      x = await call("/api/schedule", { body: { instant: true, pay: "cash", cashAgree: true, service: svc.id, barber: "any", start: slot.start, name: "Client 3 Test", phone: "907-555-1003", email: "three@example.com", textOk: true } });
+      assert.equal(x.status, 200, JSON.stringify(x.data)); assert.equal(x.data.barber, "Mike Fade"); assert.equal(x.data.pay, "cash");
+      x = await call("/api/schedule", { body: { instant: true, pay: "card", service: svc.id, barber: "mike-fade", start: slot.start, name: "Someone Else", phone: "907-555-2222" } });
       assert.equal(x.status, 409, "same time can't be booked twice");
       cookie = owner;
       x = await call("/api/admin/inbox"); const booked = x.data.requests.find((r) => r.instant); assert.equal(booked.status, "booked"); assert.ok(booked.clientId);
@@ -917,7 +925,7 @@ const valid = (o = {}) => ({
         let y = await call(`/api/schedule?instant=1&service=${svc.id}&barber=mike-fade`);
         const allSlots = y.data.days.flatMap((d) => d.slots);
         const [s1, s2] = [allSlots[3], allSlots[8]];
-        y = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: s1.start, name: "Client 10 Test", phone: "907-555-1010" } });
+        y = await call("/api/schedule", { body: { instant: true, pay: "card", service: svc.id, barber: "mike-fade", start: s1.start, name: "Client 10 Test", phone: "907-555-1010" } });
         assert.equal(y.status, 200, JSON.stringify(y.data));
         const st = new URL(y.data.statusUrl, "http://x").searchParams; const id = st.get("id"), t = st.get("t");
         y = await call(`/api/status?id=${id}&t=${t}`); assert.equal(y.data.canChange, true); assert.equal(y.data.instant, true); assert.equal(y.data.service.id, svc.id);
@@ -926,7 +934,7 @@ const valid = (o = {}) => ({
         y = await call(`/api/schedule?instant=1&service=${svc.id}&barber=mike-fade`);
         let open = y.data.days.flatMap((d) => d.slots).map((sl) => sl.start);
         assert.ok(open.includes(s1.start), "old time is open again"); assert.ok(!open.includes(s2.start), "new time is taken");
-        y = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: s2.start, name: "Late Comer", phone: "907-555-3002" } });
+        y = await call("/api/schedule", { body: { instant: true, pay: "card", service: svc.id, barber: "mike-fade", start: s2.start, name: "Late Comer", phone: "907-555-3002" } });
         assert.equal(y.status, 409, "nobody else can take the moved-to time");
         y = await call("/api/status", { body: { id, t, action: "reschedule", start: slot.start } });
         assert.equal(y.status, 409, "can't move onto someone else's appointment");
@@ -936,7 +944,7 @@ const valid = (o = {}) => ({
         open = y.data.days.flatMap((d) => d.slots).map((sl) => sl.start); assert.ok(open.includes(s2.start), "cancelled time is open again");
         y = await call("/api/status", { body: { id, t, action: "cancel" } }); assert.equal(y.status, 409, "can't cancel twice");
         // Inside the shop's cutoff, the link says to call instead.
-        y = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: s1.start, name: "Client 11 Test", phone: "907-555-1011" } });
+        y = await call("/api/schedule", { body: { instant: true, pay: "card", service: svc.id, barber: "mike-fade", start: s1.start, name: "Client 11 Test", phone: "907-555-1011" } });
         const st2 = new URL(y.data.statusUrl, "http://x").searchParams;
         cookie = owner;
         y = await call("/api/admin/books", { body: { action: "bookingSettings", changeCutoffHours: 168 } }); assert.equal(y.data.changeCutoffHours, 168);

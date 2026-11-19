@@ -570,6 +570,13 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     if (r.status === "agreed") facts.push(["Next", "Set the time: Book a time myself, or send a booking link."]);
     if (r.status === "declined" && r.declinedBy === "client") facts.push(["Client", "Turned down the offer"]);
     if (r.clientView?.deposit) facts.push(["Deposit", r.clientView.deposit]);
+    if (r.payment?.plan) facts.push(["Paying", r.payment.plan === "cash"
+      ? el("span", {}, `Cash at the appointment${r.payment.cashPrice != null ? ` ($${r.payment.cashPrice})` : ""}. `,
+          el("details", { style: "display:inline" }, el("summary", { class: "small", style: "display:inline;cursor:pointer" }, `Agreed ${datetime(r.payment.cashAgreedAt)}`),
+            el("p", { class: "small muted", style: "margin:6px 0 0" }, r.payment.cashTerms)))
+      : "Card at the shop"]);
+    if (r.terms?.booking) facts.push(["Booking terms", el("details", {}, el("summary", { class: "small", style: "cursor:pointer" }, `Shown when they booked (${datetime(r.terms.at)})`),
+      el("p", { class: "small muted", style: "margin:6px 0 0" }, r.terms.booking))]);
     if (r.clientView?.when) facts.push([r.status === "pending" ? "Requested time" : "Appointment", r.clientView.when]);
     if (r.status === "scheduling") facts.push(["Booking link", D.emailReady ? "Sent. Waiting for the client to pick a time." : "Ready. Text or copy it below; email isn't connected."]);
     p.append(el("dl", { class: "facts" }, facts.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])));
@@ -1229,6 +1236,9 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     const cutoff = el("input", { type: "number", min: 0, max: 168, step: 0.5, id: "changeCutoff", value: D.changeCutoffHours ?? 2, style: "max-width:110px" });
     p.append(el("div", { class: "field", style: "margin:4px 0 16px" }, el("label", { for: "changeCutoff" }, "Clients can change or cancel online up to this many hours before"), cutoff,
       el("p", { class: "small muted" }, "Inside that window their booking link tells them to call. 0 = any time before it starts.")));
+    const payAsk = el("input", { type: "checkbox", checked: D.payAtBooking !== false }), atm = el("input", { type: "checkbox", checked: Boolean(D.atmOnSite) });
+    p.append(el("label", { class: "check" }, payAsk, "Ask clients how they'll pay (card or cash, both at the shop). Clients who pick cash agree to pay cash at their appointment."),
+      el("label", { class: "check", style: "margin-bottom:16px" }, atm, "There's an ATM in the shop (clients picking cash are told it's a courtesy and isn't guaranteed to work or have cash)."));
     const rows = el("div", {});
     const addRow = (sv = {}) => {
       const r = el("div", { style: "display:flex;flex-wrap:wrap;align-items:end;gap:8px;margin-bottom:10px" },
@@ -1247,7 +1257,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
         const services = [...rows.children].map((r) => ({ id: r.dataset.id || undefined, barbers: JSON.parse(r.dataset.barbers || "[]"),
           ...Object.fromEntries([...r.querySelectorAll("[data-k]")].map((i) => [i.dataset.k, i.value])) })).filter((x) => x.name.trim());
         if (on.checked && !services.length) { err.textContent = "Add at least one service before turning instant booking on."; err.hidden = false; return; }
-        try { await api("/api/admin/books", { body: { action: "bookingSettings", instant: on.checked, services, changeCutoffHours: cutoff.value } }); await load(); toast("Services saved"); showForm(); }
+        try { await api("/api/admin/books", { body: { action: "bookingSettings", instant: on.checked, services, changeCutoffHours: cutoff.value, payAtBooking: payAsk.checked, atmOnSite: atm.checked } }); await load(); toast("Services saved"); showForm(); }
         catch (x) { err.textContent = x.message; err.hidden = false; }
       } }, "Save services"), el("a", { class: "btn sm line", href: "/appointment", target: "_blank", rel: "noopener" }, "See the booking page")));
     return p;

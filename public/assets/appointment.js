@@ -30,11 +30,18 @@
 
   async function loadTimes() {
     S.days = null; S.day = null; S.slot = null; render();
-    try { const r = await api(`/api/schedule?instant=1&service=${encodeURIComponent(S.service.id)}&barber=${encodeURIComponent(S.barber)}`); S.days = r.days; S.day = r.days[0] || null; }
+    try { const r = await api(`/api/schedule?instant=1&service=${encodeURIComponent(S.service.id)}&barber=${encodeURIComponent(S.barber)}`); S.days = r.days; S.day = r.days[0] || null; S.cashTerms = r.cashTerms || ""; S.cashPrice = r.cashPrice || ""; }
     catch (e) { S.days = []; S.err = e.message; }
     render();
   }
 
+  if (!document.getElementById("payCss")) document.head.append(el("style", { id: "payCss" }, `
+    .pay-opt{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--field);border-radius:var(--radius);padding:12px 14px;margin:0 0 8px;cursor:pointer}
+    .pay-opt input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--sign);flex:none}.pay-opt .pay-sub{display:block;font-weight:400;color:var(--graphite);font-size:.9375rem}
+    .pay-opt:has(input:checked){border-color:var(--sign-dark);background:var(--soft)}
+    fieldset.field{border:0;padding:0;margin:0 0 18px}fieldset.field legend{font-weight:600;margin-bottom:8px}
+    .cash-terms{border-left:3px solid var(--sign);padding:10px 0 2px 14px;margin:6px 0 0}.cash-terms .check{font-size:.95rem;line-height:1.5}
+    .book-terms{color:var(--graphite);margin:4px 0 14px;line-height:1.55}`));
   function render() {
     const many = D.barbers.length > 1;
     intro.textContent = `${many ? "Pick your barber, then a service" : "Pick a service"} and a time. You're booked right away. Times are shop time (${D.timeZone}).`;
@@ -118,6 +125,24 @@
         el("span", {}, `Text me appointment confirmations and reminders from ${D.shopName || "the shop"}. Message frequency varies. Msg & data rates may apply. Reply STOP to opt out, HELP for help. `,
           el("a", { href: "/terms#sms", target: "_blank", rel: "noopener" }, "Terms"), " & ", el("a", { href: "/privacy", target: "_blank", rel: "noopener" }, "Privacy")))),
       el("div", { class: "field", "data-f": "note" }, el("label", { for: "f-note" }, "Anything we should know? (optional)"), el("textarea", { id: "f-note", name: "note", rows: 2, maxlength: 300 })));
+
+    // How they'll pay (both at the shop; nothing is charged online). Cash needs an explicit agreement.
+    const P = D.pay || {};
+    if (P.ask) {
+      const opt = (v, label, sub) => el("label", { class: "pay-opt" }, el("input", { type: "radio", name: "pay", value: v, required: true }),
+        el("span", {}, el("strong", {}, label), sub ? el("span", { class: "pay-sub" }, sub) : null));
+      const cashBox = el("div", { class: "cash-terms", hidden: true },
+        el("label", { class: "check" }, el("input", { type: "checkbox", name: "cashAgree" }), el("span", {}, S.cashTerms)),
+        el("div", { class: "err" }));
+      cashBox.dataset.f = "cashAgree";
+      const payField = el("fieldset", { class: "field", "data-f": "pay" }, el("legend", {}, "How you'll pay at the shop"),
+        opt("card", "Card", S.service.price != null ? `${S.service.priceLabel || ""} · pay when your service is done` : "Pay when your service is done"),
+        opt("cash", "Cash", S.cashPrice ? `${S.cashPrice} · ${P.cashDiscount ? `$${P.cashDiscount} off for paying cash` : ""}` : "Pay in cash at your appointment"),
+        el("div", { class: "err" }), cashBox);
+      payField.addEventListener("change", () => { cashBox.hidden = f.querySelector("input[name=pay]:checked")?.value !== "cash"; });
+      f.append(payField);
+    }
+    f.append(el("p", { class: "book-terms small" }, D.bookingTerms || "", " By booking, you agree to the ", el("a", { href: "/terms#booking", target: "_blank", rel: "noopener" }, "booking terms"), "."));
     const err = el("p", { class: "form-error", role: "alert", hidden: true });
     const btn = el("button", { class: "btn sign", type: "submit" }, `Book ${S.service.name}`);
     f.append(err, btn);
@@ -128,7 +153,8 @@
       btn.disabled = true; btn.textContent = "Booking…";
       try {
         const r = await api("/api/schedule", { body: { instant: true, service: S.service.id, barber: S.barber === "any" ? S.slot.barber : S.barber, start: S.slot.start,
-          name: d.get("name"), phone: d.get("phone"), email: d.get("email"), textOk: d.get("textOk") === "on", note: d.get("note"), website: d.get("website") } });
+          name: d.get("name"), phone: d.get("phone"), email: d.get("email"), textOk: d.get("textOk") === "on", note: d.get("note"), website: d.get("website"),
+          pay: d.get("pay") || undefined, cashAgree: d.get("cashAgree") === "on", termsVersion: D.termsVersion } });
         done(r);
       } catch (x) {
         btn.disabled = false; btn.textContent = `Book ${S.service.name}`;
@@ -146,6 +172,8 @@
     app.append(el("div", { class: "panel", tabindex: "-1", id: "bookedBox" },
       el("h2", {}, r.when),
       el("p", {}, `${r.service} with ${r.barber}${r.price ? ` · ${r.price}` : ""}.`),
+      r.pay === "cash" ? el("p", { class: "notice" }, `You're paying cash${r.cashPrice ? ` (${r.cashPrice})` : ""} at your appointment. Please bring it with you${r.atm ? ": the shop's ATM isn't guaranteed to be working or to have cash" : ""}.`)
+        : r.pay === "card" ? el("p", {}, "You'll pay by card at the shop.") : null,
       D.prep ? el("p", {}, D.prep) : null,
       el("div", { class: "actions", style: "margin-top:18px" },
         el("a", { class: "btn", href: r.ics }, "Add to my calendar"),
