@@ -968,6 +968,10 @@ const valid = (o = {}) => ({
         y = await call("/api/admin/books", { body: { action: "dashPay", slug: "mike-fade", pay: { model: "commission", rate: 60 } } }); assert.equal(y.data.pay["mike-fade"].rate, 60);
         y = await call("/api/admin/books", { body: { action: "challengeSave", title: "Rebook Rumble", metric: "rebookRate", goal: 70, startDate: T.dateKey(Date.now()), endDate: T.dateKey(Date.now() + 14 * 864e5), prize: "$100" } });
         assert.equal(y.status, 200, JSON.stringify(y.data)); assert.equal(y.data.challenges[0].status, "live"); assert.equal(y.data.challenges[0].rows[0].name, "Mike Fade");
+        // the floating button: +1 and undo on a barber's count
+        y = await call("/api/admin/books", { body: { action: "challengeRebook", slug: "mike-fade" } }); assert.equal(y.data.live, true); const base = y.data.count;
+        y = await call("/api/admin/books", { body: { action: "challengeRebook", slug: "mike-fade", add: true } }); assert.equal(y.data.count, base + 1, JSON.stringify(y.data));
+        y = await call("/api/admin/books", { body: { action: "challengeRebook", slug: "mike-fade", undo: true } }); assert.equal(y.data.count, base);
         y = await call("/api/admin/books", { body: { action: "challengeSave", title: "Bad", metric: "rebookRate", goal: 150, startDate: "2026-01-01", endDate: "2026-01-02" } }); assert.equal(y.status, 400, "rebook goal over 100% refused");
         y = await call("/api/admin/books", { body: { action: "boardLink" } }); const tok = y.data.token;
         cookie = "";

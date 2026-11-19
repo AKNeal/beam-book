@@ -286,6 +286,15 @@ async function dashApi(req, res, me, b) {
       return send(res, 200, { rows, owner: isOwner });
     }
     if (b.action === "challenges") return send(res, 200, { challenges: await an.standings(), metrics: an.METRICS });
+    // The floating rebook button: your count in the live rebooking challenge, and +1 / undo.
+    if (b.action === "challengeRebook") {
+      const slug = me.artist || (owner && b.slug ? str(b.slug, 60) : null);
+      const live = (await an.standings()).filter((c) => c.status === "live" && /^rebook/.test(c.metric) && (!slug || c.rows.some((r) => r.slug === slug)));
+      const c = live[0]; if (!c || !slug) return send(res, 200, { live: false });
+      if (b.add || b.undo) { try { await an.addRebook(c.id, slug, me.name, Boolean(b.undo)); } catch (e) { return send(res, 400, { error: e.message }); } }
+      const now = b.add || b.undo ? (await an.standings()).find((x) => x.id === c.id) : c, row = now.rows.find((r) => r.slug === slug);
+      return send(res, 200, { live: true, id: c.id, title: c.title, metric: c.metric, goal: c.goal, count: row.rebooks, value: row.value, place: now.rows.findIndex((r) => r.slug === slug) + 1, of: now.rows.length, daysLeft: c.daysLeft });
+    }
     if (!owner) return send(res, 403, { error: "Only the Owner or a Administrator can change this." });
     if (me.role !== "owner" && ["dashSettings", "dashPay", "dashConfig"].includes(b.action)) return send(res, 403, { error: "The shop's money settings are for the Owner." });
     if (b.action === "dashSettings") return send(res, 200, { settings: await an.saveSettings(b.settings || {}), pay: await an.pay() });
