@@ -59,6 +59,15 @@ module.exports = async function handler(req, res) {
     const base = `https://${String(req.headers["x-forwarded-host"] || req.headers.host).split(",")[0]}`, cs = require("../calsync");
     return send(res, 200, { links: (await artists.list()).map((a) => ({ slug: a.slug, name: a.name, url: cs.linkFor(base, a.slug) })) });
   }
+  if (b.action === "rankManual") { // Owner: record today's ranks by hand from a live Google search (when the morning check didn't run)
+    if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can record ranks." });
+    try {
+      const rc = require("../../lib/rankcheck");
+      const searches = {}; for (const [q, r] of Object.entries(b.ranks || {})) searches[q] = { rank: r == null ? null : Number(r) };
+      await rc.ingest({ searches, rating: b.rating, reviews: b.reviews, note: `Entered by hand by ${me.name || "the Owner"} from a live Google search` });
+      return send(res, 200, { rankings: await rc.summary() });
+    } catch (e) { return send(res, 400, { error: e.message }); }
+  }
   if (b.action === "rankSearches") { // Owner: the shop's Google searches (up to 5)
     if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner can change the searches." });
     try { const rc = require("../../lib/rankcheck"); const searches = await rc.saveSearches(b.searches); return send(res, 200, { rankings: await rc.summary({ searches }) }); }
