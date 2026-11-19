@@ -558,6 +558,10 @@ const valid = (o = {}) => ({
         cookie = "";
         open = (await call(`/api/schedule?id=${cid}&t=${ctok}`)).data.days;
         assert.ok(open.flatMap((d) => d.slots).some((x) => x.start === target), "removing the calendar frees the time");
+        { // Test bookings: "test" in the name means no shop alert
+          const isTest = (c) => require("../lib/tenant").runAs("blackwolf", () => require("../lib/testbook").isTest(c));
+          assert.equal(await isTest({ name: "TEST" }), true); assert.equal(await isTest({ name: "Testa Rossa", email: "x@example.com" }), false);
+        }
         { // Apprenticeship application (public /apply) → owner's Applications list
           cookie = "";
           let a = await call("/api/status", { body: { action: "apprApply", first: "", last: "Rivers", email: "nope", phone: "12" } });
