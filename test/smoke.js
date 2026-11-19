@@ -632,6 +632,18 @@ const valid = (o = {}) => ({
               await call("/api/admin/books", { body: { action: "apprSet", slug: ts, on: false } });
               await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").remove(ts).catch(() => {}));
             }
+            { // applied through the website with the same name as a team member: onboarding uses that team member
+              const ts = await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").add("Rae Quill"));
+              const ap = await call("/api/status", { body: { action: "apprApply", first: "Rae", last: "Quill", email: "rae@example.com", phone: "907-555-0102", about: "Love it", street: "1 Main St", city: "North Pole", state: "AK", zip: "99705" } });
+              assert.equal(ap.status, 200, JSON.stringify(ap.data));
+              const apps = (await call("/api/admin/books", { body: { action: "apprView" } })).data.applications; const rid = apps.find((x) => x.first === "Rae").id;
+              const ob = await call("/api/admin/books", { body: { action: "apprOnboard", first: "Rae", last: "Quill", appId: rid } });
+              assert.equal(ob.status, 200, JSON.stringify(ob.data)); assert.equal(ob.data.slug, ts, "no duplicate team member");
+              await call("/api/admin/books", { body: { action: "apprSet", slug: ts, on: false } }); await call("/api/admin/books", { body: { action: "apprApp", id: rid, status: "delete" } });
+              const tm2 = await call("/api/admin/login", { body: { action: "team" } }); const ru = (tm2.data.users || tm2.data.team || []).find((x) => x.email === "rae@example.com");
+              if (ru) await call("/api/admin/login", { body: { action: "remove", id: ru.id } });
+              await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").remove(ts).catch(() => {}));
+            }
             // tidy up so later checks see the same team
             await call("/api/admin/books", { body: { action: "apprSet", slug: ks, on: false } });
             const tm = await call("/api/admin/login", { body: { action: "team" } }); const ku = (tm.data.users || tm.data.team || []).find((x) => x.email === "kiley@example.com");

@@ -42,6 +42,11 @@
       : (a.paperwork.length ? `Paperwork: missing ${a.paperwork.length}` : "Paperwork: ready") + (a.files ? ` · ${a.files} uploaded` : "");
     const needsOnboard = !a.demo && !a.onboarded;
     const slot = el("div", { style: "flex-basis:100%" });
+    const toggle = () => { if (slot.firstChild) slot.replaceChildren(); else { slot.replaceChildren(onboardForm(a)); slot.querySelector("input")?.focus(); } };
+    if (needsOnboard) // not onboarded yet: just their name and the button
+      return el("div", { class: "row", style: "align-items:center" },
+        el("div", { style: "flex:1;min-width:200px" }, el("strong", {}, exName(a.name)), el("span", { class: "meta" }, a.app ? ` · applied ${new Date(a.app.at).toLocaleDateString()}` : " · not onboarded yet")),
+        el("button", { class: "btn sm", type: "button", onclick: toggle }, "Onboard apprentice"), slot);
     const row = el("div", { class: "row", style: "align-items:flex-start" },
       el("div", { style: "flex:1;min-width:240px" }, a.demo ? el("span", { class: "ex-tag" }, "Example") : null, el("strong", {}, exName(a.name)),
         a.permit ? el("span", { class: "meta" }, ` · permit #${a.permit}`) : el("span", { class: "meta" }, " · no permit # yet"),
@@ -49,8 +54,7 @@
         el("div", { class: "meta" }, `Qualified tasks ${a.tasksQualified} / ${a.tasksTotal}${a.repsPending ? ` · ${a.repsPending} reps waiting` : ""} · Modules ${a.modulesDone} / ${a.modulesTotal}`), bar(a.tasksTotal ? 100 * a.tasksQualified / a.tasksTotal : 0),
         el("div", { class: "meta" }, `${a.startDate ? `Started ${a.startDate} · ` : ""}${paper}`)),
       el("div", { class: "actions", style: "margin:0" },
-        needsOnboard ? el("button", { class: "btn sm", type: "button", onclick: () => { if (slot.firstChild) slot.replaceChildren(); else { slot.replaceChildren(onboardForm(a)); slot.querySelector("input")?.focus(); } } }, "Onboard") : null,
-        el("button", { class: "btn sm" + (needsOnboard || a.demo ? " line" : ""), type: "button", onclick: () => show(ctx, a.slug) }, "Open"),
+        el("button", { class: "btn sm" + (a.demo ? " line" : ""), type: "button", onclick: () => show(ctx, a.slug) }, "Open"),
         a.demo ? null : el("button", { class: "btn sm line", type: "button", onclick: async () => { if (!confirmTwice(`end ${a.name}'s apprenticeship`)) return; try { await call({ action: "apprSet", slug: a.slug, on: false }); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Remove")),
       slot);
     return row;
@@ -59,21 +63,20 @@
   function drawOwner() {
     const v = document.getElementById("apprView"); v.textContent = "";
     v.append(el("h1", {}, "Apprenticeship"));
-    // Examples first, real apprentices after them (newest at the bottom).
-    const list = [...R.apprentices.filter((a) => a.demo), ...R.apprentices.filter((a) => !a.demo)];
-    const sec = el("section", { class: "panel" }, el("h2", {}, "Apprentices"));
-    if (!list.length) sec.append(el("p", { class: "muted" }, "No apprentices yet. Pick someone from your team below, or onboard someone new."));
+    // Real apprentices at the top: people waiting to be onboarded (team members marked apprentice, and accepted
+    // applications from the website), then everyone onboarded. Examples last.
+    const real = R.apprentices.filter((a) => !a.demo);
+    const linked = new Set(real.map((a) => a.appId).filter(Boolean));
+    const nm = (x) => String(x || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const fromApps = (R.applications || []).filter((x) => x.status === "accepted" && !x.demo && !linked.has(x.id)
+      && !real.some((a) => nm(exName(a.name)) === nm(`${x.first} ${x.last}`)))
+      .map((x) => ({ slug: "", name: `${x.first} ${x.last}`, app: x, onboarded: false, email: x.email, phone: x.phone, startDate: x.startDate || "" }));
+    const list = [...real.filter((a) => !a.onboarded), ...fromApps, ...real.filter((a) => a.onboarded), ...R.apprentices.filter((a) => a.demo)];
+    const sec = el("section", { class: "panel" }, el("h2", {}, "Apprentices"),
+      el("p", { class: "small muted" }, "Every apprentice applies through your website (", el("a", { href: "/apply", target: "_blank", rel: "noopener" }, "Apply page"), "). Mark their application Accepted and they show up here to onboard."));
+    if (!list.length) sec.append(el("p", { class: "muted" }, "No apprentices yet."));
     for (const a of list) sec.append(apprRow(a));
-    const others = R.team.filter((t) => !R.apprentices.some((a) => a.slug === t.slug));
-    const newSlot = el("div");
-    const add = el("div", { class: "actions", style: "margin-top:14px;align-items:center" });
-    if (others.length) {
-      const sel = el("select", { "aria-label": "Team member" }, others.map((t) => el("option", { value: t.slug }, t.name)));
-      add.append(el("span", { class: "small muted" }, "Add from your team:"), sel, el("button", { class: "btn sm line", type: "button", onclick: async () => { try { await call({ action: "apprSet", slug: sel.value, on: true }); ctx.toast("Added. Press Onboard next to their name."); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Add as apprentice"));
-    }
-    add.append(el("button", { class: "linkbtn small", type: "button", onclick: () => { if (newSlot.firstChild) newSlot.replaceChildren(); else { newSlot.replaceChildren(onboardForm(null)); newSlot.querySelector("input")?.focus(); } } }, "Someone not on the team yet?"));
-    sec.append(add, newSlot,
-      el("p", { class: "small", style: "margin-top:12px" }, el("button", { class: "linkbtn small", type: "button", onclick: async () => {
+    sec.append(el("p", { class: "small", style: "margin-top:12px" }, el("button", { class: "linkbtn small", type: "button", onclick: async () => {
         if (R.demo && !confirmTwice("remove the example apprentices")) return;
         try { await call({ action: "apprDemo", on: !R.demo }); ctx.toast(R.demo ? "Examples removed" : "Examples added"); show(ctx); } catch (e) { ctx.toast(e.message); } } }, R.demo ? "Remove the examples" : "Show examples")));
     v.append(appsPanel(), sec, formsPanel(), paperSettingsPanel(), setupPanel());
@@ -85,7 +88,7 @@
     const f = el("form", { class: "panel onb", style: "margin:12px 0" });
     const inp = (name, label, attrs = {}) => el("label", {}, label, el("input", { name, ...attrs }));
     const first = a ? exName(a.name).split(" ")[0] : "them";
-    const appSel = apps.length ? el("select", { name: "appId", onchange: () => {
+    const appSel = apps.length && !a?.app ? el("select", { name: "appId", onchange: () => {
       const x = apps.find((y) => y.id === appSel.value); if (!x) return;
       for (const [k, v2] of [["first", x.first], ["last", x.last], ["email", x.email], ["phone", x.phone], ["startDate", x.startDate || ""]]) if (f.elements[k] && (!a || !["first", "last"].includes(k))) f.elements[k].value = v2 || "";
     } }, el("option", { value: "" }, "— not from an application —"), apps.map((x) => el("option", { value: x.id }, `${x.first} ${x.last} · applied ${new Date(x.at).toLocaleDateString()}`))) : null;
@@ -101,7 +104,7 @@
       e.preventDefault();
       const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
       try {
-        const r = await call({ action: "apprOnboard", ...(a ? { slug: a.slug } : {}), ...Object.fromEntries(new FormData(f)) });
+        const r = await call({ action: "apprOnboard", ...(a?.slug ? { slug: a.slug } : {}), ...(a?.app ? { first: a.app.first, last: a.app.last, appId: a.app.id } : {}), ...Object.fromEntries(new FormData(f)) });
         ctx.toast(`${r.name} is onboarded`);
         await show(ctx, r.slug);
         const v = document.getElementById("apprView"), nm = r.name.split(" ")[0];

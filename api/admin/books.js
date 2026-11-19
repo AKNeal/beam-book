@@ -374,7 +374,7 @@ async function apprApi(req, res, me, b) {
               checksDone: v.checksDone, checksTotal: v.checksTotal, tasksQualified: tasks.filter((c) => c.done).length, tasksTotal: tasks.length,
               repsPending: tasks.reduce((n, c) => n + c.repsPending, 0), modulesDone: v.checklist.filter((c) => !c.target && c.done).length, modulesTotal: v.checklist.filter((c) => !c.target).length,
               permit: v.permit, startDate: v.startDate, paperwork: prof ? P.missing(prof) : null, files: (await A.files(s2)).length,
-              onboarded: Boolean(v.onboardedAt), email: v.email, phone: v.phone, hasLogin: logins.some((u) => u.artist === s2 && u.active !== false) });
+              onboarded: Boolean(v.onboardedAt), appId: v.appId, email: v.email, phone: v.phone, hasLogin: logins.some((u) => u.artist === s2 && u.active !== false) });
             for (const d of (await store.getJSON(`appr:docs:${s2}`)) || []) docs.push({ ...d, slug: s2, name: a.name });
           }
           docs.sort((x, y) => y.at - x.at);
@@ -461,8 +461,11 @@ async function apprApi(req, res, me, b) {
           const first = str(b.first, 40), last = str(b.last, 40);
           if (first.length < 1) return send(res, 400, { error: "Enter their first name." });
           name = `${first} ${last}`.trim();
+          // Already on the team under the same name (e.g. a barber who applied through the website)? Use them.
+          const same = team.find((x) => x.name.trim().toLowerCase().replace(/\s+/g, " ") === name.toLowerCase().replace(/\s+/g, " "));
+          if (same) { slug = same.slug; name = same.name; }
         }
-        const hasLogin = slug && users.some((u) => u.artist === slug && u.active !== false);
+        const hasLogin = Boolean(slug) && users.some((u) => u.artist === slug && u.active !== false);
         if (email && !hasLogin && users.some((x) => x.email === email)) return send(res, 400, { error: "Someone else already logs in with that email." });
         if (!slug) slug = await require("../../lib/artists").add(name); // unlisted: not on the booking page
         await A.setApprentice(slug, true);
