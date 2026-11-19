@@ -151,7 +151,24 @@
   .rank-badge { display: flex; flex-direction: column; align-items: center; gap: 3px; }
   .rank-cap { font: 600 9.5px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; color: #4b4a47;
     background: rgba(255,255,255,.88); padding: 3px 6px 2px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+  /* "Google ranking" banner: a red 8-bit ribbon. The band is built from one block per letter, and each block (and the two
+     notched tails folded behind it) steps up and down a little later than the one before, so a wave flows along the ribbon.
+     One wave takes 2.25s, double the speed of the medal shine (4.5s). */
+  .rcap { display: flex; align-items: flex-start; margin-top: 3px; }
+  .rcap-band { display: flex; position: relative; z-index: 1; }
+  .rcap-ch, .rcap-tail { animation: rcap-wave 2.25s steps(1, end) infinite; }
+  .rcap-ch { display: block; min-width: 8px; padding: 5px 0 4px; text-align: center; white-space: pre;
+    font: 7px/1 "Press Start 2P", monospace; color: #fff; text-shadow: 1px 1px 0 #7f1d1d; text-transform: uppercase;
+    background: #dc2626; box-shadow: 0 -2px 0 #f87171, 0 2px 0 #991b1b; }
+  .rcap-ch:first-child { padding-left: 6px; } .rcap-ch:last-child { padding-right: 6px; }
+  .rcap-tail { width: 14px; height: 18px; margin-top: 6px; position: relative; z-index: 0; }
+  .rcap-tail.l { margin-right: -4px; background: linear-gradient(90deg, #b91c1c 0 10px, #7f1d1d 10px);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 16px, 2px 16px, 2px 13px, 4px 13px, 4px 11px, 6px 11px, 6px 7px, 4px 7px, 4px 5px, 2px 5px, 2px 2px, 0 2px); }
+  .rcap-tail.r { margin-left: -4px; background: linear-gradient(90deg, #7f1d1d 0 4px, #b91c1c 4px);
+    clip-path: polygon(0 0, 100% 0, 100% 2px, calc(100% - 2px) 2px, calc(100% - 2px) 5px, calc(100% - 4px) 5px, calc(100% - 4px) 7px, calc(100% - 6px) 7px, calc(100% - 6px) 11px, calc(100% - 4px) 11px, calc(100% - 4px) 13px, calc(100% - 2px) 13px, calc(100% - 2px) 16px, 100% 16px, 100% 100%, 0 100%); }
+  @keyframes rcap-wave { 0% { transform: translateY(0); } 25% { transform: translateY(-2px); } 50% { transform: translateY(0); } 75% { transform: translateY(2px); } }
   .rank-float.open .rank-badge { animation-play-state: paused; }
+  @media (prefers-reduced-motion: reduce) { .rcap-ch, .rcap-tail { animation: none; } }
   /* The torn sheet: tears out to the right from the medal. */
   .rank-fly { position: absolute; left: 84px; bottom: 0; width: min(440px, calc(100vw - 92px)); pointer-events: none;
     clip-path: inset(0 100% 0 0); transition: clip-path .45s steps(9); filter: drop-shadow(4px 5px 0 rgba(0,0,0,.18)); }
@@ -866,6 +883,14 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     pts.push("97% 100%", "0 100%");
     return `polygon(${pts.join(", ")})`;
   }
+  // The red 8-bit ribbon under the medal: one block per letter so the wave can flow along it (see .rcap in the styles).
+  function capBanner(text) {
+    const step = 2.25 / (text.length + 2), d = (i) => `animation-delay:${(-(i * step)).toFixed(3)}s`;
+    return el("span", { class: "rcap", "aria-hidden": "true" },
+      el("span", { class: "rcap-tail l", style: d(0) }),
+      el("span", { class: "rcap-band" }, [...text].map((c, i) => el("span", { class: "rcap-ch", style: d(i + 1) }, c))),
+      el("span", { class: "rcap-tail r", style: d(text.length + 1) }));
+  }
   function closeRankFly() { const w = document.getElementById("rankFloat"); if (w) { w.classList.remove("open"); w.querySelector(".rank-badge").setAttribute("aria-expanded", "false"); } }
   function rankBadge() {
     document.getElementById("rankFloat")?.remove();
@@ -873,7 +898,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     const o = rkOverall(k);
     const btn = el("button", { class: "rank-badge", type: "button", "aria-expanded": "false", "aria-controls": "rankFly", "aria-label": `Google ranking: #${o.exact ?? "–"}. Show details` },
       medal(o.n, 3, o.exact == null ? null : o.exact > 10 ? "10+" : String(o.exact)),
-      el("span", { class: "rank-cap", "aria-hidden": "true" }, "Google ranking"));
+      capBanner("Google ranking"));
     const rows = k.searches.map((x) => el("div", { class: "fly-row" },
       el("span", { class: `dot tier-${rkTier(x.rank)[0]}` }, rkLabel(x.rank)),
       el("span", { class: "fly-q" }, x.q),
