@@ -230,6 +230,16 @@
   </select></label>
   <nav id="nav" hidden><a href="#" id="viewDash">Dashboard</a><a href="#" id="viewCheckout">Checkout</a><a href="#" id="viewDay">Shop calendar</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewAppr" hidden>Apprenticeship</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewSite" hidden>Website</a><a href="#" id="viewSetup" hidden>Setup</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
 </div></header>
+<div class="shell setup-banner" id="setupBanner" hidden><div class="sb-in">
+  <div class="sb-text"><b>Setup checklist</b> <span id="setupBannerLeft"></span><div class="sb-prog" aria-hidden="true"><i id="setupBannerBar"></i></div></div>
+  <a href="#" class="btn sm" id="setupBannerGo">Open checklist</a>
+</div></div>
+<style>
+.setup-banner{margin-top:14px}
+.setup-banner .sb-in{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:var(--white);border:1px solid var(--line);border-left:5px solid var(--sign);border-radius:8px;padding:12px 16px}
+.setup-banner .sb-text{flex:1;min-width:220px}.setup-banner .sb-text span{color:var(--graphite)}
+.setup-banner .sb-prog{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px;max-width:420px}.setup-banner .sb-prog i{display:block;height:100%;background:var(--sign);border-radius:99px;width:0}
+</style>
 <script>(function(){var sel=document.getElementById("lookSel");sel.value=document.documentElement.dataset.look||"";
 sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentElement.dataset.look=v;else delete document.documentElement.dataset.look;try{v?localStorage.setItem("bb-look",v):localStorage.removeItem("bb-look")}catch(e){}});})();</script>
 
@@ -427,6 +437,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
   $("viewSite").addEventListener("click", (e) => { e.preventDefault(); showSite(); });
   $("viewDash").addEventListener("click", (e) => { e.preventDefault(); window.BBDash.show({ only, toast, D }); });
   $("viewSetup").addEventListener("click", (e) => { e.preventDefault(); window.BBSetup.show({ only, toast, D }); });
+  $("setupBannerGo").addEventListener("click", (e) => { e.preventDefault(); window.BBSetup.show({ only, toast, D }); });
   $("viewCheckout").addEventListener("click", (e) => { e.preventDefault(); window.BBCheckout.show({ only, toast, D }); });
   $("viewAppr").addEventListener("click", (e) => { e.preventDefault(); window.BBAppr.show({ only, toast, D }); });
   const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView", "siteView", "rankView", "dashView", "checkoutView", "apprView", "setupView"];
