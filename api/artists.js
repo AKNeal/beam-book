@@ -180,7 +180,10 @@ async function rankApi(req, res, what) {
   if (what === "due") return send(res, 200, await rc.due());
   if (req.method !== "POST") return send(res, 405, { error: "POST the results." });
   if (what === "searches") { // Neal Media: fix the shop's searches (same as the owner's editor, up to 5)
-    try { const searches = await rc.saveSearches(require("../lib/http").body(req).searches); return send(res, 200, { ok: true, searches }); }
+    try { const b = require("../lib/http").body(req), out = { ok: true };
+      if (b.searches) out.searches = await rc.saveSearches(b.searches);
+      if (b.report !== undefined) { out.report = await rc.saveReport(b.report); out.summary = await rc.summary(); }
+      return send(res, 200, out); }
     catch (e) { return send(res, 400, { error: e.message }); }
   }
   try { const check = await rc.ingest(require("../lib/http").body(req)); return send(res, 200, { ok: true, check }); }

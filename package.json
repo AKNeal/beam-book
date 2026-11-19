@@ -5,7 +5,7 @@
   "description": "Beam Book — tattoo booking for many shops: request form, quotes, scheduling, shop inbox, calendar sync. Powered by Beam.",
   "scripts": {
     "dev": "node build.js && node dev-server.js",
-    "test": "node test/smoke.js && node test/analytics.js && node test/import.js",
+    "test": "node test/smoke.js && node test/analytics.js && node test/import.js && node test/report.js",
     "build": "node build.js"
   },
   "engines": {
