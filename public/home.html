@@ -59,7 +59,7 @@
   .note { font-size: 14px; color: var(--soft); margin-top: 16px; }
 
   /* Hero mock */
-  .mock { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); padding: 22px; }
+  .mock { position: relative; margin-bottom: 40px; background: #fff; border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); padding: 22px; }
   .mock-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .mock-head b { font-size: 15px; }
   .pill { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--bg-3); color: var(--muted); }
@@ -71,20 +71,67 @@
   .av.g { background: linear-gradient(135deg, #94a3b8, #64748b); }
   .req small { display: block; color: var(--soft); font-size: 13px; }
   .req strong { font-size: 15px; }
-  .req-wrap { border: 1px solid var(--line); border-radius: 14px; background: #fff; overflow: hidden; }
-  .req-wrap .req { border: 0; border-radius: 0; margin: 0; }
-  .offer { border-top: 1px solid var(--line); background: var(--bg-2); padding: 14px 16px 16px; }
+  .offer { position: absolute; left: -28px; bottom: -64px; width: 230px; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 14px 16px; }
   .offer small { color: var(--soft); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
-  .offer p { margin: 4px 0 12px; font-weight: 700; }
+  .offer p { margin: 4px 0 10px; font-weight: 700; }
   .offer .row { display: flex; gap: 8px; }
-  .offer button { flex: 1; font: inherit; font-size: 14px; font-weight: 700; padding: 10px 0; border-radius: 10px; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--navy); transition: transform .12s ease, box-shadow .12s ease, background .12s ease; }
-  .offer button:hover { background: #fff; box-shadow: 0 4px 12px rgba(13,34,54,.10); transform: translateY(-1px); }
-  .offer button.acc { border-color: transparent; background: var(--grad); color: #fff; box-shadow: 0 4px 12px rgba(18,101,184,.25); }
-  .offer button.acc:hover { box-shadow: 0 6px 16px rgba(18,101,184,.35); }
-  .offer button:active { transform: translateY(0); }
-  .offer .msg { display: none; font-weight: 700; color: #18794e; margin: 0; }
-  .offer.answered .row { display: none; }
-  .offer.answered .msg { display: block; }
+  .offer .row span { flex: 1; text-align: center; font-size: 13px; font-weight: 700; padding: 7px 0; border-radius: 10px; background: var(--bg-2); }
+  .offer .row span:first-child { background: var(--grad); color: #fff; }
+
+  /* Framed product shots: read as pictures, not as controls on the page */
+  .shot { position: relative; border-radius: 28px; border: 1px solid var(--line); background:
+      radial-gradient(120% 90% at 100% 0%, rgba(43,176,255,.18), rgba(43,176,255,0) 60%),
+      linear-gradient(160deg, #f3f8fd 0%, #e9eef4 100%);
+    box-shadow: inset 0 1px 0 #fff, inset 0 -18px 40px rgba(13,34,54,.04), 0 24px 60px rgba(13,34,54,.12), 0 2px 6px rgba(13,34,54,.05);
+    pointer-events: none; user-select: none; overflow: hidden; }
+  .shot-hero { padding: 40px 36px 84px 60px; }
+  .shot-hero .mock { margin: 0; }
+  .shot-tag { position: absolute; right: 18px; bottom: 16px; font-size: 12px; font-weight: 700; color: var(--muted); background: rgba(255,255,255,.75); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; }
+
+  .promo-grid { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 22px; align-items: start; }
+  .promo-item { display: flex; flex-direction: column; gap: 14px; }
+  .promo-item .shot { height: 460px; display: grid; place-items: center; padding: 24px 20px 60px; }
+  .promo-item h3 { margin: 0; font-size: 18px; letter-spacing: -.01em; }
+  .promo-item p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .phone { width: 210px; background: #fff; border: 8px solid var(--navy); border-radius: 34px; padding: 16px 12px 14px; box-shadow: 0 18px 40px rgba(13,34,54,.22); }
+  .phone .notch { width: 70px; height: 6px; border-radius: 6px; background: var(--bg-3); margin: -6px auto 12px; }
+  .phone h5 { margin: 0 0 2px; font-size: 14px; }
+  .phone .sub { font-size: 11px; color: var(--soft); margin-bottom: 10px; }
+  .svc { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; }
+  .svc.on { border-color: var(--sky); background: rgba(43,176,255,.08); }
+  .svc span { color: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--soft); margin: 10px 0 6px; }
+  .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .slots i { font-style: normal; font-size: 11px; font-weight: 700; text-align: center; padding: 6px 0; border-radius: 8px; background: var(--bg-2); color: var(--navy); }
+  .slots i.on { background: var(--grad); color: #fff; }
+  .slots i.off { color: #c3ccd6; text-decoration: line-through; }
+  .phone .go { margin-top: 10px; text-align: center; font-size: 12px; font-weight: 800; color: #fff; background: var(--grad); border-radius: 10px; padding: 9px 0; }
+
+  .cal { width: 100%; max-width: 380px; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 14px; box-shadow: var(--shadow); }
+  .cal-head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+  .cal-head span { color: var(--soft); font-weight: 600; }
+  .cal-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; font-size: 10px; }
+  .cal-grid .d { text-align: center; font-weight: 700; color: var(--muted); padding-bottom: 4px; }
+  .cal-grid .t { color: var(--soft); text-align: right; padding-right: 2px; height: 30px; }
+  .cal-col { position: relative; background: repeating-linear-gradient(180deg, var(--bg-2) 0 29px, var(--line) 29px 30px); border-radius: 8px; height: 240px; }
+  .ev { position: absolute; left: 3px; right: 3px; border-radius: 6px; padding: 4px 5px; font-size: 9.5px; font-weight: 700; line-height: 1.2; color: #fff; background: var(--grad); overflow: hidden; }
+  .ev.b { background: linear-gradient(135deg, #7cc8f5, #3d8fd6); }
+  .ev.g { background: #e6f6ee; color: #18794e; }
+  .ev.n { background: var(--navy); }
+
+  .dash { width: 100%; max-width: 260px; display: grid; gap: 10px; }
+  .tile { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); }
+  .tile small { display: block; font-size: 11px; font-weight: 600; color: var(--soft); }
+  .tile b { font-size: 22px; letter-spacing: -.02em; }
+  .tile em { font-style: normal; font-size: 11px; font-weight: 700; color: #18794e; margin-left: 6px; }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 54px; margin-top: 8px; }
+  .bars i { flex: 1; border-radius: 4px 4px 2px 2px; background: rgba(43,176,255,.25); }
+  .bars i.hi { background: var(--grad); }
+  .race { margin-top: 6px; display: grid; gap: 6px; font-size: 11px; font-weight: 600; }
+  .race div { display: grid; grid-template-columns: 52px 1fr 30px; gap: 6px; align-items: center; }
+  .race s { display: block; height: 7px; border-radius: 6px; background: var(--grad); text-decoration: none; }
+  .race span { color: var(--muted); text-align: right; }
 
   /* Sections */
   section { padding: 88px 0; }
@@ -154,6 +201,8 @@
   @media (max-width: 900px) {
     .hero .wrap, .split { grid-template-columns: 1fr; gap: 40px; }
     .hero .wrap { padding: 48px 0 72px; }
+    .shot-hero { padding: 28px 20px 76px 40px; }
+    .promo-grid { grid-template-columns: 1fr; }
     .grid { grid-template-columns: 1fr 1fr; }
     .foot-grid { grid-template-columns: 1fr 1fr; }
     .foot-grid > :first-child { grid-column: 1 / -1; }
@@ -163,6 +212,8 @@
     .grid, .fields { grid-template-columns: 1fr; }
     .top .btn-sm { padding: 9px 14px; }
     .logo img { height: 28px; }
+    .offer { left: -14px; width: 200px; }
+    .shot-hero { padding: 22px 14px 76px 28px; }
     .dlg { padding: 22px; }
     .foot-grid { grid-template-columns: 1fr; }
   }
@@ -196,19 +247,19 @@
         <p class="note">We'll call you to walk through it and set up your page.</p>
       </div>
 
-      <div class="mock" aria-label="Example Beam inbox">
+      <div class="shot shot-hero" role="img" aria-label="Example of the Beam inbox with a counter-offer">
+      <div class="mock" aria-hidden="true">
         <div class="mock-head"><b>Inbox</b><span class="pill">Today</span></div>
         <div class="req"><div class="av">JM</div><div><strong>Fade + beard trim</strong><small>Fri 2:30 pm · with Marcus</small></div><span class="pill ok">Booked</span></div>
         <div class="req"><div class="av g">TR</div><div><strong>Wedding reception DJ</strong><small>Jun 14 · 120 guests</small></div><span class="pill new">New</span></div>
-        <div class="req-wrap">
-          <div class="req"><div class="av">AK</div><div><strong>Gutter cleaning</strong><small>2-story · photos attached</small></div><span class="pill" id="ak-pill">Counter-offer</span></div>
-          <div class="offer" id="demo-offer">
-            <small>Counter-offer from the client</small>
-            <p>$450 · Sat, Jun 14 · 4 hrs</p>
-            <div class="row"><button type="button" class="acc" data-act="accept">Accept</button><button type="button" data-act="counter">Counter</button></div>
-            <p class="msg" id="demo-msg" role="status"></p>
-          </div>
+        <div class="req"><div class="av">AK</div><div><strong>Gutter cleaning</strong><small>2-story · photos attached</small></div><span class="pill">Offer sent</span></div>
+        <div class="offer">
+          <small>Counter-offer</small>
+          <p>$450 · Sat, Jun 14 · 4 hrs</p>
+          <div class="row"><span>Accept</span><span>Counter</span></div>
         </div>
+      </div>
+        <span class="shot-tag">Your inbox</span>
       </div>
     </div>
   </div>
@@ -250,6 +301,69 @@
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></div>
           <h3>Your team and clients</h3>
           <p>Logins for every barber, artist or tech, a client list you can import, and a dashboard for the owner.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="promo" id="tour">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">A look inside</span>
+        <h2>Your clients book. You stay on top of it.</h2>
+        <p>A booking page with your name on it, a calendar that fills itself, and numbers that show how the business is doing.</p>
+      </div>
+      <div class="promo-grid">
+        <div class="promo-item">
+          <div class="shot" role="img" aria-label="Example booking page on a phone">
+            <div class="phone" aria-hidden="true">
+              <div class="notch"></div>
+              <h5>Northside Cuts</h5>
+              <div class="sub">Open today until 7 pm</div>
+              <div class="svc on">Skin fade <span>$35 · 45m</span></div>
+              <div class="svc">Cut + beard <span>$45 · 60m</span></div>
+              <div class="svc">Kids cut <span>$25 · 30m</span></div>
+              <div class="lbl">Friday</div>
+              <div class="slots"><i>10:00</i><i class="off">11:00</i><i>12:30</i><i class="on">2:30</i><i>3:15</i><i class="off">4:00</i></div>
+              <div class="go">Book 2:30 pm</div>
+            </div>
+            <span class="shot-tag">Booking page</span>
+          </div>
+          <h3>Booked in seconds</h3>
+          <p>Clients pick a service, a person and an open time from their phone. No back-and-forth texts.</p>
+        </div>
+        <div class="promo-item">
+          <div class="shot" role="img" aria-label="Example weekly calendar">
+            <div class="cal" aria-hidden="true">
+              <div class="cal-head">This week <span>Mon – Fri</span></div>
+              <div class="cal-grid">
+                <span class="d">Mon</span><span class="d">Tue</span><span class="d">Wed</span><span class="d">Thu</span><span class="d">Fri</span>
+                <div class="cal-col"><div class="ev" style="top:4px;height:52px">Fade · Jay</div><div class="ev g" style="top:96px;height:40px">Consult</div></div>
+                <div class="cal-col"><div class="ev b" style="top:34px;height:64px">Gutters · 2-story</div></div>
+                <div class="cal-col"><div class="ev n" style="top:4px;height:28px">Trim</div><div class="ev" style="top:66px;height:52px">Beard · Leo</div><div class="ev b" style="top:126px;height:46px">Kids cut</div></div>
+                <div class="cal-col"><div class="ev g" style="top:20px;height:40px">Deposit in</div><div class="ev" style="top:100px;height:70px">Tattoo session</div></div>
+                <div class="cal-col"><div class="ev" style="top:4px;height:40px">Fade · Sam</div><div class="ev n" style="top:60px;height:110px">DJ · Wedding</div></div>
+              </div>
+            </div>
+            <span class="shot-tag">Calendar</span>
+          </div>
+          <h3>A calendar that fills itself</h3>
+          <p>Bookings and accepted offers land on the calendar and sync with the one you already use.</p>
+        </div>
+        <div class="promo-item">
+          <div class="shot" role="img" aria-label="Example owner dashboard">
+            <div class="dash" aria-hidden="true">
+              <div class="tile"><small>Booked this week</small><b>$4,820</b><em>+12%</em>
+                <div class="bars"><i style="height:40%"></i><i style="height:62%"></i><i style="height:48%"></i><i style="height:80%"></i><i class="hi" style="height:100%"></i><i style="height:70%"></i></div>
+              </div>
+              <div class="tile"><small>Rebook challenge</small>
+                <div class="race"><div>Marcus<s style="width:82%"></s><span>71%</span></div><div>Leo<s style="width:66%"></s><span>58%</span></div><div>Sam<s style="width:50%"></s><span>44%</span></div></div>
+              </div>
+            </div>
+            <span class="shot-tag">Owner dashboard</span>
+          </div>
+          <h3>Know how the week is going</h3>
+          <p>Sales, rebook rates and team challenges at a glance, with each person seeing only their own numbers.</p>
         </div>
       </div>
     </div>
@@ -389,19 +503,6 @@
   dlg.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", close));
   dlg.addEventListener("click", (e) => { if (e.target === dlg) close(); });
   if (location.hash === "#call") open();
-
-  // Demo inbox: the counter-offer buttons respond, then reset.
-  const offer = document.getElementById("demo-offer"), pill = document.getElementById("ak-pill"), msg = document.getElementById("demo-msg");
-  offer.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
-    const acc = b.dataset.act === "accept";
-    pill.textContent = acc ? "Booked" : "Offer sent";
-    pill.className = acc ? "pill ok" : "pill";
-    msg.style.color = acc ? "#18794e" : "var(--blue)";
-    msg.textContent = acc ? "Accepted. It's on the calendar and the client got a confirmation." : "Your counter-offer was sent to the client.";
-    offer.classList.add("answered");
-    clearTimeout(offer._t);
-    offer._t = setTimeout(() => { offer.classList.remove("answered"); pill.textContent = "Counter-offer"; pill.className = "pill"; }, 4500);
-  }));
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
