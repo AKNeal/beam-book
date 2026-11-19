@@ -16,7 +16,15 @@
   .appr .pill.ok{background:var(--soft);border-color:var(--sign-dark)}.appr .grid3{display:grid;grid-template-columns:1fr 110px;gap:10px}
   .appr .chk{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}.appr .chk input{width:20px;height:20px;margin-top:2px;accent-color:var(--sign)}
   .appr label{display:block;font-size:14px;margin:8px 0}.appr label input,.appr label textarea,.appr label select{display:block;width:100%;margin-top:4px}
-  .appr h3{margin:16px 0 4px;font-size:18px}`;
+  .appr h3{margin:16px 0 4px;font-size:18px}
+  .appr .ex-panel{border:2px dashed var(--graphite);background:repeating-linear-gradient(135deg,transparent 0 14px,rgba(127,127,127,.07) 14px 28px)}
+  .appr .ex-banner{display:flex;gap:12px;align-items:flex-start;background:var(--ink);color:var(--snow);padding:12px 14px;border-radius:8px;margin:8px 0 6px;font-size:15px}
+  .appr .ex-banner b{display:block;font-size:16px;letter-spacing:.04em}
+  .appr .ex-tag{display:inline-block;font:700 11px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;background:var(--ink);color:var(--snow);padding:4px 7px;border-radius:4px;margin-right:8px;vertical-align:2px}
+  .appr .ex-row{opacity:.85}
+  .appr .onb{border:2px solid var(--sign)}.appr .onb .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:600px){.appr .onb .two{grid-template-columns:1fr}}
+  .appr .linkbox{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--soft);padding:10px;border-radius:6px;word-break:break-all;font-size:14px}
+  .appr .files .row{padding:8px 0}.appr .drop{border:2px dashed var(--field);border-radius:8px;padding:14px;margin-top:10px}`;
 
   async function show(c, slug) {
     ctx = c; ctx.only("apprView"); if (!document.getElementById("apprCss")) document.head.append(el("style", { id: "apprCss" }, css));
@@ -27,32 +35,90 @@
   }
 
   // ---------- owner: everyone ----------
+  const exName = (n) => String(n || "").replace(/\s*\((demo|example)\)\s*$/i, "");
+  function apprRow(a) {
+    const bar = (pct) => el("div", { class: "prog", style: "height:8px;margin:4px 0" }, el("i", { style: `width:${Math.min(100, pct)}%` }));
+    const paper = a.paperwork === null ? (a.files ? `Paperwork: ${a.files} uploaded` : "Paperwork: details not filled in")
+      : (a.paperwork.length ? `Paperwork: missing ${a.paperwork.length}` : "Paperwork: ready") + (a.files ? ` · ${a.files} uploaded` : "");
+    return el("div", { class: "row" + (a.demo ? " ex-row" : ""), style: "align-items:flex-start" },
+      el("div", { style: "flex:1;min-width:240px" }, a.demo ? el("span", { class: "ex-tag" }, "Example") : null, el("strong", {}, exName(a.name)),
+        a.permit ? el("span", { class: "meta" }, ` · permit #${a.permit}`) : el("span", { class: "meta" }, " · no permit # yet"),
+        el("div", { class: "meta" }, `Hours ${fmtH(a.approvedHours)} / ${fmtH(R.settings.goalHours)} (${fmtH(a.practicalHours)} practical, ${fmtH(a.theoryHours)} theory)${a.pendingHours ? ` · ${fmtH(a.pendingHours)} waiting for you` : ""}`), bar(a.pct),
+        el("div", { class: "meta" }, `Qualified tasks ${a.tasksQualified} / ${a.tasksTotal}${a.repsPending ? ` · ${a.repsPending} reps waiting` : ""} · Modules ${a.modulesDone} / ${a.modulesTotal}`), bar(a.tasksTotal ? 100 * a.tasksQualified / a.tasksTotal : 0),
+        el("div", { class: "meta" }, `${a.startDate ? `Started ${a.startDate} · ` : ""}${paper}`)),
+      el("div", { class: "actions", style: "margin:0" }, el("button", { class: "btn sm" + (a.demo ? " line" : ""), type: "button", onclick: () => show(ctx, a.slug) }, a.demo ? "Look inside" : "Open"),
+        a.demo ? null : el("button", { class: "btn sm line", type: "button", onclick: async () => { if (!confirmTwice(`end ${a.name}'s apprenticeship`)) return; try { await call({ action: "apprSet", slug: a.slug, on: false }); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Remove")));
+  }
+  const exBanner = (text) => el("div", { class: "ex-banner", role: "note" }, el("span", { "aria-hidden": "true", style: "font-size:22px;line-height:1" }, "⚠"),
+    el("div", {}, el("b", {}, "EXAMPLES ONLY — NOT REAL APPRENTICES"), text));
+
   function drawOwner() {
     const v = document.getElementById("apprView"); v.textContent = "";
     v.append(el("h1", {}, "Apprenticeship"));
-    const sec = el("section", { class: "panel" }, el("h2", {}, "Apprentices"));
-    if (!R.apprentices.length) sec.append(el("p", { class: "muted" }, "Nobody yet. Pick a team member below to start their apprenticeship. They log in with their own Beam login and see their hours, checkoffs and course materials."));
-    for (const a of R.apprentices) {
-      const bar = (pct) => el("div", { class: "prog", style: "height:8px;margin:4px 0" }, el("i", { style: `width:${Math.min(100, pct)}%` }));
-      const paper = a.paperwork === null ? "Paperwork: details not filled in" : a.paperwork.length ? `Paperwork: missing ${a.paperwork.length}` : "Paperwork: ready";
-      sec.append(el("div", { class: "row", style: "align-items:flex-start" },
-        el("div", { style: "flex:1;min-width:240px" }, el("strong", {}, a.name), a.permit ? el("span", { class: "meta" }, ` · permit #${a.permit}`) : el("span", { class: "meta" }, " · no permit # yet"),
-          el("div", { class: "meta" }, `Hours ${fmtH(a.approvedHours)} / ${fmtH(R.settings.goalHours)} (${fmtH(a.practicalHours)} practical, ${fmtH(a.theoryHours)} theory)${a.pendingHours ? ` · ${fmtH(a.pendingHours)} waiting for you` : ""}`), bar(a.pct),
-          el("div", { class: "meta" }, `Qualified tasks ${a.tasksQualified} / ${a.tasksTotal}${a.repsPending ? ` · ${a.repsPending} reps waiting` : ""} · Modules ${a.modulesDone} / ${a.modulesTotal}`), bar(a.tasksTotal ? 100 * a.tasksQualified / a.tasksTotal : 0),
-          el("div", { class: "meta" }, `${a.startDate ? `Started ${a.startDate} · ` : ""}${paper}`)),
-        el("div", { class: "actions", style: "margin:0" }, el("button", { class: "btn sm", type: "button", onclick: () => show(ctx, a.slug) }, "Open"),
-          a.demo ? null : el("button", { class: "btn sm line", type: "button", onclick: async () => { if (!confirmTwice(`end ${a.name}'s apprenticeship`)) return; try { await call({ action: "apprSet", slug: a.slug, on: false }); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Remove"))));
-    }
+    const real = R.apprentices.filter((a) => !a.demo), demos = R.apprentices.filter((a) => a.demo);
+    const sec = el("section", { class: "panel" }, el("div", { style: "display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap" },
+      el("h2", { style: "margin:0" }, "Apprentices"), el("button", { class: "btn", type: "button", onclick: () => { const f = document.getElementById("onbPanel"); f.hidden = !f.hidden; if (!f.hidden) f.querySelector("input").focus(); } }, "+ Onboard an apprentice")));
+    sec.append(onboardPanel());
+    if (!real.length) sec.append(el("p", { class: "muted" }, "No apprentices yet. Use Onboard an apprentice to add someone new, or pick someone already on the team below."));
+    for (const a of real) sec.append(apprRow(a));
     const others = R.team.filter((t) => !R.apprentices.some((a) => a.slug === t.slug));
     if (others.length) {
       const sel = el("select", {}, others.map((t) => el("option", { value: t.slug }, t.name)));
-      sec.append(el("div", { class: "actions", style: "margin-top:14px" }, sel, el("button", { class: "btn", type: "button", onclick: async () => { try { await call({ action: "apprSet", slug: sel.value, on: true }); ctx.toast("Apprenticeship started"); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Make apprentice")));
+      sec.append(el("div", { class: "actions", style: "margin-top:14px;align-items:center" }, el("span", { class: "small muted" }, "Already on the team:"), sel, el("button", { class: "btn line", type: "button", onclick: async () => { try { await call({ action: "apprSet", slug: sel.value, on: true }); ctx.toast("Apprenticeship started"); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Make apprentice")));
     }
-    sec.append(el("p", { class: "small muted" }, "An apprentice needs their own login: Team → add them with their email and link the login to their name. They get an email to set a password."));
-    sec.append(el("div", { class: "actions", style: "margin-top:14px" }, el("button", { class: "btn sm line", type: "button", onclick: async () => {
-      if (R.demo && !confirmTwice("remove the demo apprentices")) return;
-      try { await call({ action: "apprDemo", on: !R.demo }); ctx.toast(R.demo ? "Demo apprentices removed" : "Demo apprentices added"); show(ctx); } catch (e) { ctx.toast(e.message); } } }, R.demo ? "Remove demo apprentices" : "Show demo apprentices")));
-    v.append(sec, appsPanel(), formsPanel(), paperSettingsPanel(), setupPanel());
+    v.append(sec);
+
+    // Example apprentices: kept apart and clearly labelled so nobody mistakes them for real people.
+    const ex = el("section", { class: "panel ex-panel" }, el("h2", {}, "Example apprentices"));
+    if (demos.length) {
+      ex.append(exBanner(" These are made-up people at different stages, there to show how hours, checkoffs and paperwork look. Remove them whenever you like; it doesn't touch real apprentices."));
+      for (const a of demos) ex.append(apprRow(a));
+    } else ex.append(el("p", { class: "small muted" }, "Want to see how it all looks first? Add a few made-up example apprentices at different stages. They're clearly marked and come off with one tap."));
+    ex.append(el("div", { class: "actions", style: "margin-top:14px" }, el("button", { class: "btn sm line", type: "button", onclick: async () => {
+      if (R.demo && !confirmTwice("remove the example apprentices")) return;
+      try { await call({ action: "apprDemo", on: !R.demo }); ctx.toast(R.demo ? "Example apprentices removed" : "Example apprentices added"); show(ctx); } catch (e) { ctx.toast(e.message); } } }, R.demo ? "Remove example apprentices" : "Show example apprentices")));
+    v.append(appsPanel(), formsPanel(), paperSettingsPanel(), setupPanel(), ex);
+  }
+
+  // ---------- owner: onboard a new apprentice in one step ----------
+  function onboardPanel() {
+    const apps = (R.applications || []).filter((a) => a.status !== "declined" && !a.demo);
+    const f = el("form", { class: "panel onb", id: "onbPanel", hidden: true, style: "margin:14px 0" });
+    const inp = (name, label, attrs = {}) => el("label", {}, label, el("input", { name, ...attrs }));
+    const appSel = apps.length ? el("select", { name: "appId", onchange: () => {
+      const a = apps.find((x) => x.id === appSel.value); if (!a) return;
+      for (const [k, v2] of [["first", a.first], ["last", a.last], ["email", a.email], ["phone", a.phone], ["startDate", a.startDate || ""]]) if (f.elements[k]) f.elements[k].value = v2 || "";
+    } }, el("option", { value: "" }, "— not from an application —"), apps.map((a) => el("option", { value: a.id }, `${a.first} ${a.last} · applied ${new Date(a.at).toLocaleDateString()}`))) : null;
+    f.append(el("h2", { style: "margin-top:0" }, "Onboard an apprentice"),
+      el("p", { class: "small muted" }, "Adds them as an apprentice (not on your booking page) and, with an email, gives them their own login to log hours and fill in their paperwork details. Already-signed forms can be uploaded on their page right after."),
+      appSel ? el("label", {}, "From an application (fills in what they sent)", appSel) : null,
+      el("div", { class: "two" }, inp("first", "First name", { required: true, maxlength: 40, autocomplete: "off" }), inp("last", "Last name", { maxlength: 40, autocomplete: "off" })),
+      el("div", { class: "two" }, inp("email", "Email (for their login)", { type: "email", maxlength: 120, autocomplete: "off" }), inp("phone", "Phone", { type: "tel", maxlength: 30, autocomplete: "off" })),
+      el("div", { class: "two" }, inp("startDate", "Start date", { type: "date", value: today() }), inp("permit", "Apprentice permit # (if they have one)", { maxlength: 30 })),
+      el("div", { class: "actions" }, el("button", { class: "btn", type: "submit" }, "Onboard apprentice"), el("button", { class: "btn line", type: "button", onclick: () => { f.hidden = true; } }, "Cancel")));
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
+      try {
+        const r = await call({ action: "apprOnboard", ...Object.fromEntries(new FormData(f)) });
+        ctx.toast(`${r.name} is set up`);
+        await show(ctx, r.slug);
+        const v = document.getElementById("apprView"), first = r.name.split(" ")[0];
+        const next = el("section", { class: "panel onb" }, el("h2", {}, `${first} is set up`),
+          el("p", {}, "Next: upload the paperwork they already filled out (enrollment form, ETA-671, W-4, I-9, ID copies, permit)."),
+          el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: () => document.getElementById("apprFiles")?.scrollIntoView({ behavior: "smooth" }) }, "Upload their paperwork")));
+        if (r.invite) {
+          const msg = `Hi ${first}, here's your link to set up your apprentice login: ${r.invite.link}`;
+          next.append(el("h3", {}, "Their login"),
+            el("p", {}, r.invite.emailed ? `We emailed ${first} a link to choose a password (${r.invite.email}). You can also send it yourself:` : `Send ${first} this link to choose a password. It works once and lasts 12 days.`),
+            el("div", { class: "linkbox" }, el("code", { style: "flex:1;min-width:200px" }, r.invite.link),
+              el("button", { class: "btn sm line", type: "button", onclick: () => navigator.clipboard?.writeText(r.invite.link).then(() => ctx.toast("Copied")) }, "Copy"),
+              r.invite.phone ? el("a", { class: "btn sm line", href: `sms:${r.invite.phone.replace(/[^\d+]/g, "")}?&body=${encodeURIComponent(msg)}` }, "Text it") : null));
+        } else next.append(el("p", { class: "small muted" }, `No email, so no login yet. To give ${first} one later: Team → add them with their email and link it to ${first}.`));
+        v.insertBefore(next, v.children[2] || null);
+      } catch (x) { ctx.toast(x.message); btn.disabled = false; }
+    });
+    return f;
   }
 
   // ---------- owner: every form that's been made ----------
@@ -69,7 +135,7 @@
       try { const r = await call({ action: "apprPaper", slug: d.slug || R.slug, form: d.form, months: d.months, view: true }); open ? viewPdf(r, w) : download(r); }
       catch (e) { if (w) w.close(); ctx.toast(e.message); }
     };
-    return el("div", { class: "row" }, el("div", {}, el("strong", {}, d.title), el("div", { class: "meta" }, `${withName ? d.name + " · " : ""}${new Date(d.at).toLocaleString()}${d.by ? " · " + d.by : ""}${d.missing ? ` · ${d.missing} blanks` : ""}`)),
+    return el("div", { class: "row" }, el("div", {}, /^demo-/.test(d.slug || "") && withName ? el("span", { class: "ex-tag" }, "Example") : null, el("strong", {}, d.title), el("div", { class: "meta" }, `${withName ? exName(d.name) + " · " : ""}${new Date(d.at).toLocaleString()}${d.by ? " · " + d.by : ""}${d.missing ? ` · ${d.missing} blanks` : ""}`)),
       el("div", { class: "actions", style: "margin:0" }, el("button", { class: "btn sm", type: "button", onclick: () => go(true) }, "View"), el("button", { class: "btn sm line", type: "button", onclick: () => go(false) }, "Download")));
   }
   function pdfUrl(r) { const bin = atob(r.pdf), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return URL.createObjectURL(new Blob([u8], { type: "application/pdf" })); }
@@ -86,7 +152,7 @@
       const st = el("select", { onchange: async () => { try { R.applications = (await call({ action: "apprApp", id: a.id, status: st.value })).applications; ctx.toast("Saved"); } catch (e) { ctx.toast(e.message); } } },
         ["new", "contacted", "accepted", "declined"].map((x) => el("option", { value: x, selected: a.status === x }, x[0].toUpperCase() + x.slice(1))));
       sec.append(el("div", { class: "row", style: "align-items:flex-start" },
-        el("div", {}, el("strong", {}, `${a.first} ${a.last}`),
+        el("div", {}, a.demo ? el("span", { class: "ex-tag" }, "Example") : null, el("strong", {}, exName(`${a.first} ${a.last}`)),
           el("div", { class: "meta" }, el("a", { href: `mailto:${a.email}` }, a.email), " · ", el("a", { href: `tel:${a.phone}` }, a.phone), " · ", new Date(a.at).toLocaleDateString()),
           a.about ? el("p", { class: "small", style: "white-space:pre-line;margin:6px 0 0" }, a.about) : null),
         el("div", { class: "actions", style: "margin:0" }, st,
@@ -151,7 +217,9 @@
     const v = document.getElementById("apprView"); v.textContent = "";
     const owner = R.owner;
     if (owner) v.append(el("p", { style: "margin:24px 0 0" }, el("button", { class: "linkbtn", type: "button", onclick: () => show(ctx) }, "← All apprentices")));
-    v.append(el("h1", {}, owner ? R.name : "My training"));
+    const isEx = /^demo-/.test(R.slug || "");
+    v.append(el("h1", {}, isEx ? el("span", { class: "ex-tag", style: "font-size:14px;vertical-align:8px" }, "Example") : null, owner ? exName(R.name) : "My training"));
+    if (isEx) v.append(exBanner(" A made-up apprentice so you can see how this page works. Nothing here is a real person, and nothing here is sent anywhere."));
     const tasks = R.checklist.filter((c) => c.target), qualified = tasks.filter((c) => c.done).length;
     v.append(el("section", { class: "panel" },
       el("div", { class: "big" }, `${fmtH(R.approvedHours)} / ${fmtH(R.goalHours)} hours`),
@@ -225,6 +293,7 @@
     for (const m of R.materials) ml.append(el("div", { class: "row" }, el("strong", {}, m.title), el("a", { class: "btn sm line", href: m.url, target: "_blank", rel: "noopener" }, "Open")));
     v.append(ml);
 
+    if (owner && !isEx) v.append(filesPanel());
     v.append(owner ? paperPanel() : profilePanel());
   }
 
@@ -243,6 +312,51 @@
     const url = pdfUrl(r);
     const a = el("a", { href: url, download: r.filename }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
+  // ---------- owner: paperwork that's already filled out (uploads) ----------
+  function shrinkImage(file) { // big phone photos of a form: scale to 2200px wide JPEG so they fit the upload limit
+    return new Promise((ok, bad) => { const img = new Image(), u = URL.createObjectURL(file);
+      img.onload = () => { const k = Math.min(1, 2200 / Math.max(img.width, img.height)), c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); ok(c.toDataURL("image/jpeg", 0.85)); };
+      img.onerror = () => { URL.revokeObjectURL(u); bad(new Error(`Couldn't read ${file.name}.`)); }; img.src = u; });
+  }
+  const readData = (file) => new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => bad(new Error(`Couldn't read ${file.name}.`)); r.readAsDataURL(file); });
+  function filesPanel() {
+    const first = exName(R.name).split(" ")[0];
+    const sec = el("section", { class: "panel files", id: "apprFiles" }, el("h2", {}, "Uploaded paperwork"),
+      el("p", { class: "small muted" }, `Forms ${first} already filled out and signed, scans of their ID, their permit from the state, anything on paper. Only the Owner and Administrators can open these.`));
+    const list = el("div", {}, el("p", { class: "muted" }, "Loading…")); sec.append(list);
+    let K = {};
+    const paint = (F) => {
+      list.replaceChildren();
+      if (!F.length) list.append(el("p", { class: "muted" }, "Nothing uploaded yet."));
+      for (const x of F) list.append(el("div", { class: "row" },
+        el("div", {}, el("strong", {}, x.label), el("div", { class: "meta" }, `${x.filename} · ${(x.size / 1024 / 1024).toFixed(1)} MB · ${new Date(x.at).toLocaleDateString()}${x.by ? " · " + x.by : ""}`)),
+        el("div", { class: "actions", style: "margin:0" }, el("a", { class: "btn sm", href: `/api/admin/photo?p=${encodeURIComponent(x.name)}`, target: "_blank", rel: "noopener" }, "View"),
+          el("button", { class: "btn sm line", type: "button", onclick: async () => { if (!confirmTwice(`delete ${x.label}`)) return; try { paint((await call({ action: "apprFileDel", slug: R.slug, id: x.id })).files); ctx.toast("Deleted"); } catch (e) { ctx.toast(e.message); } } }, "Delete"))));
+    };
+    const kind = el("select", { name: "kind" }), label = el("input", { placeholder: "e.g. 08-4194 signed 11/12, page 1–3", maxlength: 120 });
+    const pick = el("input", { type: "file", accept: "application/pdf,image/*", multiple: true });
+    const go = el("button", { class: "btn", type: "button", onclick: async () => {
+      if (!pick.files.length) return ctx.toast("Choose a file first.");
+      go.disabled = true; let F = null;
+      try {
+        for (const file of pick.files) {
+          ctx.toast(`Uploading ${file.name}…`);
+          let data;
+          if (file.type === "application/pdf") { if (file.size > 3 * 1024 * 1024) throw new Error(`${file.name} is over 3 MB. Save the scan smaller, or take photos of the pages.`); data = await readData(file); }
+          else data = file.size > 1.5 * 1024 * 1024 ? await shrinkImage(file) : await readData(file);
+          F = (await call({ action: "apprFileAdd", slug: R.slug, kind: kind.value, label: label.value, filename: file.name, data })).files;
+        }
+        pick.value = ""; label.value = ""; paint(F); ctx.toast("Uploaded");
+      } catch (e) { ctx.toast(e.message); if (F) paint(F); }
+      go.disabled = false;
+    } }, "Upload");
+    sec.append(el("div", { class: "drop" }, el("h3", { style: "margin-top:0" }, "Add a document"),
+      el("label", {}, "What it is", kind), el("label", {}, "Note (optional)", label), el("label", {}, "File (PDF or photos, up to 3 MB each)", pick), go));
+    (async () => { try { const r = await call({ action: "apprFiles", slug: R.slug }); K = r.kinds; kind.replaceChildren(...Object.entries(K).map(([k2, l]) => el("option", { value: k2 }, l))); paint(r.files); } catch (e) { list.replaceChildren(el("p", { class: "notice" }, e.message)); } })();
+    return sec;
+  }
+
   function paperPanel() {
     const sec = el("section", { class: "panel" }, el("h2", {}, "Paperwork"), el("p", { class: "muted" }, "Loading…"));
     (async () => {
@@ -250,7 +364,7 @@
       sec.lastChild.remove();
       const p = P.profile, miss = p ? p.missing : ["everything"];
       sec.append(el("p", { class: "small" }, P.saved ? (miss.length ? `${R.name.split(" ")[0]} has filled in their details. Still missing: ${miss.join(", ")}.` : `${R.name.split(" ")[0]} has filled in all their details.`)
-        : `${R.name.split(" ")[0]} hasn't filled in their private details yet (SSN, date of birth, I-9, W-4). They do that from their own login under My training → My paperwork details.${p ? " Their application details are used until then." : ""}`));
+        : `${R.name.split(" ")[0]} hasn't filled in their private details yet (SSN, date of birth, I-9, W-4). They do that from their own login under My training → My paperwork details.${p ? " Their application details are used until then." : ""} If they already filled out the forms on paper, upload them under Uploaded paperwork above.`));
       // link to an application
       const apps = (R.applications || []);
       if (apps.length) {
