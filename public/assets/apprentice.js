@@ -40,82 +40,84 @@
     const bar = (pct) => el("div", { class: "prog", style: "height:8px;margin:4px 0" }, el("i", { style: `width:${Math.min(100, pct)}%` }));
     const paper = a.paperwork === null ? (a.files ? `Paperwork: ${a.files} uploaded` : "Paperwork: details not filled in")
       : (a.paperwork.length ? `Paperwork: missing ${a.paperwork.length}` : "Paperwork: ready") + (a.files ? ` · ${a.files} uploaded` : "");
-    return el("div", { class: "row" + (a.demo ? " ex-row" : ""), style: "align-items:flex-start" },
+    const needsOnboard = !a.demo && !a.onboarded;
+    const slot = el("div", { style: "flex-basis:100%" });
+    const row = el("div", { class: "row", style: "align-items:flex-start" },
       el("div", { style: "flex:1;min-width:240px" }, a.demo ? el("span", { class: "ex-tag" }, "Example") : null, el("strong", {}, exName(a.name)),
         a.permit ? el("span", { class: "meta" }, ` · permit #${a.permit}`) : el("span", { class: "meta" }, " · no permit # yet"),
         el("div", { class: "meta" }, `Hours ${fmtH(a.approvedHours)} / ${fmtH(R.settings.goalHours)} (${fmtH(a.practicalHours)} practical, ${fmtH(a.theoryHours)} theory)${a.pendingHours ? ` · ${fmtH(a.pendingHours)} waiting for you` : ""}`), bar(a.pct),
         el("div", { class: "meta" }, `Qualified tasks ${a.tasksQualified} / ${a.tasksTotal}${a.repsPending ? ` · ${a.repsPending} reps waiting` : ""} · Modules ${a.modulesDone} / ${a.modulesTotal}`), bar(a.tasksTotal ? 100 * a.tasksQualified / a.tasksTotal : 0),
         el("div", { class: "meta" }, `${a.startDate ? `Started ${a.startDate} · ` : ""}${paper}`)),
-      el("div", { class: "actions", style: "margin:0" }, el("button", { class: "btn sm" + (a.demo ? " line" : ""), type: "button", onclick: () => show(ctx, a.slug) }, a.demo ? "Look inside" : "Open"),
-        a.demo ? null : el("button", { class: "btn sm line", type: "button", onclick: async () => { if (!confirmTwice(`end ${a.name}'s apprenticeship`)) return; try { await call({ action: "apprSet", slug: a.slug, on: false }); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Remove")));
+      el("div", { class: "actions", style: "margin:0" },
+        needsOnboard ? el("button", { class: "btn sm", type: "button", onclick: () => { if (slot.firstChild) slot.replaceChildren(); else { slot.replaceChildren(onboardForm(a)); slot.querySelector("input")?.focus(); } } }, "Onboard") : null,
+        el("button", { class: "btn sm" + (needsOnboard || a.demo ? " line" : ""), type: "button", onclick: () => show(ctx, a.slug) }, "Open"),
+        a.demo ? null : el("button", { class: "btn sm line", type: "button", onclick: async () => { if (!confirmTwice(`end ${a.name}'s apprenticeship`)) return; try { await call({ action: "apprSet", slug: a.slug, on: false }); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Remove")),
+      slot);
+    return row;
   }
-  const exBanner = (text) => el("div", { class: "ex-banner", role: "note" }, el("span", { "aria-hidden": "true", style: "font-size:22px;line-height:1" }, "⚠"),
-    el("div", {}, el("b", {}, "EXAMPLES ONLY — NOT REAL APPRENTICES"), text));
 
   function drawOwner() {
     const v = document.getElementById("apprView"); v.textContent = "";
     v.append(el("h1", {}, "Apprenticeship"));
-    const real = R.apprentices.filter((a) => !a.demo), demos = R.apprentices.filter((a) => a.demo);
-    const sec = el("section", { class: "panel" }, el("div", { style: "display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap" },
-      el("h2", { style: "margin:0" }, "Apprentices"), el("button", { class: "btn", type: "button", onclick: () => { const f = document.getElementById("onbPanel"); f.hidden = !f.hidden; if (!f.hidden) f.querySelector("input").focus(); } }, "+ Onboard an apprentice")));
-    sec.append(onboardPanel());
-    if (!real.length) sec.append(el("p", { class: "muted" }, "No apprentices yet. Use Onboard an apprentice to add someone new, or pick someone already on the team below."));
-    for (const a of real) sec.append(apprRow(a));
+    // Examples first, real apprentices after them (newest at the bottom).
+    const list = [...R.apprentices.filter((a) => a.demo), ...R.apprentices.filter((a) => !a.demo)];
+    const sec = el("section", { class: "panel" }, el("h2", {}, "Apprentices"));
+    if (!list.length) sec.append(el("p", { class: "muted" }, "No apprentices yet. Pick someone from your team below, or onboard someone new."));
+    for (const a of list) sec.append(apprRow(a));
     const others = R.team.filter((t) => !R.apprentices.some((a) => a.slug === t.slug));
+    const newSlot = el("div");
+    const add = el("div", { class: "actions", style: "margin-top:14px;align-items:center" });
     if (others.length) {
-      const sel = el("select", {}, others.map((t) => el("option", { value: t.slug }, t.name)));
-      sec.append(el("div", { class: "actions", style: "margin-top:14px;align-items:center" }, el("span", { class: "small muted" }, "Already on the team:"), sel, el("button", { class: "btn line", type: "button", onclick: async () => { try { await call({ action: "apprSet", slug: sel.value, on: true }); ctx.toast("Apprenticeship started"); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Make apprentice")));
+      const sel = el("select", { "aria-label": "Team member" }, others.map((t) => el("option", { value: t.slug }, t.name)));
+      add.append(el("span", { class: "small muted" }, "Add from your team:"), sel, el("button", { class: "btn sm line", type: "button", onclick: async () => { try { await call({ action: "apprSet", slug: sel.value, on: true }); ctx.toast("Added. Press Onboard next to their name."); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Add as apprentice"));
     }
-    v.append(sec);
-
-    // Example apprentices: kept apart and clearly labelled so nobody mistakes them for real people.
-    const ex = el("section", { class: "panel ex-panel" }, el("h2", {}, "Example apprentices"));
-    if (demos.length) {
-      ex.append(exBanner(" These are made-up people at different stages, there to show how hours, checkoffs and paperwork look. Remove them whenever you like; it doesn't touch real apprentices."));
-      for (const a of demos) ex.append(apprRow(a));
-    } else ex.append(el("p", { class: "small muted" }, "Want to see how it all looks first? Add a few made-up example apprentices at different stages. They're clearly marked and come off with one tap."));
-    ex.append(el("div", { class: "actions", style: "margin-top:14px" }, el("button", { class: "btn sm line", type: "button", onclick: async () => {
-      if (R.demo && !confirmTwice("remove the example apprentices")) return;
-      try { await call({ action: "apprDemo", on: !R.demo }); ctx.toast(R.demo ? "Example apprentices removed" : "Example apprentices added"); show(ctx); } catch (e) { ctx.toast(e.message); } } }, R.demo ? "Remove example apprentices" : "Show example apprentices")));
-    v.append(appsPanel(), formsPanel(), paperSettingsPanel(), setupPanel(), ex);
+    add.append(el("button", { class: "linkbtn small", type: "button", onclick: () => { if (newSlot.firstChild) newSlot.replaceChildren(); else { newSlot.replaceChildren(onboardForm(null)); newSlot.querySelector("input")?.focus(); } } }, "Someone not on the team yet?"));
+    sec.append(add, newSlot,
+      el("p", { class: "small", style: "margin-top:12px" }, el("button", { class: "linkbtn small", type: "button", onclick: async () => {
+        if (R.demo && !confirmTwice("remove the example apprentices")) return;
+        try { await call({ action: "apprDemo", on: !R.demo }); ctx.toast(R.demo ? "Examples removed" : "Examples added"); show(ctx); } catch (e) { ctx.toast(e.message); } } }, R.demo ? "Remove the examples" : "Show examples")));
+    v.append(appsPanel(), sec, formsPanel(), paperSettingsPanel(), setupPanel());
   }
 
-  // ---------- owner: onboard a new apprentice in one step ----------
-  function onboardPanel() {
-    const apps = (R.applications || []).filter((a) => a.status !== "declined" && !a.demo);
-    const f = el("form", { class: "panel onb", id: "onbPanel", hidden: true, style: "margin:14px 0" });
+  // ---------- owner: onboard an apprentice (someone on the team: a; someone new: null) ----------
+  function onboardForm(a) {
+    const apps = (R.applications || []).filter((x) => x.status !== "declined" && !x.demo);
+    const f = el("form", { class: "panel onb", style: "margin:12px 0" });
     const inp = (name, label, attrs = {}) => el("label", {}, label, el("input", { name, ...attrs }));
+    const first = a ? exName(a.name).split(" ")[0] : "them";
     const appSel = apps.length ? el("select", { name: "appId", onchange: () => {
-      const a = apps.find((x) => x.id === appSel.value); if (!a) return;
-      for (const [k, v2] of [["first", a.first], ["last", a.last], ["email", a.email], ["phone", a.phone], ["startDate", a.startDate || ""]]) if (f.elements[k]) f.elements[k].value = v2 || "";
-    } }, el("option", { value: "" }, "— not from an application —"), apps.map((a) => el("option", { value: a.id }, `${a.first} ${a.last} · applied ${new Date(a.at).toLocaleDateString()}`))) : null;
-    f.append(el("h2", { style: "margin-top:0" }, "Onboard an apprentice"),
-      el("p", { class: "small muted" }, "Adds them as an apprentice (not on your booking page) and, with an email, gives them their own login to log hours and fill in their paperwork details. Already-signed forms can be uploaded on their page right after."),
+      const x = apps.find((y) => y.id === appSel.value); if (!x) return;
+      for (const [k, v2] of [["first", x.first], ["last", x.last], ["email", x.email], ["phone", x.phone], ["startDate", x.startDate || ""]]) if (f.elements[k] && (!a || !["first", "last"].includes(k))) f.elements[k].value = v2 || "";
+    } }, el("option", { value: "" }, "— not from an application —"), apps.map((x) => el("option", { value: x.id }, `${x.first} ${x.last} · applied ${new Date(x.at).toLocaleDateString()}`))) : null;
+    const login = a && a.hasLogin;
+    f.append(...[el("h3", { style: "margin-top:0" }, a ? `Onboard ${first}` : "Onboard someone new"),
       appSel ? el("label", {}, "From an application (fills in what they sent)", appSel) : null,
-      el("div", { class: "two" }, inp("first", "First name", { required: true, maxlength: 40, autocomplete: "off" }), inp("last", "Last name", { maxlength: 40, autocomplete: "off" })),
-      el("div", { class: "two" }, inp("email", "Email (for their login)", { type: "email", maxlength: 120, autocomplete: "off" }), inp("phone", "Phone", { type: "tel", maxlength: 30, autocomplete: "off" })),
-      el("div", { class: "two" }, inp("startDate", "Start date", { type: "date", value: today() }), inp("permit", "Apprentice permit # (if they have one)", { maxlength: 30 })),
-      el("div", { class: "actions" }, el("button", { class: "btn", type: "submit" }, "Onboard apprentice"), el("button", { class: "btn line", type: "button", onclick: () => { f.hidden = true; } }, "Cancel")));
+      a ? null : el("div", { class: "two" }, inp("first", "First name", { required: true, maxlength: 40, autocomplete: "off" }), inp("last", "Last name", { maxlength: 40, autocomplete: "off" })),
+      el("div", { class: "two" }, inp("startDate", "Start date", { type: "date", value: a?.startDate || today() }), inp("permit", "Apprentice permit # (if they have one)", { maxlength: 30, value: a?.permit || "" })),
+      login ? el("p", { class: "small muted" }, `${first} already has a login, so they'll see My training as soon as you save.`)
+        : el("div", { class: "two" }, inp("email", "Email (for their own login)", { type: "email", maxlength: 120, autocomplete: "off", value: a?.email || "" }), inp("phone", "Phone", { type: "tel", maxlength: 30, autocomplete: "off", value: a?.phone || "" })),
+      el("div", { class: "actions" }, el("button", { class: "btn", type: "submit" }, "Save and upload paperwork"), el("button", { class: "btn line", type: "button", onclick: () => f.remove() }, "Cancel"))].filter(Boolean));
     f.addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
       try {
-        const r = await call({ action: "apprOnboard", ...Object.fromEntries(new FormData(f)) });
-        ctx.toast(`${r.name} is set up`);
+        const r = await call({ action: "apprOnboard", ...(a ? { slug: a.slug } : {}), ...Object.fromEntries(new FormData(f)) });
+        ctx.toast(`${r.name} is onboarded`);
         await show(ctx, r.slug);
-        const v = document.getElementById("apprView"), first = r.name.split(" ")[0];
-        const next = el("section", { class: "panel onb" }, el("h2", {}, `${first} is set up`),
+        const v = document.getElementById("apprView"), nm = r.name.split(" ")[0];
+        const next = el("section", { class: "panel onb" }, el("h2", {}, `${nm} is onboarded`),
           el("p", {}, "Next: upload the paperwork they already filled out (enrollment form, ETA-671, W-4, I-9, ID copies, permit)."),
           el("div", { class: "actions" }, el("button", { class: "btn", type: "button", onclick: () => document.getElementById("apprFiles")?.scrollIntoView({ behavior: "smooth" }) }, "Upload their paperwork")));
         if (r.invite) {
-          const msg = `Hi ${first}, here's your link to set up your apprentice login: ${r.invite.link}`;
+          const msg = `Hi ${nm}, here's your link to set up your apprentice login: ${r.invite.link}`;
           next.append(el("h3", {}, "Their login"),
-            el("p", {}, r.invite.emailed ? `We emailed ${first} a link to choose a password (${r.invite.email}). You can also send it yourself:` : `Send ${first} this link to choose a password. It works once and lasts 12 days.`),
+            el("p", {}, r.invite.emailed ? `We emailed ${nm} a link to choose a password (${r.invite.email}). You can also send it yourself:` : `Send ${nm} this link to choose a password. It works once and lasts 12 days.`),
             el("div", { class: "linkbox" }, el("code", { style: "flex:1;min-width:200px" }, r.invite.link),
               el("button", { class: "btn sm line", type: "button", onclick: () => navigator.clipboard?.writeText(r.invite.link).then(() => ctx.toast("Copied")) }, "Copy"),
               r.invite.phone ? el("a", { class: "btn sm line", href: `sms:${r.invite.phone.replace(/[^\d+]/g, "")}?&body=${encodeURIComponent(msg)}` }, "Text it") : null));
-        } else next.append(el("p", { class: "small muted" }, `No email, so no login yet. To give ${first} one later: Team → add them with their email and link it to ${first}.`));
+        }
         v.insertBefore(next, v.children[2] || null);
+        document.getElementById("apprFiles")?.scrollIntoView({ behavior: "smooth" });
       } catch (x) { ctx.toast(x.message); btn.disabled = false; }
     });
     return f;
@@ -219,7 +221,6 @@
     if (owner) v.append(el("p", { style: "margin:24px 0 0" }, el("button", { class: "linkbtn", type: "button", onclick: () => show(ctx) }, "← All apprentices")));
     const isEx = /^demo-/.test(R.slug || "");
     v.append(el("h1", {}, isEx ? el("span", { class: "ex-tag", style: "font-size:14px;vertical-align:8px" }, "Example") : null, owner ? exName(R.name) : "My training"));
-    if (isEx) v.append(exBanner(" A made-up apprentice so you can see how this page works. Nothing here is a real person, and nothing here is sent anywhere."));
     const tasks = R.checklist.filter((c) => c.target), qualified = tasks.filter((c) => c.done).length;
     v.append(el("section", { class: "panel" },
       el("div", { class: "big" }, `${fmtH(R.approvedHours)} / ${fmtH(R.goalHours)} hours`),
@@ -227,6 +228,8 @@
       el("p", { class: "muted", style: "margin:0" }, `${R.pct}% signed off · ${fmtH(R.practicalHours || 0)} practical · ${fmtH(R.theoryHours || 0)} theory${R.pendingHours ? ` · ${fmtH(R.pendingHours)} waiting for sign-off` : ""}`),
       el("p", { class: "muted", style: "margin:4px 0 0" }, `${tasks.length ? `${qualified} of ${tasks.length} tasks qualified · ` : ""}${R.checksDone - qualified} of ${R.checksTotal - tasks.length} other checkoffs${R.startDate ? ` · started ${R.startDate}` : ""}${R.permit ? ` · permit #${R.permit}` : ""}`),
       owner ? startEditor() : null));
+
+    if (owner && !isEx) v.append(filesPanel());
 
     // Log hours
     const date = el("input", { type: "date", value: today(), max: today() }), hrs = el("input", { type: "number", min: 0.25, max: 16, step: 0.25, value: 8 }), note = el("input", { placeholder: "What you worked on (optional)" });
@@ -293,7 +296,6 @@
     for (const m of R.materials) ml.append(el("div", { class: "row" }, el("strong", {}, m.title), el("a", { class: "btn sm line", href: m.url, target: "_blank", rel: "noopener" }, "Open")));
     v.append(ml);
 
-    if (owner && !isEx) v.append(filesPanel());
     v.append(owner ? paperPanel() : profilePanel());
   }
 

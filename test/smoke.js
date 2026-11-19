@@ -620,6 +620,18 @@ const valid = (o = {}) => ({
             assert.equal((await fetch(BASE + fileUrl, { headers: { "X-Forwarded-Host": SHOPHOST } })).status, 401, "logged out can't open it");
             lv = await call("/api/admin/books", { body: { action: "apprView" } }); assert.equal(lv.data.apprentices.find((x) => x.slug === ks).files, 1);
             fu = await call("/api/admin/books", { body: { action: "apprFileDel", slug: ks, id: fu.data.files[0].id } }); assert.equal(fu.data.files.length, 0);
+            { // someone already on the team: Add as apprentice, then Onboard next to their name
+              const ts = await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").add("Kiley Kuykendall"));
+              assert.equal((await call("/api/admin/books", { body: { action: "apprSet", slug: ts, on: true } })).status, 200);
+              let tv = await call("/api/admin/books", { body: { action: "apprView" } });
+              assert.equal(tv.data.apprentices.find((x) => x.slug === ts).onboarded, false);
+              const ob = await call("/api/admin/books", { body: { action: "apprOnboard", slug: ts, startDate: "2026-11-10", permit: "BAHA-7" } });
+              assert.equal(ob.status, 200, JSON.stringify(ob.data)); assert.equal(ob.data.invite, null); assert.equal(ob.data.slug, ts);
+              tv = await call("/api/admin/books", { body: { action: "apprView" } });
+              const tr = tv.data.apprentices.find((x) => x.slug === ts); assert.ok(tr.onboarded && tr.permit === "BAHA-7" && tr.startDate === "2026-11-10");
+              await call("/api/admin/books", { body: { action: "apprSet", slug: ts, on: false } });
+              await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").remove(ts).catch(() => {}));
+            }
             // tidy up so later checks see the same team
             await call("/api/admin/books", { body: { action: "apprSet", slug: ks, on: false } });
             const tm = await call("/api/admin/login", { body: { action: "team" } }); const ku = (tm.data.users || tm.data.team || []).find((x) => x.email === "kiley@example.com");

@@ -364,7 +364,7 @@ async function apprApi(req, res, me, b) {
       case "apprView": {
         if (full && !b.slug) {
           const P = require("../../lib/paperwork");
-          const roster = await artists.list(), slugs = await A.list();
+          const roster = await artists.list(), slugs = await A.list(), logins = await auth.users();
           const people = [], docs = [];
           for (const s2 of slugs) {
             const a = roster.find((x) => x.slug === s2); if (!a) continue;
@@ -373,12 +373,13 @@ async function apprApi(req, res, me, b) {
             people.push({ slug: s2, name: a.name, demo: Demo.isDemo(s2), approvedHours: v.approvedHours, pendingHours: v.pendingHours, practicalHours: v.practicalHours, theoryHours: v.theoryHours, pct: v.pct,
               checksDone: v.checksDone, checksTotal: v.checksTotal, tasksQualified: tasks.filter((c) => c.done).length, tasksTotal: tasks.length,
               repsPending: tasks.reduce((n, c) => n + c.repsPending, 0), modulesDone: v.checklist.filter((c) => !c.target && c.done).length, modulesTotal: v.checklist.filter((c) => !c.target).length,
-              permit: v.permit, startDate: v.startDate, paperwork: prof ? P.missing(prof) : null, files: (await A.files(s2)).length });
+              permit: v.permit, startDate: v.startDate, paperwork: prof ? P.missing(prof) : null, files: (await A.files(s2)).length,
+              onboarded: Boolean(v.onboardedAt), email: v.email, phone: v.phone, hasLogin: logins.some((u) => u.artist === s2 && u.active !== false) });
             for (const d of (await store.getJSON(`appr:docs:${s2}`)) || []) docs.push({ ...d, slug: s2, name: a.name });
           }
           docs.sort((x, y) => y.at - x.at);
           return send(res, 200, { owner: true, applications: await A.applications(), apprentices: people, docs: docs.slice(0, 60), demo: demos.length > 0,
-            team: team.map((a) => ({ slug: a.slug, name: a.name })), settings: await A.settings(), checklist: await A.checklist(), materials: await A.materials() });
+            team: team.map((a) => ({ slug: a.slug, name: a.name, hasLogin: logins.some((u) => u.artist === a.slug && u.active !== false) })), settings: await A.settings(), checklist: await A.checklist(), materials: await A.materials() });
         }
         const slug = full ? str(b.slug, 60) : me.artist;
         if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
@@ -446,22 +447,32 @@ async function apprApi(req, res, me, b) {
         }
         return send(res, 200, { ok: true, filename: fname, pdf: buf.toString("base64"), missing: P.missing(p) });
       }
-      case "apprOnboard": { // Owner: bring on a new apprentice in one go. {first, last, email?, phone?, startDate?, permit?, appId?}
+      case "apprOnboard": { // Owner: onboard an apprentice in one go.
+        // Someone already on the team: {slug, ...}. Someone new: {first, last, ...}. Both: email?, phone?, startDate?, permit?, appId?
         if (!needFull()) return;
-        const first = str(b.first, 40), last = str(b.last, 40), email = str(b.email, 120).toLowerCase(), phone = str(b.phone, 30);
-        if (first.length < 1) return send(res, 400, { error: "Enter their first name." });
+        const email = str(b.email, 120).toLowerCase(), phone = str(b.phone, 30);
         if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return send(res, 400, { error: "That email doesn't look right." });
         const users = await auth.users();
-        if (email && users.some((x) => x.email === email)) return send(res, 400, { error: "Someone already logs in with that email. Use Make apprentice below for people already on the team." });
-        const name = `${first} ${last}`.trim();
-        const slug = await require("../../lib/artists").add(name); // unlisted: not on the booking page
+        let slug = str(b.slug, 60), name;
+        if (slug) {
+          const a = team.find((x) => x.slug === slug); if (!a) return send(res, 404, { error: "That team member isn't here." });
+          name = a.name;
+        } else {
+          const first = str(b.first, 40), last = str(b.last, 40);
+          if (first.length < 1) return send(res, 400, { error: "Enter their first name." });
+          name = `${first} ${last}`.trim();
+        }
+        const hasLogin = slug && users.some((u) => u.artist === slug && u.active !== false);
+        if (email && !hasLogin && users.some((x) => x.email === email)) return send(res, 400, { error: "Someone else already logs in with that email." });
+        if (!slug) slug = await require("../../lib/artists").add(name); // unlisted: not on the booking page
         await A.setApprentice(slug, true);
         if (b.startDate) { try { await A.setStart(slug, b.startDate); } catch {} }
-        await A.setMeta(slug, { permit: b.permit || "", appId: b.appId || "", email, phone });
+        await A.setMeta(slug, { ...(b.permit !== undefined ? { permit: b.permit } : {}), ...(b.appId ? { appId: b.appId } : {}), email, phone, onboarded: true });
         if (b.appId) { try { await A.setAppStatus(str(b.appId, 20), "accepted"); } catch {} }
         let invite = null;
-        if (email) { // their own login, so they can log hours and fill in their paperwork details
+        if (email && !hasLogin) { // their own login, so they can log hours and fill in their paperwork details
           const { baseUrl } = require("../../lib/http"), { sendEmail, emailReady } = require("../../lib/email"), config = require("../../config/studio");
+          const first = name.split(" ")[0];
           const u = { id: require("crypto").randomBytes(6).toString("base64url"), name, email, role: "artist", artist: slug, hash: "", mustChange: false, ver: 0, active: true,
             createdAt: new Date().toISOString(), createdBy: by };
           users.push(u); await auth.saveUsers(users);
@@ -475,7 +486,7 @@ async function apprApi(req, res, me, b) {
           }
           invite = { link, emailed, email, phone };
         }
-        return send(res, 200, { ok: true, slug, name, invite });
+        return send(res, 200, { ok: true, slug, name, invite, hadLogin: Boolean(hasLogin) });
       }
       case "apprFiles": { // Owner: uploaded paperwork for one apprentice
         if (!needFull()) return;
