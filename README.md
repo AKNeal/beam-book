@@ -74,6 +74,7 @@ The booking pages allow framing (`frame-ancestors *`); the inbox and control pag
 | `/schedule` | Approved clients pick an open time |
 | `/admin` | The shop's inbox |
 | `/platform` | **Beam Book control page** (Neal): add and manage shops |
+| `/home` | Beam Book product splash page. `middleware.js` shows it at `/` on beam-book.com and www.beam-book.com only (more hosts: `SPLASH_HOSTS`). Its **Request a call** form posts to `/api/callback`, which emails Nealmedia@yahoo.com and Artemis.nealmedia@gmail.com (override with `CALLBACK_TO`) |
 
 ## Control page (`/platform`)
 - **Add a shop:** name, short name, city, phone, address, Instagram, time zone, the Owner's name and email, first artist, dark or light, accent color, optional gold corners. You get a one-time link (7 days) for the Owner to set their password, with buttons to email or text it.
