@@ -1,8 +1,8 @@
 /* Beam app service worker. Lets phones install Beam to the home screen.
    Deliberately simple: pages and data always come from the network (bookings must never be stale).
    Only when the phone is offline does it show a small "You're offline" page instead of the browser's error. */
-const CACHE = "beam-shell-v1";
-const OFFLINE = "/offline.html";
+const CACHE = "beam-shell-v2";
+const OFFLINE = "/offline"; // cleanUrls serves offline.html here (no redirect)
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll([OFFLINE, "/assets/brand/beam-icon-192.png"])).then(() => self.skipWaiting()));
