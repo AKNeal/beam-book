@@ -44,6 +44,17 @@ module.exports = async function handler(req, res) {
     const r = await sendEmail({ to, subject: "Test from your booking system", title: "Email is working", paragraphs: ["This is a test from your booking system. Booking confirmations, reminders and changes will look like this."] });
     return send(res, r && r.ok ? 200 : 502, { ok: Boolean(r && r.ok), to, ...(r && r.ok ? {} : { error: "Resend didn't accept it. Check the domain and key." }) });
   }
+  if (/^setup/.test(String(b.action || ""))) { // setup checklist (lib/setup.js): your own items; Owner / Administrator see and edit everyone's
+    const SU = require("../../lib/setup"), full = auth.isFull(me);
+    try {
+      if (b.action === "setupList") return send(res, 200, { ...(await SU.view(me, full && b.all !== false)), full });
+      if (b.action === "setupDone") { await SU.setDone(me, str(b.id, 20), Boolean(b.done), full); return send(res, 200, { ...(await SU.view(me, full)), full }); }
+      if (!full) return send(res, 403, { error: "Only the Owner or an Administrator can change the checklist." });
+      if (b.action === "setupSave") { await SU.save(b); return send(res, 200, { ...(await SU.view(me, true)), full }); }
+      if (b.action === "setupRemove") { await SU.remove(str(b.id, 20)); return send(res, 200, { ...(await SU.view(me, true)), full }); }
+      return send(res, 400, { error: "Unknown setup action." });
+    } catch (e) { return send(res, 400, { error: e.message }); }
+  }
   if (b.action === "paperFields") { // Owner: field names in an official form (for setting up the paperwork maps)
     if (!auth.isFull(me)) return send(res, 403, { error: "Owner or an Administrator only." });
     try { const P = require("../../lib/paperwork"); return send(res, 200, { form: b.form, fields: await P.fields(String(b.form || "")) }); }
