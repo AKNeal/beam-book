@@ -374,7 +374,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
       $("viewAppr").textContent = "My training";
       return window.BBAppr.show({ only, toast, D });
     }
-    if (!selected && D.instant) return showDay(); // barbershops open on today's schedule
+    if (D.instant) { if (location.hash) history.replaceState(null, "", "/admin"); return window.BBDash.show({ only, toast, D }); } // barbershops open on the dashboard (no bookings list)
     showRequests();
   }
   let SHOP = "the shop";
@@ -461,6 +461,13 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     if (!D.emailReady) box.append(el("div", { class: "notice", role: "note" },
       el("strong", {}, "Email isn't connected yet. "),
       "Clients won't get emails from the site, and you won't get new-request alerts. Open a request and use ", el("strong", {}, "Text link"), " or ", el("strong", {}, "Copy link"), " to send it yourself."));
+    // Barbershops: no bookings list, just the booking you opened (with a way back to the shop calendar)
+    if (D.instant) {
+      box.append(el("p", { style: "margin:20px 0 0" }, el("button", { class: "linkbtn", type: "button", onclick: showDay }, "← Shop calendar")));
+      const detail = el("div", { id: "detail" }); box.append(detail);
+      if (!D.requests.some((r) => r.id === selected)) { detail.append(el("p", { class: "muted" }, "That booking isn't here any more.")); return; }
+      return renderDetail();
+    }
     const counts = Object.fromEntries(D.statuses.map((s) => [s, D.requests.filter((r) => r.status === s && (artistFilter === "all" || r.artist === artistFilter)).length]));
     box.append(el("div", { class: "tabs", role: "group", "aria-label": "Status" }, D.statuses.map((s) =>
       el("button", { class: "tab", type: "button", "aria-pressed": String(s === tab), onclick: () => { tab = s; selected = null; history.replaceState(null, "", "#"); renderInbox(); } },
@@ -482,7 +489,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
   }
 
   function renderList() {
-    const list = $("list"); list.textContent = "";
+    const list = $("list"); if (!list) return; list.textContent = "";
     const rows = visible();
     const older = D.olderFrom ? el("button", { class: "btn sm line", type: "button", style: "margin:12px 0", onclick: async (e) => {
       e.target.disabled = true; e.target.textContent = "Loading…";
