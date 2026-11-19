@@ -1,0 +1,17 @@
+{
+  "name": "Beam",
+  "short_name": "Beam",
+  "description": "Your shop's schedule, bookings and clients.",
+  "id": "/admin",
+  "start_url": "/admin?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d1014",
+  "theme_color": "#0d1014",
+  "icons": [
+    { "src": "/assets/brand/beam-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/brand/beam-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/brand/beam-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
