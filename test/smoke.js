@@ -746,6 +746,20 @@ const valid = (o = {}) => ({
       assert.equal(x.status, 200, JSON.stringify(x.data)); assert.equal(x.data.barber, "Mike Fade");
       x = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: slot.start, name: "Someone Else", phone: "907-555-2222" } });
       assert.equal(x.status, 409, "same time can't be booked twice");
+      // First available is fair: two clients at the same open time land with two different barbers, not the first one listed.
+      { const days = (await call(`/api/schedule?instant=1&service=${svc.id}&barber=any`)).data.days;
+        const free = [];
+        for (const b of ["mike-fade", ...(await call("/api/schedule?instant=1")).data.barbers.map((z) => z.slug).filter((z) => z !== "mike-fade")]) {
+          const r = await call(`/api/schedule?instant=1&service=${svc.id}&barber=${b}`); if (r.status === 200) free.push(new Set(r.data.days.flatMap((d) => d.slots.map((q) => q.start))));
+        }
+        const both = days.flatMap((d) => d.slots).find((q) => free.filter((f) => f.has(q.start)).length >= 2);
+        if (both) {
+          const a1 = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "any", start: both.start, name: "Fair One", phone: "907-555-3001" } });
+          const a2 = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "any", start: both.start, name: "Fair Two", phone: "907-555-3002" } });
+          assert.equal(a1.status, 200); assert.equal(a2.status, 200); assert.notEqual(a1.data.barber, a2.data.barber, "first available spreads clients");
+          assert.notEqual(a1.data.barber, "Mike Fade", "the barber who already has a booking that day isn't picked first");
+        } else console.log("  (no time with two free barbers; fairness check skipped)");
+      }
       cookie = owner;
       x = await call("/api/admin/inbox"); const booked = x.data.requests.find((r) => r.instant); assert.equal(booked.status, "booked"); assert.ok(booked.clientId);
       assert.ok(x.data.calendar["mike-fade"].appts.some((a) => a.start === slot.start));

@@ -88,7 +88,7 @@
       app.append(step(3, "Time", false, el("div", {}, dayRow, el("div", { class: "slots" }, el("h2", {}, S.day.label), grid))));
       return;
     }
-    const who = S.barber === "any" ? nameOf(S.slot.barber) : nameOf(S.barber);
+    const who = S.barber === "any" ? "the first available barber" : nameOf(S.barber);
     app.append(step(3, "Time", true, el("p", { style: "margin:0" }, el("strong", {}, `${S.day.label} at ${S.slot.label}`), who ? ` with ${who}` : ""),
       () => { S.slot = null; render(); }));
 
@@ -112,7 +112,7 @@
       const d = new FormData(f);
       btn.disabled = true; btn.textContent = "Booking…";
       try {
-        const r = await api("/api/schedule", { body: { instant: true, service: S.service.id, barber: S.barber === "any" ? S.slot.barber : S.barber, start: S.slot.start,
+        const r = await api("/api/schedule", { body: { instant: true, service: S.service.id, barber: S.barber, start: S.slot.start,
           name: d.get("name"), phone: d.get("phone"), email: d.get("email"), textOk: d.get("textOk") === "on", note: d.get("note"), website: d.get("website") } });
         done(r);
       } catch (x) {
