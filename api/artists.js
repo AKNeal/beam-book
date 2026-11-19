@@ -13,7 +13,7 @@ const { send, method } = require("../lib/http");
 
 module.exports = async function handler(req, res) {
   const q = new URL(req.url, "http://x").searchParams;
-  if (q.get("rank") === "due" || q.get("rank") === "ingest") return rankApi(req, res, q.get("rank"));
+  if (["due", "ingest", "searches"].includes(q.get("rank"))) return rankApi(req, res, q.get("rank"));
   if (!method(req, res, "GET")) return;
   if (q.get("ig")) return instagram(req, res, q);
   if (q.get("board")) { // Beam: the shop TV scoreboard — a private link, no money
@@ -179,6 +179,10 @@ async function rankApi(req, res, what) {
   const rc = require("../lib/rankcheck");
   if (what === "due") return send(res, 200, await rc.due());
   if (req.method !== "POST") return send(res, 405, { error: "POST the results." });
+  if (what === "searches") { // Neal Media: fix the shop's searches (same as the owner's editor, up to 5)
+    try { const searches = await rc.saveSearches(require("../lib/http").body(req).searches); return send(res, 200, { ok: true, searches }); }
+    catch (e) { return send(res, 400, { error: e.message }); }
+  }
   try { const check = await rc.ingest(require("../lib/http").body(req)); return send(res, 200, { ok: true, check }); }
   catch (e) { return send(res, 400, { error: e.message }); }
 }
