@@ -644,6 +644,34 @@ const valid = (o = {}) => ({
               if (ru) await call("/api/admin/login", { body: { action: "remove", id: ru.id } });
               await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").remove(ts).catch(() => {}));
             }
+            { // Instructor role: signs off apprentices; no applications, paperwork or settings. Owner / Instructor keeps everything.
+              const owner = cookie;
+              let ad = await call("/api/admin/login", { body: { action: "add", name: "Ivy Teach", email: "ivy@example.com", role: "instructor", newArtist: "Ivy Teach", password: "ivy teaches fades 1", mustChange: false } });
+              assert.equal(ad.status, 200, JSON.stringify(ad.data));
+              const iv = ad.data.users.find((x) => x.email === "ivy@example.com"); assert.equal(iv.roleName, "Instructor"); assert.equal(iv.roleKey, "instructor"); assert.equal(iv.role, "artist");
+              await call("/api/admin/books", { body: { action: "apprLog", slug: ks, date: "2026-11-12", hours: 2 } }); // owner logs: signed off
+              cookie = "";
+              const li = await call("/api/admin/login", { body: { action: "login", email: "ivy@example.com", password: "ivy teaches fades 1" } }); assert.equal(li.status, 200, JSON.stringify(li.data));
+              let iv2 = await call("/api/admin/books", { body: { action: "apprView" } });
+              assert.equal(iv2.status, 200, JSON.stringify(iv2.data)); assert.equal(iv2.data.full, false); assert.deepEqual(iv2.data.applications, []);
+              assert.ok(iv2.data.apprentices.some((x) => x.slug === ks));
+              iv2 = await call("/api/admin/books", { body: { action: "apprLog", slug: ks, date: "2026-11-13", hours: 3 } }); assert.equal(iv2.status, 200, JSON.stringify(iv2.data));
+              assert.equal(iv2.data.approvedHours, 5, "instructor's entries are signed off");
+              assert.equal((await call("/api/admin/books", { body: { action: "apprCheck", slug: ks, id: "m1", on: true } })).status, 200);
+              assert.equal((await call("/api/admin/books", { body: { action: "apprFiles", slug: ks } })).status, 403, "no paperwork");
+              assert.equal((await call("/api/admin/books", { body: { action: "apprProfile", slug: ks, get: true } })).status, 403, "no private details");
+              assert.equal((await call("/api/admin/books", { body: { action: "apprOnboard", first: "X" } })).status, 403);
+              assert.equal((await call("/api/admin/books", { body: { action: "apprApp", id: "x", status: "accepted" } })).status, 403);
+              cookie = owner;
+              const tm = await call("/api/admin/login", { body: { action: "team" } });
+              const me0 = tm.data.users.find((x) => x.role === "owner" && x.email); 
+              const up = await call("/api/admin/login", { body: { action: "update", id: me0.id, role: "ownerInstructor" } }); assert.equal(up.status, 200, JSON.stringify(up.data));
+              const me1 = up.data.users.find((x) => x.id === me0.id); assert.equal(me1.roleName, "Owner / Instructor"); assert.equal(me1.role, "owner");
+              assert.equal((await call("/api/admin/books", { body: { action: "apprView" } })).data.full, true, "owner keeps everything");
+              await call("/api/admin/login", { body: { action: "update", id: me0.id, role: "owner" } });
+              const ivu = tm.data.users.find((x) => x.email === "ivy@example.com"); await call("/api/admin/login", { body: { action: "remove", id: ivu.id } });
+              await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").remove(iv.artist).catch(() => {}));
+            }
             // tidy up so later checks see the same team
             await call("/api/admin/books", { body: { action: "apprSet", slug: ks, on: false } });
             const tm = await call("/api/admin/login", { body: { action: "team" } }); const ku = (tm.data.users || tm.data.team || []).find((x) => x.email === "kiley@example.com");

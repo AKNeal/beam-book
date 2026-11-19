@@ -55,7 +55,7 @@
         el("div", { class: "meta" }, `${a.startDate ? `Started ${a.startDate} · ` : ""}${paper}`)),
       el("div", { class: "actions", style: "margin:0" },
         el("button", { class: "btn sm" + (a.demo ? " line" : ""), type: "button", onclick: () => show(ctx, a.slug) }, "Open"),
-        a.demo ? null : el("button", { class: "btn sm line", type: "button", onclick: async () => { if (!confirmTwice(`end ${a.name}'s apprenticeship`)) return; try { await call({ action: "apprSet", slug: a.slug, on: false }); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Remove")),
+        a.demo || !R.full ? null : el("button", { class: "btn sm line", type: "button", onclick: async () => { if (!confirmTwice(`end ${a.name}'s apprenticeship`)) return; try { await call({ action: "apprSet", slug: a.slug, on: false }); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Remove")),
       slot);
     return row;
   }
@@ -72,13 +72,14 @@
       && !real.some((a) => nm(exName(a.name)) === nm(`${x.first} ${x.last}`)))
       .map((x) => ({ slug: "", name: `${x.first} ${x.last}`, app: x, onboarded: false, email: x.email, phone: x.phone, startDate: x.startDate || "" }));
     const list = [...real.filter((a) => !a.onboarded), ...fromApps, ...real.filter((a) => a.onboarded), ...R.apprentices.filter((a) => a.demo)];
-    const sec = el("section", { class: "panel" }, el("h2", {}, "Apprentices"),
+    const sec = el("section", { class: "panel" }, el("h2", {}, "Apprentices"), !R.full ? el("p", { class: "small muted" }, "Open an apprentice to sign off their hours, reps and checkoffs.") :
       el("p", { class: "small muted" }, "Every apprentice applies through your website (", el("a", { href: "/apply", target: "_blank", rel: "noopener" }, "Apply page"), "). Mark their application Accepted and they show up here to onboard."));
     if (!list.length) sec.append(el("p", { class: "muted" }, "No apprentices yet."));
     for (const a of list) sec.append(apprRow(a));
-    sec.append(el("p", { class: "small", style: "margin-top:12px" }, el("button", { class: "linkbtn small", type: "button", onclick: async () => {
+    if (R.full) sec.append(el("p", { class: "small", style: "margin-top:12px" }, el("button", { class: "linkbtn small", type: "button", onclick: async () => {
         if (R.demo && !confirmTwice("remove the example apprentices")) return;
         try { await call({ action: "apprDemo", on: !R.demo }); ctx.toast(R.demo ? "Examples removed" : "Examples added"); show(ctx); } catch (e) { ctx.toast(e.message); } } }, R.demo ? "Remove the examples" : "Show examples")));
+    if (!R.full) { v.append(sec); return; } // instructors: just the apprentices
     v.append(appsPanel(), sec, formsPanel(), paperSettingsPanel(), setupPanel());
   }
 
@@ -230,9 +231,9 @@
       el("div", { class: "prog" }, el("i", { style: `width:${R.pct}%` })),
       el("p", { class: "muted", style: "margin:0" }, `${R.pct}% signed off · ${fmtH(R.practicalHours || 0)} practical · ${fmtH(R.theoryHours || 0)} theory${R.pendingHours ? ` · ${fmtH(R.pendingHours)} waiting for sign-off` : ""}`),
       el("p", { class: "muted", style: "margin:4px 0 0" }, `${tasks.length ? `${qualified} of ${tasks.length} tasks qualified · ` : ""}${R.checksDone - qualified} of ${R.checksTotal - tasks.length} other checkoffs${R.startDate ? ` · started ${R.startDate}` : ""}${R.permit ? ` · permit #${R.permit}` : ""}`),
-      owner ? startEditor() : null));
+      R.full ? startEditor() : null));
 
-    if (owner && !isEx) v.append(filesPanel());
+    if (R.full && !isEx) v.append(filesPanel());
 
     // Log hours
     const date = el("input", { type: "date", value: today(), max: today() }), hrs = el("input", { type: "number", min: 0.25, max: 16, step: 0.25, value: 8 }), note = el("input", { placeholder: "What you worked on (optional)" });
@@ -299,7 +300,7 @@
     for (const m of R.materials) ml.append(el("div", { class: "row" }, el("strong", {}, m.title), el("a", { class: "btn sm line", href: m.url, target: "_blank", rel: "noopener" }, "Open")));
     v.append(ml);
 
-    v.append(owner ? paperPanel() : profilePanel());
+    if (R.full) v.append(paperPanel()); else if (!owner) v.append(profilePanel());
   }
 
   async function rep(cid, rid, approve) { try { R = { ...R, ...(await call({ action: "apprRepReview", slug: R.owner ? R.slug : undefined, id: cid, rep: rid, approve })) }; drawOne(); } catch (e) { ctx.toast(e.message); } }
