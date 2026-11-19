@@ -55,11 +55,28 @@
       [["None", 0], ["15%", pct(0.15)], ["20%", pct(0.2)], ["25%", pct(0.25)]].map(([l, t]) => el("button", { class: "btn sm line", type: "button", "aria-pressed": String(tip === t), onclick: async () => { tip = t; await requote(); drawPay(); } }, l + (t ? ` (${$$(t)})` : ""))),
       el("input", { type: "number", min: 0, step: "0.01", placeholder: "Other $", style: "width:100px", onchange: async (e) => { tip = Math.max(0, Number(e.target.value) || 0); await requote(); drawPay(); } }))));
     p.append(el("div", { class: "opts" },
-      el("div", { class: "opt" }, el("small", {}, "Cash"), el("b", {}, $$(Q.cash.total)), el("small", {}, Q.cash.discount ? el("strong", {}, `Pay cash, save ${$$(Q.cash.discount)}`) : ""),
-        el("button", { class: "btn big", type: "button", disabled: Boolean(state), onclick: cash }, "Paid cash")),
+      el("div", { class: "opt" }, el("small", {}, "Cash"), el("b", {}, $$(Q.cash.total)), el("small", {}, Q.cash.discount ? el("strong", {}, `${$$(Q.cash.discount)} off for cash`) : ""),
+        el("button", { class: "btn big", type: "button", disabled: Boolean(state), onclick: cash }, Q.cash.discount ? `Paid cash (${$$(Q.cash.discount)} off)` : "Paid cash")),
       el("div", { class: "opt" }, el("small", {}, "Card"), el("b", {}, $$(Q.card.total)), el("small", {}, Q.surchargePct > 0 ? `credit cards +${Q.surchargePct}% (${$$(Q.card.creditFee)}); debit no fee` : "no card fee"),
-        el("button", { class: "btn big", type: "button", disabled: !Q.cardReady || Boolean(state), onclick: card }, Q.cardReady ? "Card on reader" : "Reader not set up"))));
+        Q.cardReady ? el("button", { class: "btn big", type: "button", disabled: Boolean(state), onclick: card }, "Card on reader") : null,
+        el("button", { class: "btn big" + (Q.cardReady ? " line" : ""), type: "button", disabled: !Q.phoneReady || Boolean(state), onclick: phone }, Q.phoneReady ? "Card on their phone (QR)" : "Card: Stripe not connected yet"))));
     if (state) p.append(state);
+  }
+
+  // Card on the client's phone: they scan the code (or you send them the link) and pay on Stripe's page.
+  async function phone() {
+    let r; try { r = await call({ action: "payLink", appt: sel, tip }); } catch (e) { return ctx.toast(e.message); }
+    const cancel = el("button", { class: "btn sm line", type: "button", onclick: async () => { stopPoll(); await call({ action: "payLinkCancel", appt: sel }).catch(() => {}); drawPay(); } }, "Cancel");
+    drawPay(el("div", { class: "state", style: "text-align:center" }, el("strong", {}, `Have them scan to pay ${$$(Q.card.total)}`),
+      el("img", { src: r.qr, alt: "QR code to pay", style: "display:block;margin:10px auto;width:240px;height:240px;image-rendering:pixelated" }),
+      el("div", { class: "actions", style: "justify-content:center" }, el("button", { class: "btn sm line", type: "button", onclick: async () => { try { await navigator.clipboard.writeText(r.url); ctx.toast("Link copied: text it to them"); } catch { prompt("Copy this link", r.url); } } }, "Copy link"), cancel),
+      el("p", { class: "small muted" }, "This screen updates by itself when they've paid."),
+      Q.testMode ? el("div", { class: "test" }, "Test mode: pay with card 4242 4242 4242 4242, any future date, any CVC.") : null));
+    stopPoll(); poll = setInterval(async () => {
+      let st; try { st = await call({ action: "payLinkStatus", appt: sel }); } catch { return; }
+      if (st.state === "paid") { stopPoll(); ctx.toast(`Paid ${$$(st.paid.total)}`); await load(); await requote(); draw(); }
+      else if (st.state === "canceled" || st.state === "none") { stopPoll(); drawPay(); }
+    }, 2500);
   }
 
   async function cash() { try { await call({ action: "payCash", appt: sel, tip }); ctx.toast("Paid cash"); await load(); await requote(); draw(); } catch (e) { ctx.toast(e.message); } }

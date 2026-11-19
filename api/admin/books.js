@@ -292,6 +292,9 @@ async function payApi(req, res, me, b) {
     if (b.action === "payCardStatus") return send(res, 200, await pay.cardStatus(id));
     if (b.action === "payCardConfirm") return send(res, 200, await pay.confirmCard(id));
     if (b.action === "payCardCancel") return send(res, 200, await pay.cancelCard(id));
+    if (b.action === "payLink") return send(res, 200, await pay.startLink(id, o, require("../../lib/http").baseUrl(req)));
+    if (b.action === "payLinkStatus") return send(res, 200, await pay.linkStatus(id));
+    if (b.action === "payLinkCancel") return send(res, 200, await pay.cancelLink(id));
     return send(res, 400, { error: "Unknown payment action." });
   } catch (e) { return send(res, 400, { error: e.message }); }
 }
