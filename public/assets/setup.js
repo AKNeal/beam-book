@@ -69,11 +69,20 @@
     return el("section", { class: "panel" }, el("h2", {}, i.id ? "Edit item" : "Add an item"), f);
   }
 
-  // The nav link shows how many of your own items are left (hidden once you're done).
+  // A banner under the menu shows how many of your own items are left. Once you're done it goes away;
+  // the Owner / Administrator then get a plain "Setup" link in the menu to manage everyone's lists.
   async function refreshBadge() {
-    const a = document.getElementById("viewSetup"); if (!a) return;
-    try { const r = await call({ action: "setupList", all: false }); const left = r.items.filter((i) => !i.done).length;
-      a.hidden = !left && !r.full; a.textContent = left ? `Setup (${left})` : "Setup"; } catch { a.hidden = true; }
+    const a = document.getElementById("viewSetup"), bn = document.getElementById("setupBanner"); if (!a) return;
+    try {
+      const r = await call({ action: "setupList", all: false }), mine = r.items.filter((i) => i.mine !== false);
+      const left = mine.filter((i) => !i.done).length, total = mine.length;
+      a.hidden = Boolean(left) || !r.full; a.textContent = "Setup";
+      if (bn) {
+        bn.hidden = !left;
+        document.getElementById("setupBannerLeft").textContent = left ? `· ${left} of ${total} thing${total === 1 ? "" : "s"} left to finish` : "";
+        document.getElementById("setupBannerBar").style.width = `${total ? Math.round(100 * (total - left) / total) : 0}%`;
+      }
+    } catch { a.hidden = true; if (bn) bn.hidden = true; }
   }
 
   window.BBSetup = { show, refreshBadge };
