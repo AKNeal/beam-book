@@ -56,6 +56,7 @@ async function get(req, res) {
     return send(res, 200, u ? { valid: true, name: u.name, email: u.email } : { valid: false });
   }
   const me = await auth.currentUser(req, { allowMustChange: true });
+  if (me && !me.mustChange) auth.renewSession(req, res, me);
   return send(res, 200, {
     admin: Boolean(me), user: me ? { ...auth.publicUser(me), shopKey: me.id === "shop" } : null,
     needsSetup: false, emailReady: emailReady(), smsReady: require("../../lib/sms").smsReady(),
