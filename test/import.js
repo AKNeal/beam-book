@@ -71,6 +71,13 @@ const TOKEN = "t".repeat(32);
       assert.equal((await A({ action: "apprLog", slug: "seth-long", date: d(5), hours: 8 })).status, 400, "no future hours");
       a = await A({ action: "apprCheck", slug: "seth-long", id: "m1", on: true }); assert.equal(a.data.checksDone, 1); assert.equal(a.data.checksTotal, 20);
       a = await A({ action: "apprView" }); assert.equal(a.data.apprentices[0].approvedHours, 8); assert.equal(a.data.settings.goalHours, 1650);
+      // Shop calendar: the desk books someone in; a second booking at the same time needs force
+      { const sch = await fetch(BASE + "/api/schedule?instant=1", { headers: { "X-Forwarded-Host": "levelup.localhost" } }).then((q) => q.json());
+        const svc = sch.services.find((q) => q.name === "Haircut");
+        const bk = { action: "staffBook", barber: "seth-long", service: svc.id, date: d(2), time: "13:00", name: "Desk Test Client", phone: "907-555-0199", notify: false };
+        let s1 = await A(bk); assert.equal(s1.status, 200, JSON.stringify(s1.data));
+        s1 = await A(bk); assert.equal(s1.status, 409); assert.ok(s1.data.clash);
+        s1 = await A({ ...bk, force: true }); assert.equal(s1.status, 200); }
       assert.equal((await A({ action: "apprMaterials", items: [{ title: "Vol 1", url: "javascript:alert(1)" }, { title: "Vol 2", url: "https://example.com/v2" }] })).data.materials.length, 1, "https links only"); }
     // Onboarding link: owner fills shop details, socials and team; the website reads them back publicly.
     const ob = new URL((await post({ action: "importSquire", token: TOKEN, slug: "levelup", data, onboardLink: true })).data.onboardLink);

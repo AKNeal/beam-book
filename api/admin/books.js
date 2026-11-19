@@ -55,6 +55,11 @@ module.exports = async function handler(req, res) {
       return send(res, 400, { error: "Unknown setup action." });
     } catch (e) { return send(res, 400, { error: e.message }); }
   }
+  if (b.action === "staffBook") { // book someone in from the shop calendar (Owner, Administrator, Staff: anyone; a barber: themselves)
+    if (!auth.seesAll(me) && (me.artist !== str(b.barber, 60))) return send(res, 403, { error: "You can only book on your own calendar." });
+    try { return send(res, 200, await require("../../lib/instant").staffBook(b, me, require("../../lib/http").baseUrl(req))); }
+    catch (e) { return send(res, e.clash ? 409 : 400, { error: e.message, clash: Boolean(e.clash) }); }
+  }
   if (b.action === "paperFields") { // Owner: field names in an official form (for setting up the paperwork maps)
     if (!auth.isFull(me)) return send(res, 403, { error: "Owner or an Administrator only." });
     try { const P = require("../../lib/paperwork"); return send(res, 200, { form: b.form, fields: await P.fields(String(b.form || "")) }); }
