@@ -29,7 +29,7 @@ const header = (page) => `<a class="skip" href="#main">Skip to content</a>
     <nav class="nav" id="nav" aria-label="Main">
       ${NAV.map(([href, label, key]) => `<a href="${href}"${key === page ? ' aria-current="page"' : ""}>${label}</a>`).join("\n      ")}
       <a data-shop="website" data-shop-if="website" href="#" rel="noopener" hidden>Shop website</a>
-      <a class="btn sign sm" href="/booking" data-word="cta"${page === "booking" ? ' aria-current="page"' : ""}>Request a booking</a>
+      ${["booking", "appointment", "schedule"].includes(page) ? "" : `<a class="btn sign sm" href="/booking" data-word="cta">Request a booking</a>`}
     </nav>
   </div>
 </header>`;
