@@ -333,7 +333,62 @@ async function apprApi(req, res, me, b) {
         const slug = full ? str(b.slug, 60) : me.artist;
         if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
         const a = await artists.bySlug(slug); if (!a) return send(res, 404, { error: "That team member isn't here." });
-        return send(res, 200, { owner: full, name: a.name, ...(await A.view(slug)) });
+        return send(res, 200, { owner: full, name: a.name, ...(full ? { applications: (await A.applications()).map((x) => ({ id: x.id, first: x.first, last: x.last, status: x.status })) } : {}), ...(await A.view(slug)) });
+      }
+      case "apprRep": { // log reps on a qualified task (apprentice: waiting for approval; Owner: approved)
+        const slug = full && b.slug ? str(b.slug, 60) : me.artist;
+        if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
+        await A.logRep(slug, str(b.id, 20), { date: b.date, count: b.count, note: b.note, approved: full }, by);
+        return send(res, 200, { ok: true, ...(await A.view(slug)) });
+      }
+      case "apprRepReview": { // Owner: approve true | false | "delete"; apprentice: "delete" on their own pending rep
+        const slug = full ? str(b.slug, 60) : me.artist;
+        if (!full && !(mine && b.approve === "delete")) return send(res, 403, { error: "Only the Owner or a Site manager can do that." });
+        await A.reviewRep(slug, str(b.id, 20), str(b.rep, 20), b.approve === "delete" ? "delete" : Boolean(b.approve), by, !full);
+        return send(res, 200, { ok: true, ...(await A.view(slug)) });
+      }
+      case "apprMeta": { // Owner: permit number, linked application
+        if (!needFull()) return;
+        await A.setMeta(str(b.slug, 60), { permit: b.permit, appId: b.appId });
+        return send(res, 200, { ok: true, ...(await A.view(str(b.slug, 60))) });
+      }
+      case "apprProfile": { // the apprentice's paperwork details. GET: {get:true}. The apprentice edits their own; the Owner only sees (SSN masked).
+        const P = require("../../lib/paperwork");
+        const slug = full && b.slug ? str(b.slug, 60) : me.artist;
+        if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
+        if (b.get) {
+          let p = await P.profile(slug);
+          if (p) return send(res, 200, { ok: true, saved: true, profile: P.masked(p) });
+          const v = await A.view(slug), app = v.appId ? (await A.applications()).find((x) => x.id === v.appId) : null;
+          return send(res, 200, { ok: true, saved: false, profile: P.fromApplication(app) });
+        }
+        if (full && slug !== me.artist) return send(res, 403, { error: "Apprentices fill in their own details from their login." });
+        const p = await P.saveProfile(slug, b.profile || {});
+        return send(res, 200, { ok: true, saved: true, profile: P.masked(p) });
+      }
+      case "apprPaperSettings": { // Owner: shop paperwork settings. {get:true} to read.
+        if (!needFull()) return;
+        const P = require("../../lib/paperwork");
+        const S = b.get ? await P.settings() : await P.saveSettings(b.settings || {}), shop = require("../../config/studio").studio || {};
+        return send(res, 200, { ok: true, settings: { ...S, shopName: S.shopName || shop.name || "", shopPhone: S.shopPhone || shop.phone || "", shopPhysical: S.shopPhysical || shop.address || "" } });
+      }
+      case "apprPaper": { // Owner: fill a form. form: ak4194 | eta671 | w4 | i9 | ak4315 | packet. ak4315 takes months: ["2026-11", …]
+        if (!needFull()) return;
+        const P = require("../../lib/paperwork");
+        const slug = str(b.slug, 60), a = await artists.bySlug(slug); if (!a) return send(res, 404, { error: "That team member isn't here." });
+        const v = await A.view(slug);
+        const p = (await P.profile(slug)) || P.cleanProfile((await A.applications()).find((x) => x.id === v.appId) || { first: a.name.split(" ")[0], last: a.name.split(" ").slice(1).join(" ") });
+        const S = await P.settings(), shop = require("../../config/studio").studio || {};
+        S.shopName = S.shopName || shop.name || ""; S.shopPhone = S.shopPhone || shop.phone || ""; S.shopPhysical = S.shopPhysical || shop.address || "";
+        const roster = await artists.list(), others = [];
+        for (const s2 of await A.list()) if (s2 !== slug) { const o = roster.find((x) => x.slug === s2); if (o) others.push({ name: o.name, permit: (await A.view(s2)).permit }); }
+        const months = (Array.isArray(b.months) ? b.months : []).filter((m) => /^\d{4}-\d{2}$/.test(m)).slice(0, 3);
+        const ctx2 = { startDate: v.startDate, permit: v.permit, others, hours: v.hours, months };
+        const form = str(b.form, 10);
+        const buf = form === "packet" ? await P.packet(p, S, ctx2) : await P.build(form, p, S, ctx2);
+        const nm = (p.last || a.name).replace(/[^a-z0-9]+/gi, "-");
+        const fname = form === "packet" ? `Apprentice-paperwork-${nm}.pdf` : `${P.FORMS[form].file}-${nm}${form === "ak4315" && months[0] ? `-${months[0]}` : ""}.pdf`;
+        return send(res, 200, { ok: true, filename: fname, pdf: buf.toString("base64"), missing: P.missing(p) });
       }
       case "apprApp": { // Owner: application status (new / contacted / accepted / declined) or "delete"
         if (!needFull()) return;
@@ -343,7 +398,7 @@ async function apprApi(req, res, me, b) {
       case "apprLog": {
         const slug = full && b.slug ? str(b.slug, 60) : me.artist;
         if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
-        await A.logHours(slug, { date: b.date, hours: b.hours, note: b.note, approved: full }, by);
+        await A.logHours(slug, { date: b.date, hours: b.hours, kind: b.kind, note: b.note, approved: full }, by);
         return send(res, 200, { ok: true, ...(await A.view(slug)) });
       }
       case "apprDelete":

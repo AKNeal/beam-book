@@ -566,11 +566,32 @@ const valid = (o = {}) => ({
           cookie = "";
           let a = await call("/api/status", { body: { action: "apprApply", first: "", last: "Rivers", email: "nope", phone: "12" } });
           assert.equal(a.status, 400); assert.ok(a.data.fields.first && a.data.fields.email && a.data.fields.phone);
-          a = await call("/api/status", { body: { action: "apprApply", first: "Jamie", last: "Rivers", email: "jamie@example.com", phone: "907-555-0100", about: "Cut my brother's hair for years" } });
+          a = await call("/api/status", { body: { action: "apprApply", first: "Jamie", last: "Rivers", email: "jamie@example.com", phone: "907-555-0100", about: "Cut my brother's hair for years", street: "1 Main St", city: "North Pole", state: "ak", zip: "99705", prior: [{ name: "Home practice", hours: 0 }] } });
           assert.equal(a.status, 200, JSON.stringify(a.data));
           cookie = real;
           let v = await call("/api/admin/books", { body: { action: "apprView" } });
           assert.equal(v.status, 200, JSON.stringify(v.data)); assert.equal(v.data.applications[0].first, "Jamie"); assert.equal(v.data.applications[0].status, "new");
+          assert.equal(v.data.applications[0].state, "AK");
+          { // paperwork details: encrypted at rest, SSN masked; qualified-task reps
+            process.env.SESSION_SECRET = process.env.SESSION_SECRET || "s3cret";
+            const P = require("../lib/paperwork"), A = require("../lib/apprentice"), store = require("../lib/store");
+            await require("../lib/tenant").runAs("blackwolf", async () => {
+              const app = (await A.applications())[0];
+              assert.equal(P.fromApplication(app).city, "North Pole");
+              await P.saveProfile("zz-test", { ...app, ssn: "123-45-6789", dob: "2000-01-02", i9Status: "citizen", w4Filing: "single", education: "hs" });
+              const raw = JSON.stringify(await store.getJSON("appr:pw:zz-test")); assert.ok(!raw.includes("6789") && !raw.includes("North Pole"), "stored encrypted");
+              let m = P.masked(await P.profile("zz-test")); assert.equal(m.ssn, "***-**-6789"); assert.deepEqual(m.missing, []);
+              await P.saveProfile("zz-test", { ...m, ssn: m.ssn }); assert.equal((await P.profile("zz-test")).ssn, "123456789", "masked SSN keeps the saved one");
+              await assert.rejects(P.saveProfile("zz-test", { ssn: "12" }));
+              await A.logRep("zz-test", "t3", { count: 3 }, "Owner"); let vw = await A.view("zz-test");
+              assert.equal(vw.checklist.find((c) => c.id === "t3").repsPending, 3);
+              await A.reviewRep("zz-test", "t3", vw.reps.t3[0].id, true, "Owner"); vw = await A.view("zz-test");
+              assert.equal(vw.checklist.find((c) => c.id === "t3").repsApproved, 1);
+              await A.logHours("zz-test", { date: "2026-01-05", hours: 2, kind: "theory", approved: true }, "Owner");
+              assert.equal((await A.view("zz-test")).theoryHours, 2);
+              await store.del("appr:pw:zz-test"); await store.del("appr:zz-test");
+            });
+          }
           v = await call("/api/admin/books", { body: { action: "apprApp", id: v.data.applications[0].id, status: "contacted" } }); assert.equal(v.data.applications[0].status, "contacted");
           v = await call("/api/admin/books", { body: { action: "apprApp", id: v.data.applications[0].id, status: "delete" } }); assert.equal(v.data.applications.length, 0);
           cookie = "";

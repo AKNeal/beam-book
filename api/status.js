@@ -146,7 +146,10 @@ async function post(req, res) {
       const a = await A.apply(b);
       const to = config.studio.contactEmail;
       if (to) await sendEmail({ to, replyTo: a.email, subject: `Apprenticeship application: ${a.first} ${a.last}`, title: "New apprenticeship application",
-        paragraphs: [`${a.first} ${a.last}`, `Email: ${a.email}`, `Phone: ${a.phone}`, a.about ? `About them:\n${a.about}` : "", "It's also in your inbox: Apprenticeship → Applications."],
+        paragraphs: [[a.first, a.middle, a.last, a.suffix].filter(Boolean).join(" "), `Email: ${a.email}`, `Phone: ${a.phone}`, `Address: ${a.street}, ${a.city}, ${a.state} ${a.zip}`,
+          a.prior?.length ? `Previous training: ${a.prior.map((x) => `${x.name}${x.hours ? ` (${x.hours} hrs)` : ""}`).join("; ")}` : "No previous barber training.",
+          a.startDate || a.availability ? `Can start: ${[a.startDate, a.availability].filter(Boolean).join(" · ")}` : "",
+          a.about ? `About them:\n${a.about}` : "", "It's also on your dashboard: Apprenticeship → Applications."],
         button: { label: "Open in the inbox", url: `${baseUrl(req)}/admin` } }).catch(() => {});
       return send(res, 200, { ok: true });
     } catch (e) { return send(res, 400, { error: e.message, fields: e.fields }); }

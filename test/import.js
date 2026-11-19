@@ -69,7 +69,7 @@ const TOKEN = "t".repeat(32);
       assert.equal((await A({ action: "apprSet", slug: "seth-long", on: true })).status, 200);
       let a = await A({ action: "apprLog", slug: "seth-long", date: d(-1), hours: 8, note: "Fades on the floor" }); assert.equal(a.data.approvedHours, 8);
       assert.equal((await A({ action: "apprLog", slug: "seth-long", date: d(5), hours: 8 })).status, 400, "no future hours");
-      a = await A({ action: "apprCheck", slug: "seth-long", id: "m1", on: true }); assert.equal(a.data.checksDone, 1); assert.equal(a.data.checksTotal, 8);
+      a = await A({ action: "apprCheck", slug: "seth-long", id: "m1", on: true }); assert.equal(a.data.checksDone, 1); assert.equal(a.data.checksTotal, 20);
       a = await A({ action: "apprView" }); assert.equal(a.data.apprentices[0].approvedHours, 8); assert.equal(a.data.settings.goalHours, 1650);
       assert.equal((await A({ action: "apprMaterials", items: [{ title: "Vol 1", url: "javascript:alert(1)" }, { title: "Vol 2", url: "https://example.com/v2" }] })).data.materials.length, 1, "https links only"); }
     // Onboarding link: owner fills shop details, socials and team; the website reads them back publicly.

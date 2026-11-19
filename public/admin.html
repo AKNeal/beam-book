@@ -352,6 +352,12 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     }
     selected = location.hash.slice(1) || null;
     if (selected) { const r = D.requests.find((x) => x.id === selected); if (r) tab = r.status; }
+    // Apprentices get a dashboard cut down to their training: hours, qualified tasks, materials, paperwork.
+    if (ME.role === "artist" && D.instant && (D.apprentices || []).includes(ME.artist)) {
+      for (const id of ["viewDash", "viewCheckout", "viewDay", "viewReq", "viewCal", "viewClients", "viewArt"]) if ($(id)) $(id).hidden = true;
+      $("viewAppr").textContent = "My training";
+      return window.BBAppr.show({ only, toast, D });
+    }
     if (!selected && D.instant) return showDay(); // barbershops open on today's schedule
     showRequests();
   }
