@@ -69,7 +69,7 @@ p { margin: 0 0 1em; }
 .site-header { position: sticky; top: 0; z-index: 20; background: var(--snow); border-bottom: 1px solid var(--line); }
 .header-inner { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 20px; }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink); }
-.brand img { width: 46px; height: 46px; }
+.brand img { width: 64px; height: 64px; }
 .brand span { font: 700 1.375rem/1 var(--head); }
 .nav { display: flex; align-items: center; gap: 26px; }
 .nav a { color: var(--ink); text-decoration: none; font-weight: 500; font-size: 1rem; }
@@ -289,7 +289,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--ink); outline: n
 .booking-split { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
 @media (max-width: 860px) { .booking-split { grid-template-columns: minmax(0, 1fr); } }
 .field > label.check { display: flex; font-weight: 400; margin-bottom: 0; }
-@media (max-width: 420px) { .brand span { font-size: 1.2rem; } .brand img { width: 36px; height: 36px; } }
+@media (max-width: 420px) { .brand span { font-size: 1.2rem; } .brand img { width: 48px; height: 48px; } .brand img.shop-logo { height: 48px; } }
 
 /* ---------- Pick your time ---------- */
 .day-row { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; margin: 0 -2px 20px; scroll-snap-type: x proximity; }
@@ -432,7 +432,7 @@ html.embed body { background: var(--snow); }
 
 /* A business's own heading color (theme.ink), when set */
 h1, h2, h3, .brand span { color: var(--head-ink, inherit); }
-.brand img.shop-logo { width: auto; height: 40px; }
+.brand img.shop-logo { width: auto; height: 64px; }
 
 /* Beam inbox: setup checklist (compact, like Black Wolf's). Red light = still needed, green = done. */
 .setup { margin: 22px 0 8px; padding: 0 !important; overflow: hidden; }
