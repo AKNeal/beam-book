@@ -44,6 +44,11 @@ module.exports = async function handler(req, res) {
     const r = await sendEmail({ to, subject: "Test from your booking system", title: "Email is working", paragraphs: ["This is a test from your booking system. Booking confirmations, reminders and changes will look like this."] });
     return send(res, r && r.ok ? 200 : 502, { ok: Boolean(r && r.ok), to, ...(r && r.ok ? {} : { error: "Resend didn't accept it. Check the domain and key." }) });
   }
+  if (b.action === "paperFields") { // Owner: field names in an official form (for setting up the paperwork maps)
+    if (me.role !== "owner") return send(res, 403, { error: "Owner only." });
+    try { const P = require("../../lib/paperwork"); return send(res, 200, { form: b.form, fields: await P.fields(String(b.form || "")) }); }
+    catch (e) { return send(res, 400, { error: e.message }); }
+  }
   if (b.action === "onboardLink") { // Owner: the shop's private setup link (the current one; fresh:true makes a new one and stops the old)
     if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can make the setup link." });
     const base = `https://${String(req.headers["x-forwarded-host"] || req.headers.host).split(",")[0]}`;
