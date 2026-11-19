@@ -24,7 +24,10 @@
     const me = R.items.filter((i) => i.mine);
     if (R.full) {
       const ppl = (R.people || []).filter((p) => R.items.some((i) => i.user === p.id));
-      v.append(el("div", { class: "people" }, [["me", "Mine"], ["all", "Everyone"], ...ppl.map((p) => [p.id, p.name])].map(([k, l]) =>
+      // Tabs show first names only ("Isacc"), unless two people share a first name.
+      const first = (p) => String(p.name || "").trim().split(/\s+/)[0] || p.name;
+      const tab = (p) => ppl.filter((q) => first(q).toLowerCase() === first(p).toLowerCase()).length > 1 ? p.name : first(p);
+      v.append(el("div", { class: "people" }, [["me", "Mine"], ["all", "Everyone"], ...ppl.map((p) => [p.id, tab(p)])].map(([k, l]) =>
         el("button", { class: "btn sm" + (who === k ? "" : " line"), type: "button", onclick: () => { who = k; draw(); } }, l))));
     }
     const list = who === "me" ? me : who === "all" ? R.items : R.items.filter((i) => i.user === who);
