@@ -251,12 +251,17 @@ async function dashApi(req, res, me, b) {
       if (to - from > 400 * 864e5 || to <= from) return send(res, 400, { error: "Pick a shorter date range." });
       const who = all ? (b.barber ? str(b.barber, 60) : null) : me.artist;
       if (!all && !who) return send(res, 403, { error: "Your login isn't linked to a barber." });
-      const d = await an.dashboard({ from, to, who, withMoney: true });
+      // The Administrator (Neal Media) runs the shop's site but doesn't see the shop's money.
+      const hideMoney = me.role === "admin";
+      const d = await an.dashboard({ from, to, who, withMoney: !hideMoney });
+      if (hideMoney) { delete d.avgTicket; d.services = d.services.map(({ gross, ...x }) => x); d.daily = d.daily.map(({ gross, ...x }) => x); }
+      d.weekly = await an.weekly({ who });
       if (!owner) { delete d.settings; for (const m of [d.money, ...d.barbers.map((x) => x.money)]) if (m) { delete m.net; delete m.expenses; delete m.booth; } }
-      return send(res, 200, { dash: d, challenges: await an.standings(), owner, barbers: all ? (await artists.list()).map((a) => ({ slug: a.slug, name: a.name })) : [] });
+      return send(res, 200, { dash: d, hideMoney, challenges: await an.standings(), owner, barbers: all ? (await artists.list()).map((a) => ({ slug: a.slug, name: a.name })) : [] });
     }
     if (b.action === "challenges") return send(res, 200, { challenges: await an.standings(), metrics: an.METRICS });
     if (!owner) return send(res, 403, { error: "Only the Owner or a Administrator can change this." });
+    if (me.role === "admin" && ["dashSettings", "dashPay", "dashConfig"].includes(b.action)) return send(res, 403, { error: "The shop's money settings are for the Owner." });
     if (b.action === "dashSettings") return send(res, 200, { settings: await an.saveSettings(b.settings || {}), pay: await an.pay() });
     if (b.action === "dashPay") { if (!(await artists.bySlug(str(b.slug, 60)))) return send(res, 400, { error: "Unknown barber." }); return send(res, 200, { pay: await an.savePay(str(b.slug, 60), b.pay || {}) }); }
     if (b.action === "dashConfig") return send(res, 200, { settings: await an.settings(), pay: await an.pay(), barbers: (await artists.list()).map((a) => ({ slug: a.slug, name: a.name })) });
