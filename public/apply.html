@@ -53,7 +53,7 @@
         <div class="field"><label for="f-p0">School or shop</label><input id="f-p0" data-prior="name" type="text" maxlength="120"><label for="f-h0" style="margin-top:6px">Hours there</label><input id="f-h0" data-prior="hours" type="number" min="0" max="5000" style="max-width:140px"></div>
         <div class="field"><label for="f-p1">Another school or shop</label><input id="f-p1" data-prior="name" type="text" maxlength="120"><label for="f-h1" style="margin-top:6px">Hours there</label><input id="f-h1" data-prior="hours" type="number" min="0" max="5000" style="max-width:140px"></div>
       </div>
-      <div class="field" data-f="startDate"><label for="f-startDate">When could you start? <span class="hint">Optional</span></label><input id="f-startDate" name="startDate" type="date"><div class="err"></div></div>
+      <div class="field" data-f="startDate"><label for="f-startDate">When could you start? <span class="hint">Optional</span></label><input id="f-startDate" name="startDate" type="date" data-picker data-min="today" data-placeholder="Pick a start date"><div class="err"></div></div>
       <div class="field" data-f="availability"><label for="f-availability">Days and hours you can work <span class="hint">Optional</span></label><input id="f-availability" name="availability" type="text" maxlength="200" placeholder="Weekdays after 3, all day Saturday"><div class="err"></div></div>
       <div class="field" data-f="about"><label for="f-about">Why do you want to be a barber?</label><textarea id="f-about" name="about" rows="4" maxlength="1500" required></textarea><div class="err"></div></div>
       <p class="small muted">Don't send your Social Security number or ID here. If you're accepted, you'll fill those in privately from your own login.</p>
@@ -93,6 +93,7 @@
 </footer>
 <script src="/assets/site.js" defer></script>
 <script src="/assets/common.js"></script>
+<script src="/assets/datepicker.js"></script>
 <script>
 (function () {
   var f = document.getElementById("apply"), err = document.getElementById("formErr");

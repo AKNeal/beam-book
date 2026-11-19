@@ -236,10 +236,10 @@ details > div { padding: 0 0 18px; color: var(--graphite); max-width: var(--text
 .field > label, .field > .label { display: block; font-weight: 600; margin-bottom: 6px; }
 .hint { display: block; font-weight: 400; color: var(--graphite); font-size: .9375rem; margin-top: 2px; }
 .opt { font-weight: 400; color: var(--graphite); font-size: .9375rem; }
-input[type=text], input[type=email], input[type=tel], input[type=url], input[type=number], input[type=password], input[type=date], input[type=time], input[type=datetime-local], select, textarea {
+input[type=text], input[type=email], input[type=tel], input[type=url], input[type=number], input[type=password], input[type=date], input[type=time], input[type=datetime-local], select, textarea, .bdp-trigger {
   width: 100%; font: 1rem var(--body); color: var(--ink); background: var(--white); border: 1.5px solid var(--field); border-radius: var(--radius); padding: 12px 13px; }
 textarea { min-height: 130px; resize: vertical; line-height: 1.5; }
-input:focus, select:focus, textarea:focus { border-color: var(--ink); outline: none; box-shadow: 0 0 0 3px rgba(188,158,100,.4); }
+input:focus, select:focus, textarea:focus, .bdp-trigger:focus-visible, .bdp-trigger[aria-expanded=true] { border-color: var(--ink); outline: none; box-shadow: 0 0 0 3px rgba(188,158,100,.4); }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
 .check { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 12px; font-weight: 400; cursor: pointer; }
