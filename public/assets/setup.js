@@ -49,7 +49,12 @@
         i.details ? el("div", { class: "d" }, i.details) : null,
         i.doneAt && !i.autoDone ? el("div", { class: "who" }, `Done ${new Date(i.doneAt).toLocaleDateString()}${i.doneBy ? " by " + i.doneBy : ""}`) : null),
       el("div", { class: "actions", style: "margin:0;flex-direction:column;align-items:flex-end" },
-        i.link ? el("a", { class: "btn sm line", href: i.link.url, target: i.link.url.startsWith("/") ? "_self" : "_blank", rel: "noopener" }, i.link.label) : null,
+        i.link && i.link.url === "beam:payConnect" ? (i.done ? null : el("button", { class: "btn sm", type: "button", onclick: async (e) => {
+          const b = e.currentTarget, w = window.open("", "_blank"); b.disabled = true;
+          try { const r = await call({ action: "payConnect" }); if (w) w.location.href = r.url; else location.href = r.url; }
+          catch (x) { if (w) w.close(); ctx.toast(/platform profile/i.test(x.message) ? "Not ready yet: Neal Media is finishing Stripe's approval. You'll get the form as soon as it clears." : x.message); }
+          b.disabled = false; } }, i.link.label))
+        : i.link ? el("a", { class: "btn sm line", href: i.link.url, target: i.link.url.startsWith("/") ? "_self" : "_blank", rel: "noopener" }, i.link.label) : null,
         R.full ? el("button", { class: "linkbtn small", type: "button", onclick: () => edit(i) }, "Edit") : null));
   }
 
