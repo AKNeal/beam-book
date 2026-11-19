@@ -36,12 +36,23 @@
   }
 
   if (!document.getElementById("payCss")) document.head.append(el("style", { id: "payCss" }, `
-    .pay-opt{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--field);border-radius:var(--radius);padding:12px 14px;margin:0 0 8px;cursor:pointer}
-    .pay-opt input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--sign);flex:none}.pay-opt .pay-sub{display:block;font-weight:400;color:var(--graphite);font-size:.9375rem}
-    .pay-opt:has(input:checked){border-color:var(--sign-dark);background:var(--soft)}
-    fieldset.field{border:0;padding:0;margin:0 0 18px}fieldset.field legend{font-weight:600;margin-bottom:8px}
-    .cash-terms{border-left:3px solid var(--sign);padding:10px 0 2px 14px;margin:6px 0 0}.cash-terms .check{font-size:.95rem;line-height:1.5}
-    .book-terms{color:var(--graphite);margin:4px 0 14px;line-height:1.55}`));
+    /* Booking page: rounder cards and fields, even spacing */
+    #app{--r:16px}
+    #app .form-part{margin:0 0 34px}
+    #app .form-part>h2{margin:0 0 14px}
+    #app .choice,#app .slot,#app .day,#app .field input:not([type=checkbox]):not([type=radio]),#app .field textarea,#app .field select,#app .pay-opt,#app .notice{border-radius:var(--r)}
+    #app .day,#app .slot{border-radius:12px}
+    #app .btn{border-radius:999px;padding-left:28px;padding-right:28px}
+    #app .field{margin:0 0 20px}
+    #app .field label:not(.check){display:block;margin:0 0 6px}
+    .pay-opt{display:flex;gap:14px;align-items:center;border:1.5px solid var(--field);border-radius:var(--r,16px);padding:14px 18px;margin:0 0 10px;cursor:pointer;background:var(--white)}
+    .pay-opt input[type=radio]{appearance:auto;-webkit-appearance:radio;position:static;opacity:1;width:20px;height:20px;min-height:0;margin:0;padding:0;accent-color:var(--sign);flex:none;display:inline-block}
+    .pay-opt>span{display:block;line-height:1.35}.pay-opt strong{display:block;font-weight:700}.pay-opt .pay-sub{display:block;font-weight:400;color:var(--graphite);font-size:.9375rem;margin-top:2px}
+    .pay-opt:has(input:checked){border-color:var(--sign);box-shadow:0 0 0 1px var(--sign)}
+    .pay-opt.locked{opacity:.5;cursor:not-allowed;filter:grayscale(1)}.pay-opt.locked .pay-sub{color:var(--graphite)}
+    fieldset.field{border:0;padding:0;margin:0 0 20px}fieldset.field legend{font-weight:700;font-size:1.05rem;margin:0 0 10px;padding:0}
+    .cash-terms{border-left:3px solid var(--sign);padding:10px 0 2px 14px;margin:8px 0 0;border-radius:0}.cash-terms .check{font-size:.95rem;line-height:1.5}
+    .book-terms{color:var(--graphite);margin:6px 0 18px;line-height:1.6}`));
   function render() {
     const many = D.barbers.length > 1;
     intro.textContent = `${many ? "Pick your barber, then a service" : "Pick a service"} and a time. You're booked right away. Times are shop time (${D.timeZone}).`;
@@ -127,14 +138,17 @@
     // How they'll pay (both at the shop; nothing is charged online). Cash needs an explicit agreement.
     const P = D.pay || {};
     if (P.ask) {
-      const opt = (v, label, sub) => el("label", { class: "pay-opt" }, el("input", { type: "radio", name: "pay", value: v, required: true }),
+      const opt = (v, label, sub, locked) => el("label", { class: "pay-opt" + (locked ? " locked" : ""), "aria-disabled": locked ? "true" : null },
+        el("input", { type: "radio", name: "pay", value: v, required: true, disabled: Boolean(locked) }),
         el("span", {}, el("strong", {}, label), sub ? el("span", { class: "pay-sub" }, sub) : null));
+      // Card stays locked until Neal Media turns on card payments for the shop (Stripe connected).
       const cashBox = el("div", { class: "cash-terms", hidden: true },
         el("label", { class: "check" }, el("input", { type: "checkbox", name: "cashAgree" }), el("span", {}, S.cashTerms)),
         el("div", { class: "err" }));
       cashBox.dataset.f = "cashAgree";
       const payField = el("fieldset", { class: "field", "data-f": "pay" }, el("legend", {}, "How you'll pay at the shop"),
-        opt("card", "Card", S.service.price != null ? `${S.service.priceLabel || ""} · pay when your service is done` : "Pay when your service is done"),
+        P.cardOn ? opt("card", "Card · Stripe", S.service.price != null ? `${S.service.priceLabel || ""} · pay when your service is done` : "Pay when your service is done")
+          : opt("card", "Card · Stripe 🔒", "Option locked. Contact Neal Media & Production to activate this feature.", true),
         opt("cash", "Cash", S.cashPrice ? `${S.cashPrice} · ${P.cashDiscount ? `$${P.cashDiscount} off for paying cash` : ""}` : "Pay in cash at your appointment"),
         el("div", { class: "err" }), cashBox);
       payField.addEventListener("change", () => { cashBox.hidden = f.querySelector("input[name=pay]:checked")?.value !== "cash"; });
