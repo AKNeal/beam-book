@@ -58,9 +58,7 @@
     if (many) {
       if (!S.barber) {
         const list = el("div", { class: "choices" });
-        list.append(el("button", { ...card, onclick: () => { S.barber = "any"; S.service = null; render(); } },
-          el("span", { "aria-hidden": "true", style: "width:52px;height:52px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--sign);color:var(--on-sign, #fff);font:700 22px var(--head)" }, "⚡"),
-          el("span", {}, el("strong", { style: "display:block" }, "First available"), el("span", {}, "Whoever has the soonest opening"))));
+        // (No "First available" card: clients pick their barber. Links with ?barber=any still work.)
         for (const b of D.barbers) list.append(el("button", { ...card, onclick: () => { S.barber = b.slug; if (S.service && !offers(S.service, b.slug)) S.service = null; render(); } },
           face(b), el("span", {}, el("strong", { style: "display:block" }, b.name), el("span", {}, "See their services and prices"))));
         app.append(step(1, "Barber", false, list));
@@ -94,7 +92,7 @@
     if (!S.days) { app.append(step(n + 1, "Time", false, el("p", { class: "muted" }, "Finding open times…"))); return; }
     if (!S.days.length) {
       app.append(step(n + 1, "Time", false, el("div", { class: "panel" }, el("h3", {}, "No open times"),
-        el("p", { style: "margin:0" }, `Nothing open in the next few weeks${S.barber !== "any" ? ` with ${nameOf(S.barber).split(" ")[0]}. Try First available` : ""}${D.phone ? `, or call ${D.phone}` : ""}.`))));
+        el("p", { style: "margin:0" }, `Nothing open in the next few weeks${S.barber !== "any" ? ` with ${nameOf(S.barber).split(" ")[0]}. Try another barber` : ""}${D.phone ? `, or call ${D.phone}` : ""}.`))));
       return;
     }
     if (!S.slot) {
