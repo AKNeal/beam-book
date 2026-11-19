@@ -1075,8 +1075,9 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     const v = $("teamView"); v.textContent = "";
     v.append(el("h1", { style: "font-size:44px;margin:28px 0 6px" }, "Team"),
       el("p", { class: "muted", style: "margin-top:0" }, `Everyone gets their own login. Create it here with a password you choose, or send them a link to choose their own. ${T.roles.artist}s only see the jobs assigned to them and their own calendar.`));
-    const roleHelp = { owner: "The business owner. Everything, including logins", ownerInstructor: "The business owner who also trains apprentices. Everything, including logins", admin: "Runs the site. Everything, including logins", desk: "All requests and calendars; can't manage logins", artist: "Only their own jobs and calendar", instructor: "Their own jobs and calendar, and signs off apprentices' hours and checkoffs" };
+    const roleHelp = { owner: "The business owner. Everything, including logins", ownerInstructor: "The business owner who also trains apprentices. Everything, including logins", admin: "Runs the site. Everything, including logins", desk: "All requests and calendars; can't manage logins", artist: "Only their own jobs and calendar", instructor: "Their own jobs and calendar, and signs off apprentices' hours and checkoffs", apprentice: "Their own training: hours, qualified tasks, checkoffs and paperwork" };
     const artistName2 = (slug) => T.artists.find((a) => a.slug === slug)?.name || slug;
+    if ((T.shells || []).length) v.append(shellsPanel());
     const list = el("section", { class: "panel" });
     if (!T.users.length) list.append(el("p", { class: "muted" }, "No one has a login yet."));
     for (const u of T.users) {
@@ -1117,7 +1118,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     const newArt = el("div", { class: "field" }, el("label", {}, `New ${wProv()}'s name (as clients will see it)`), el("input", { type: "text", name: "newArtist", maxlength: 60 }),
       el("p", { class: "hint" }, "They won't show on the public booking form until you switch them on in Books and waitlist."));
     const artField = el("div", { class: "field" }, el("label", {}, `Which ${wProv()}`), artSel);
-    const sync = () => { const isA = ["artist", "instructor"].includes(roleSel.value); artField.hidden = !isA; newArt.hidden = !isA || artSel.value !== "__new"; };
+    const sync = () => { const isA = ["artist", "instructor", "apprentice"].includes(roleSel.value); artField.hidden = !isA; newArt.hidden = !isA || artSel.value !== "__new"; };
     roleSel.addEventListener("change", sync); artSel.addEventListener("change", sync);
     const err = el("p", { class: "form-error", role: "alert", hidden: true });
     f.append(el("div", { class: "row" },
@@ -1136,7 +1137,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     sync(); syncHow();
     f.addEventListener("submit", async (e) => {
       e.preventDefault(); err.hidden = true; const fd = new FormData(f);
-      const role = fd.get("role"), isA = ["artist", "instructor"].includes(role), isNew = isA && fd.get("artist") === "__new";
+      const role = fd.get("role"), isA = ["artist", "instructor", "apprentice"].includes(role), isNew = isA && fd.get("artist") === "__new";
       const setNow = fd.get("how") === "set", password = setNow ? fd.get("password") : "", mustChange = fd.has("mustChange");
       try {
         const r = await api("/api/admin/login", { body: { action: "add", name: fd.get("name"), email: fd.get("email"), role,
@@ -1149,6 +1150,32 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
       } catch (ex) { err.textContent = ex.message; err.hidden = false; }
     });
     v.append(f);
+  }
+  // Approved apprentice applications: a shell account with their name and email filled in, waiting for a login.
+  function shellsPanel() {
+    const sec = el("section", { class: "panel", style: "margin-bottom:20px" }, el("h2", { style: "font-size:1.75rem;margin-top:0" }, "Approved apprentices"),
+      el("p", { class: "small muted", style: "margin-top:0" }, "Approved on the Apprenticeship page. Check their email, then onboard them: they get an Apprentice login and a link to choose their password."));
+    for (const s of T.shells) {
+      const email = el("input", { type: "email", value: s.email || "", "aria-label": `${s.name}'s email`, autocomplete: "off" });
+      const out = el("div", { style: "grid-column:1/-1" });
+      const go = el("button", { class: "btn sm", type: "button", onclick: async () => {
+        go.disabled = true;
+        try {
+          const r = await api("/api/admin/books", { body: { action: "apprOnboard", slug: s.slug, appId: s.appId, email: email.value.trim(), phone: s.phone || "" } });
+          T = await api("/api/admin/login", { body: { action: "team" } });
+          const u = T.users.find((x) => x.artist === r.slug);
+          if (u && r.invite) teamNote = { id: u.id, invite: { ...r.invite, hours: 288 } };
+          D.apprentices = [...new Set([...(D.apprentices || []), r.slug])];
+          toast(`${r.name} is onboarded`); renderTeam();
+        } catch (e) { go.disabled = false; out.replaceChildren(el("p", { class: "form-error", role: "alert" }, e.message)); }
+      } }, "Onboard apprentice");
+      sec.append(el("div", { class: "team-row" },
+        el("div", {}, el("strong", {}, s.name), el("span", { class: "pill wait" }, "No login yet"),
+          el("div", { class: "field", style: "margin:6px 0 0;max-width:340px" }, email),
+          el("div", { class: "small muted" }, `Apprentice${s.phone ? ` · ${s.phone}` : ""}${s.startDate ? ` · starts ${s.startDate}` : ""}`)),
+        el("div", { class: "acts" }, go), out));
+    }
+    return sec;
   }
   function confirmBox(row, text, yes) {
     row.querySelector(".confirm")?.remove();
@@ -1177,7 +1204,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     row.querySelector(".confirm")?.remove();
     const rs = el("select", { "aria-label": "Role" }, Object.entries(T.roles).map(([k, l]) => el("option", { value: k }, l))); rs.value = u.roleKey || u.role;
     const as = el("select", { "aria-label": "Artist" }, T.artists.map((a) => el("option", { value: a.slug }, a.name))); if (u.artist) as.value = u.artist;
-    const isArt = () => ["artist", "instructor"].includes(rs.value);
+    const isArt = () => ["artist", "instructor", "apprentice"].includes(rs.value);
     const sync = () => { as.hidden = !isArt(); }; rs.addEventListener("change", sync); sync();
     row.append(el("div", { class: "confirm act-form", style: "grid-column:1/-1;margin:8px 0 0" },
       el("div", { class: "row" }, el("div", { class: "field" }, el("label", {}, "Role"), rs), el("div", { class: "field" }, el("label", {}, "Artist"), as)),

@@ -73,7 +73,7 @@
       .map((x) => ({ slug: "", name: `${x.first} ${x.last}`, app: x, onboarded: false, email: x.email, phone: x.phone, startDate: x.startDate || "" }));
     const list = [...real.filter((a) => !a.onboarded), ...fromApps, ...real.filter((a) => a.onboarded), ...R.apprentices.filter((a) => a.demo)];
     const sec = el("section", { class: "panel" }, el("h2", {}, "Apprentices"), !R.full ? el("p", { class: "small muted" }, "Open an apprentice to sign off their hours, reps and checkoffs.") :
-      el("p", { class: "small muted" }, "Every apprentice applies through your website (", el("a", { href: "/apply", target: "_blank", rel: "noopener" }, "Apply page"), "). Mark their application Accepted and they show up here to onboard."));
+      el("p", { class: "small muted" }, "Every apprentice applies through your website (", el("a", { href: "/apply", target: "_blank", rel: "noopener" }, "Apply page"), "). Approve their application and their account is made (name and email filled in), ready to onboard here or on the Team page."));
     if (!list.length) sec.append(el("p", { class: "muted" }, "No apprentices yet."));
     for (const a of list) sec.append(apprRow(a));
     if (R.full) sec.append(el("p", { class: "small", style: "margin-top:12px" }, el("button", { class: "linkbtn small", type: "button", onclick: async () => {
@@ -155,8 +155,11 @@
       el("p", { class: "small muted" }, "From the Apply page on your website (", el("a", { href: "/apply", target: "_blank", rel: "noopener" }, "see it"), "). You get an email for each one too."));
     if (!apps.length) { sec.append(el("p", { class: "muted" }, "No applications yet.")); return sec; }
     for (const a of apps) {
-      const st = el("select", { onchange: async () => { try { R.applications = (await call({ action: "apprApp", id: a.id, status: st.value })).applications; ctx.toast("Saved"); } catch (e) { ctx.toast(e.message); } } },
-        ["new", "contacted", "accepted", "declined"].map((x) => el("option", { value: x, selected: a.status === x }, x[0].toUpperCase() + x.slice(1))));
+      const st = el("select", { onchange: async () => { try {
+          const r = await call({ action: "apprApp", id: a.id, status: st.value }); R.applications = r.applications;
+          if (r.shell) { ctx.toast(`Approved. ${a.first}'s account is on the Team page, ready to onboard`); show(ctx); } else ctx.toast("Saved");
+        } catch (e) { ctx.toast(e.message); } } },
+        [["new", "New"], ["contacted", "Contacted"], ["accepted", "Approved"], ["declined", "Declined"]].map(([x, l]) => el("option", { value: x, selected: a.status === x }, l)));
       sec.append(el("div", { class: "row", style: "align-items:flex-start" },
         el("div", {}, a.demo ? el("span", { class: "ex-tag" }, "Example") : null, el("strong", {}, exName(`${a.first} ${a.last}`)),
           el("div", { class: "meta" }, el("a", { href: `mailto:${a.email}` }, a.email), " · ", el("a", { href: `tel:${a.phone}` }, a.phone), " · ", new Date(a.at).toLocaleDateString()),

@@ -182,6 +182,7 @@ async function team(req, res, b) {
       const u = { id: id(8), name, email, role, ...(instructor ? { instructor: true } : {}), artist, hash: pw ? auth.hashPassword(pw) : "", mustChange: Boolean(pw) && b.mustChange !== false,
         ver: 0, active: true, createdAt: new Date().toISOString(), createdBy: me.name };
       list.push(u); await auth.saveUsers(list);
+      if (str(b.role, 20) === "apprentice") await markApprentice(artist, email);
       return send(res, 200, { ok: true, created: { id: u.id, withPassword: Boolean(pw) }, invite: pw ? null : await inviteOut(u, INVITE_HOURS, "add"), ...(await teamOut(list)) });
     }
 
@@ -200,6 +201,10 @@ async function team(req, res, b) {
       if (b.active !== undefined) u.active = Boolean(b.active);
       if (changedAccess) u.ver = (u.ver || 0) + 1; // log them out so the new access applies right away
       await auth.saveUsers(list);
+      if (b.role !== undefined && artist) { // Apprentice <-> Team member moves them on or off the apprentice list
+        if (str(b.role, 20) === "apprentice") await markApprentice(artist, u.email);
+        else if (role === "artist" && !instructor && (await require("../../lib/apprentice").list()).includes(artist)) await require("../../lib/apprentice").setApprentice(artist, false);
+      }
       return send(res, 200, { ok: true, ...(await teamOut(list)) });
     }
 
@@ -230,12 +235,28 @@ async function team(req, res, b) {
   return send(res, 200, { ok: true, ...(await teamOut(list)) });
 }
 
+async function markApprentice(slug, email) {
+  const A = require("../../lib/apprentice");
+  await A.setApprentice(slug, true); await A.setMeta(slug, { email, onboarded: true });
+}
+
 async function teamOut(list) {
   const w = require("../../config/studio").words || {};
   const provider = w.provider ? w.provider.charAt(0).toUpperCase() + w.provider.slice(1) : auth.ROLES.artist;
-  const roles = { owner: auth.ROLES.owner, ownerInstructor: "Owner / Instructor", admin: auth.ROLES.admin, desk: auth.ROLES.desk, artist: provider, instructor: "Instructor" };
-  const users = list.map(auth.publicUser).map((u) => (u.role === "artist" && !u.instructor ? { ...u, roleName: provider } : u));
-  return { users, artists: await artists.list(), roles, emailReady: emailReady() };
+  const A = require("../../lib/apprentice");
+  const appr = new Set(await A.list());
+  const roles = { owner: auth.ROLES.owner, ownerInstructor: "Owner / Instructor", admin: auth.ROLES.admin, desk: auth.ROLES.desk, artist: provider, instructor: "Instructor",
+    ...(config.instant || appr.size ? { apprentice: "Apprentice" } : {}) };
+  const users = list.map(auth.publicUser).map((u) => (u.role === "artist" && !u.instructor
+    ? (appr.has(u.artist) ? { ...u, roleKey: "apprentice", roleName: "Apprentice" } : { ...u, roleName: provider }) : u));
+  // Shells: approved applications waiting for their login ("Onboard apprentice").
+  const shells = [], team = await artists.list();
+  for (const slug of appr) {
+    if (list.some((u) => u.artist === slug && u.active !== false)) continue;
+    const v = await A.view(slug); if (v.onboardedAt || !v.appId) continue;
+    shells.push({ slug, name: team.find((a) => a.slug === slug)?.name || slug, email: v.email, phone: v.phone, appId: v.appId, startDate: v.startDate });
+  }
+  return { users, shells, artists: await artists.list(), roles, emailReady: emailReady() };
 }
 
 // Beam Book: run this endpoint for the shop at this web address.

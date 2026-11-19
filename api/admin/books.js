@@ -556,8 +556,13 @@ async function apprApi(req, res, me, b) {
       }
       case "apprApp": { // Owner: application status (new / contacted / accepted / declined) or "delete"
         if (!needFull()) return;
-        await A.setAppStatus(str(b.id, 20), str(b.status, 20));
-        return send(res, 200, { ok: true, applications: await A.applications() });
+        const appId = str(b.id, 20), status = str(b.status, 20);
+        const app = (await A.applications()).find((x) => x.id === appId);
+        await A.setAppStatus(appId, status);
+        // Approved: build their shell account (name, email, phone filled in; no login until "Onboard apprentice").
+        let shell = null;
+        if (app && !app.demo) { if (status === "accepted") shell = await A.makeShell(app); else await A.dropShell(appId); }
+        return send(res, 200, { ok: true, shell, applications: await A.applications() });
       }
       case "apprLog": {
         const slug = teach && b.slug ? str(b.slug, 60) : me.artist;

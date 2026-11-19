@@ -644,6 +644,30 @@ const valid = (o = {}) => ({
               if (ru) await call("/api/admin/login", { body: { action: "remove", id: ru.id } });
               await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").remove(ts).catch(() => {}));
             }
+            { // Approving an application builds a shell account (name + email, no login); "Onboard apprentice" makes their Apprentice login
+              const ap = await call("/api/status", { body: { action: "apprApply", first: "Sol", last: "Brightwater", email: "sol@example.com", phone: "907-555-0103", about: "Ready", street: "1 Main St", city: "North Pole", state: "AK", zip: "99705" } });
+              assert.equal(ap.status, 200, JSON.stringify(ap.data));
+              const sid = (await call("/api/admin/books", { body: { action: "apprView" } })).data.applications.find((x) => x.first === "Sol").id;
+              let r = await call("/api/admin/books", { body: { action: "apprApp", id: sid, status: "accepted" } }); assert.equal(r.status, 200, JSON.stringify(r.data));
+              const shellSlug = r.data.shell; assert.ok(shellSlug, "shell made");
+              r = await call("/api/admin/books", { body: { action: "apprApp", id: sid, status: "accepted" } }); assert.equal(r.data.shell, shellSlug, "approving twice keeps one shell");
+              let tm = (await call("/api/admin/login", { body: { action: "team" } })).data;
+              const sh = tm.shells.find((x) => x.slug === shellSlug); assert.ok(sh, "shell on the Team page"); assert.equal(sh.name, "Sol Brightwater"); assert.equal(sh.email, "sol@example.com");
+              assert.ok(tm.roles.apprentice, "Apprentice role offered");
+              // un-approve: the shell goes away; approve again: it's back
+              await call("/api/admin/books", { body: { action: "apprApp", id: sid, status: "declined" } });
+              tm = (await call("/api/admin/login", { body: { action: "team" } })).data; assert.ok(!tm.shells.some((x) => x.slug === shellSlug), "shell dropped");
+              assert.ok(!tm.artists.some((a) => a.slug === shellSlug), "shell team member removed");
+              const again = (await call("/api/admin/books", { body: { action: "apprApp", id: sid, status: "accepted" } })).data.shell;
+              const ob = await call("/api/admin/books", { body: { action: "apprOnboard", slug: again, appId: sid, email: "sol@example.com" } });
+              assert.equal(ob.status, 200, JSON.stringify(ob.data)); assert.ok(ob.data.invite && ob.data.invite.link, "password link made");
+              tm = (await call("/api/admin/login", { body: { action: "team" } })).data;
+              assert.ok(!tm.shells.some((x) => x.slug === again), "no longer a shell");
+              const su = tm.users.find((x) => x.email === "sol@example.com"); assert.equal(su.roleName, "Apprentice"); assert.equal(su.roleKey, "apprentice");
+              await call("/api/admin/login", { body: { action: "remove", id: su.id } });
+              await call("/api/admin/books", { body: { action: "apprSet", slug: again, on: false } }); await call("/api/admin/books", { body: { action: "apprApp", id: sid, status: "delete" } });
+              await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").remove(again).catch(() => {}));
+            }
             { // Instructor role: signs off apprentices; no applications, paperwork or settings. Owner / Instructor keeps everything.
               const owner = cookie;
               let ad = await call("/api/admin/login", { body: { action: "add", name: "Ivy Teach", email: "ivy@example.com", role: "instructor", newArtist: "Ivy Teach", password: "ivy teaches fades 1", mustChange: false } });
