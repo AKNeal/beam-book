@@ -339,7 +339,7 @@ async function bookingSettings(req, res, me, b) {
     const set = require("../../lib/templates").bookingSettings(b, { words: config.words, negotiate: config.negotiate });
     if (b.depositPolicy !== undefined) set.depositPolicy = String(b.depositPolicy).trim().slice(0, 600);
     const saved = await tenant.saveRecord({ ...rec, ...set });
-    return send(res, 200, { ok: true, instant: Boolean(saved.instant), services: saved.services || [], changeCutoffHours: saved.changeCutoffHours ?? 2, words: saved.words, form: saved.form, negotiate: saved.negotiate, ageCheck: saved.ageCheck, policyCheck: saved.policyCheck, askInstagram: saved.askInstagram !== false, sessionLengths: saved.sessionLengths });
+    return send(res, 200, { ok: true, instant: Boolean(saved.instant), services: saved.services || [], changeCutoffHours: saved.changeCutoffHours ?? 2, payAtBooking: saved.payAtBooking !== false, atmOnSite: Boolean(saved.atmOnSite), words: saved.words, form: saved.form, negotiate: saved.negotiate, ageCheck: saved.ageCheck, policyCheck: saved.policyCheck, askInstagram: saved.askInstagram !== false, sessionLengths: saved.sessionLengths });
   } catch (e) { return send(res, 400, { error: e.message }); }
 }
 
