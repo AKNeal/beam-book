@@ -69,7 +69,7 @@ module.exports = async function handler(req, res) {
     const sm = rc.enabled() ? await rc.summary() : null;
     res.setHeader("Cache-Control", "public, max-age=600");
     return send(res, 200, sm && !sm.pending ? { date: sm.date, rating: sm.rating ?? null, reviews: sm.reviews ?? null,
-      searches: sm.searches.map((x) => ({ q: x.q, rank: Number.isFinite(x.rank) && x.rank <= 10 ? x.rank : null })) } : { searches: [] });
+      searches: sm.searches.map((x) => ({ q: x.q, rank: Number.isFinite(x.rank) && x.rank <= 10 ? Math.round(x.rank) : null })) } : { searches: [] });
   }
   if (q.get("onboard")) { // Beam: the private onboarding page's current answers
     const ob = require("../lib/onboarding");

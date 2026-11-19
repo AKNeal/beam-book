@@ -815,7 +815,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
   // Google ranking: a floating award (bottom left). Click it for key numbers; the link at the bottom opens the full page.
   const rkFmt = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
   // Award tier by place: gold, silver, bronze, blue ribbon for #4-5, grey for #6 and below.
-  const rkTier = (r) => r == null ? ["grey", "No rank"] : r <= 1 ? ["gold", "Gold"] : r === 2 ? ["silver", "Silver"] : r === 3 ? ["bronze", "Bronze"] : r <= 5 ? ["blue", "Top 5"] : ["grey", r > 10 ? "Not top 10" : `${r}th place`];
+  const rkTier = (r0) => { const r = r0 == null ? null : Math.round(r0); return r == null ? ["grey", "No rank"] : r <= 1 ? ["gold", "Gold"] : r === 2 ? ["silver", "Silver"] : r === 3 ? ["bronze", "Bronze"] : r <= 5 ? ["blue", "Top 5"] : ["grey", r > 10 ? "Not top 10" : `${r}th place`]; };
   const rkLabel = (r) => r == null ? "–" : r > 10 ? ">10" : `#${r}`;
   // The badge shows this month's Friday average, or the latest check's average before the first Friday.
   function rkOverall(k) {
@@ -901,7 +901,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
   function showRank() {
     only("rankView"); const v = $("rankView"); v.textContent = ""; const k = D.rankings;
     v.append(el("h1", { style: "font-size:44px;margin:28px 0 6px" }, "Google ranking"));
-    v.append(el("p", { class: "muted", style: "max-width:680px" }, k.pending ? "The first check runs tomorrow morning. Your awards show here once it's in." : k.report ? `Where ${SHOP} shows on Google Maps for each search, from the official Local Rankings report. #1 is the top. Checked daily; last checked ${rkFmt(k.date)}.` : `Where ${SHOP} shows in Google's local results for each search, near the shop. #1 is the top. Checked every morning; last checked ${rkFmt(k.date)}.`));
+    v.append(el("p", { class: "muted", style: "max-width:680px" }, k.pending ? "The first check runs tomorrow morning. Your awards show here once it's in." : k.report ? `Where ${SHOP} shows on Google for each search: the average of its Google Maps rank and its Google Organic (website) rank, from the official Local Rankings report. #1 is the top. Checked daily; last checked ${rkFmt(k.date)}.` : `Where ${SHOP} shows in Google's local results for each search, near the shop. #1 is the top. Checked every morning; last checked ${rkFmt(k.date)}.`));
     if (k.report) v.append(el("p", {}, el("a", { class: "btn sm", href: k.report, target: "_blank", rel: "noopener" }, "Open the official report ↗")));
     const body = el("section", { class: "panel", style: "max-width:820px;margin-top:18px" });
     body.append(el("div", { class: "awards" }, k.searches.map((x) => {
@@ -911,6 +911,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
       return el("div", { class: `award tier-${t}` }, medal(x.rank, 4),
         el("span", { class: "award-tier" }, word),
         el("span", { class: "award-q" }, `"${x.q}"`),
+        x.maps != null || x.organic != null ? el("span", { class: "award-ahead" }, `Maps ${rkLabel(x.maps)} · Organic ${rkLabel(x.organic)} → average ${rkLabel(x.rank)}`) : null,
         ch ? el("span", { class: `award-ch ${x.change > 0 ? "up" : x.change < 0 ? "down" : "same"}` }, k.changeSince ? `${ch} since ${rkFmt(k.changeSince)}` : ch) : null,
         ahead.length ? el("span", { class: "award-ahead" }, `Ahead: ${ahead.join(", ")}`) : null);
     })));
