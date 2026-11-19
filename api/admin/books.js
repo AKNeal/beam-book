@@ -35,6 +35,15 @@ module.exports = async function handler(req, res) {
   if (/^(dash|challenge|board)/.test(String(b.action || ""))) return dashApi(req, res, me, b);
   if (/^pay/.test(String(b.action || ""))) return payApi(req, res, me, b);
   if (/^appr/.test(String(b.action || ""))) return apprApi(req, res, me, b);
+  if (b.action === "testEmail") { // Owner: check that booking email works (sent to the address given, or the shop's email)
+    if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can send a test." });
+    const { sendEmail, emailReady } = require("../../lib/email");
+    if (!emailReady()) return send(res, 400, { error: "Email isn't switched on yet (RESEND_API_KEY and EMAIL_FROM)." });
+    const to = String(b.to || require("../../config/studio").studio.contactEmail || "").trim().slice(0, 120);
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return send(res, 400, { error: "Give an email address to send the test to." });
+    const r = await sendEmail({ to, subject: "Test from your booking system", title: "Email is working", paragraphs: ["This is a test from your booking system. Booking confirmations, reminders and changes will look like this."] });
+    return send(res, r && r.ok ? 200 : 502, { ok: Boolean(r && r.ok), to, ...(r && r.ok ? {} : { error: "Resend didn't accept it. Check the domain and key." }) });
+  }
   if (b.action === "onboardLink") { // Owner: the shop's private setup link (the current one; fresh:true makes a new one and stops the old)
     if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can make the setup link." });
     const base = `https://${String(req.headers["x-forwarded-host"] || req.headers.host).split(",")[0]}`;
