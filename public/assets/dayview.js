@@ -45,7 +45,7 @@
     var box = el("div", { id: "dvBook", class: "dvb-scrim", onclick: function (e) { if (e.target === box) box.remove(); } }, root);
     var name = el("input", { name: "name", autocomplete: "off" }), phone = el("input", { type: "tel", inputmode: "tel", autocomplete: "off" }), email = el("input", { type: "email", autocomplete: "off" });
     var textOk = el("input", { type: "checkbox" }), note = el("textarea", { rows: 2, maxlength: 300, placeholder: "Anything the barber should know" });
-    var find = el("input", { type: "search", placeholder: "Search by name, phone or email", autocomplete: "off" }), sugg = el("div", { class: "dvb-sugg" });
+    var find = el("input", { type: "text", inputmode: "search", placeholder: "Search by name, phone or email", autocomplete: "off" }), sugg = el("div", { class: "dvb-sugg" });
     var err = el("p", { class: "form-error", role: "alert", hidden: true }), timer = null;
     find.addEventListener("input", function () {
       clearTimeout(timer); var q = find.value.trim(); if (q.length < 2) { sugg.textContent = ""; return; }
@@ -121,7 +121,7 @@
       ".dvb-x{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:none;color:var(--ink);font-size:24px;cursor:pointer;line-height:1}" +
       ".dvb-cols{display:grid;grid-template-columns:1.25fr 1fr;gap:28px}.dvb-k{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sign-dark);margin:14px 0 6px}" +
       ".dvb label{display:block;font-size:14px;margin:8px 0}.dvb label input,.dvb label select,.dvb label textarea{display:block;width:100%;margin-top:4px}.dvb input[type=search]{width:100%}" +
-      ".dvb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.dvb-row select,.dvb-row input{flex:1;min-width:140px;width:auto}.dvb .dvb-chk{display:flex;gap:8px;align-items:center}.dvb .dvb-chk input{width:auto;margin:0}.dvb .dvb-any{margin:0;white-space:nowrap}" +
+      ".dvb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.dvb-row select,.dvb-row input{flex:1;min-width:140px;width:auto}.dvb .dvb-chk{display:flex;gap:8px;align-items:center}.dvb .dvb-chk input,.dvb-row .dvb-chk input{width:auto;min-width:0;flex:none;margin:0}.dvb .dvb-any{margin:0;white-space:nowrap;flex:none}" +
       ".dvb-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}.dvb-tile{display:flex;justify-content:space-between;gap:8px;align-items:center;text-align:left;padding:11px 12px;border:1.5px solid var(--line);border-radius:var(--radius);background:var(--white);color:var(--ink);font:inherit;font-size:14px;cursor:pointer}" +
       ".dvb-tile span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dvb-tile b{white-space:nowrap;font-size:13px}.dvb-tile[aria-pressed=true],.dvb-time[aria-pressed=true]{background:var(--sign);border-color:var(--sign);color:var(--on-sign,#14110c);box-shadow:0 0 0 2px var(--ink)}" +
       ".dvb-times{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;max-height:150px;overflow:auto;padding:3px}.dvb-time{padding:7px 11px;border-radius:999px;border:1.5px solid var(--line);background:var(--white);color:var(--ink);font:inherit;font-size:14px;cursor:pointer}" +
