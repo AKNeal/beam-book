@@ -24,6 +24,8 @@
   .dash .lowrb{color:#b91c1c;font-weight:700}.dash .goodrb{color:#15803d;font-weight:700}
   .dash .heat{display:grid;grid-template-columns:44px repeat(13,minmax(0,1fr));gap:3px;font-size:12px;align-items:center}.dash .heat i{display:block;height:22px;border-radius:4px;background:var(--line)}
   .dash .heat span{color:var(--graphite);text-align:center}.dash .mix{display:flex;height:16px;border-radius:99px;overflow:hidden;margin:8px 0}.dash .mix i{display:block;height:100%}
+  .dash .fu-now{display:flex;flex-direction:column;gap:2px;padding:14px 16px;border-radius:var(--radius);background:color-mix(in srgb,var(--sign) 14%,var(--white));border:1.5px solid var(--sign);margin:6px 0 10px}
+  .dash .fu-now strong{font-size:40px;line-height:1.05;font-family:var(--display,inherit)}.dash .fu-k{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sign-dark)}
   .dash .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}.dash .chartbox{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
   .dash .chartbox h3{margin:0 0 8px;font-size:16px}.dash svg.chart{width:100%;height:auto;display:block}.dash svg .grid{stroke:var(--line);stroke-width:1}.dash svg .ax{fill:var(--graphite);font-size:11px}
   .dash svg .ln{fill:none;stroke:var(--sign);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}.dash svg .pt{fill:var(--sign);stroke:var(--white);stroke-width:2}.dash svg .pt.now{stroke:var(--ink)}
@@ -135,8 +137,42 @@
           el("span", { class: "muted" }, `${c.service ? c.service + " · " : ""}${c.daysAgo === 0 ? "today" : c.daysAgo === 1 ? "yesterday" : c.daysAgo + " days ago"}`)))));
     }
 
-    v.append(challengesPanel(owner), ...rebookPanels());
+    v.append(challengesPanel(owner), unitsPanel(), ...rebookPanels());
     if (owner) v.append(boardPanel(), historyPanel(), ...(R.isOwner ? [settingsPanel()] : []));
+  }
+
+  // ---------- Freshest Unit (the shop's monthly event; lib/units.js) ----------
+  function unitsPanel() {
+    const sec = el("section", { class: "panel" }, el("h2", {}, "Freshest Unit"), el("p", { class: "muted" }, "Loading…"));
+    const draw = (U) => {
+      sec.replaceChildren(el("h2", {}, U.title || "Freshest Unit"));
+      sec.append(el("div", { class: "fu-now" },
+        el("span", { class: "fu-k" }, U.monthLabel),
+        el("strong", {}, U.current ? U.current.unit : "Not named yet"),
+        el("span", { class: "muted" }, U.current ? `${U.prize} all month` : U.previous ? `Last winner: ${U.previous.unit} (${U.previous.monthLabel})` : "")));
+      sec.append(el("p", { class: "small muted" }, "Clients tally for their unit on the shop whiteboard. Each month's winner gets " + U.prize + ". A unit can only win once a year."));
+      if (U.canEdit) {
+        const months = []; const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1);
+        for (let i = 0; i < 14; i++) { months.push(d.toISOString().slice(0, 7)); d.setMonth(d.getMonth() - 1); }
+        const mSel = el("select", {}, months.map((m) => el("option", { value: m, selected: m === U.month }, new Date(m + "-15").toLocaleString(undefined, { month: "long", year: "numeric" }))));
+        const known = [...new Set((U.winners || []).map((w) => w.unit))];
+        const unit = el("input", { placeholder: "e.g. 354 CES", list: "fuUnits", maxlength: 60 });
+        const prize = el("input", { value: U.prize, maxlength: 120 });
+        sec.append(el("datalist", { id: "fuUnits" }, known.map((k) => el("option", { value: k }))),
+          el("div", { class: "actions", style: "align-items:end;flex-wrap:wrap" }, el("label", { style: "margin:0" }, "Month", mSel), el("label", { style: "margin:0;flex:1;min-width:180px" }, "Winning unit", unit),
+            el("button", { class: "btn", type: "button", onclick: async () => { try { draw(await call({ action: "unitsSave", month: mSel.value, unit: unit.value })); ctx.toast("Winner saved"); } catch (e) { ctx.toast(e.message); } } }, "Save winner")),
+          el("div", { class: "actions", style: "align-items:end;flex-wrap:wrap" }, el("label", { style: "margin:0;flex:1;min-width:220px" }, "Prize", prize),
+            el("button", { class: "btn sm line", type: "button", onclick: async () => { try { draw(await call({ action: "unitsSettings", prize: prize.value, title: U.title })); ctx.toast("Saved"); } catch (e) { ctx.toast(e.message); } } }, "Save prize")));
+      }
+      const W = U.winners || U.past || [];
+      if (W.length) {
+        sec.append(el("h3", {}, "Winners"));
+        for (const w of W) sec.append(el("div", { class: "nr" }, el("span", {}, el("strong", {}, w.unit), el("span", { class: "muted" }, ` · ${new Date(w.month + "-15").toLocaleString(undefined, { month: "long", year: "numeric" })}`)),
+          U.canEdit ? el("button", { class: "linkbtn small", type: "button", onclick: async (e) => { if (e.target.dataset.sure !== "1") { e.target.dataset.sure = "1"; e.target.textContent = "Tap again to remove"; return; } try { draw(await call({ action: "unitsRemove", month: w.month })); } catch (e) { ctx.toast(e.message); } } }, "Remove") : null));
+      }
+    };
+    call({ action: "unitsGet" }).then(draw).catch((e) => { sec.lastChild.textContent = e.message; });
+    return sec;
   }
 
   // ---------- graphs: week by week ----------

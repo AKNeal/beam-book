@@ -982,6 +982,12 @@ const valid = (o = {}) => ({
         y = await call("/api/admin/books", { body: { action: "dashPay", slug: "mike-fade", pay: { model: "commission", rate: 60 } } }); assert.equal(y.data.pay["mike-fade"].rate, 60);
         y = await call("/api/admin/books", { body: { action: "challengeSave", title: "Rebook Rumble", metric: "rebookRate", goal: 70, startDate: T.dateKey(Date.now()), endDate: T.dateKey(Date.now() + 14 * 864e5), prize: "$100" } });
         assert.equal(y.status, 200, JSON.stringify(y.data)); assert.equal(y.data.challenges[0].status, "live"); assert.equal(y.data.challenges[0].rows[0].name, "Mike Fade");
+        // Freshest Unit: one win per unit per year
+        { const mo = T.dateKey(Date.now()).slice(0, 7), yr = mo.slice(0, 4), other = `${yr}-${mo.slice(5) === "01" ? "02" : "01"}`;
+          y = await call("/api/admin/books", { body: { action: "unitsSave", month: mo, unit: "354 CES" } }); assert.equal(y.status, 200, JSON.stringify(y.data)); assert.equal(y.data.current.unit, "354 CES");
+          y = await call("/api/admin/books", { body: { action: "unitsSave", month: other, unit: "354 ces" } }); assert.equal(y.status, 400, "same unit twice in a year refused");
+          y = await call("/api/admin/books", { body: { action: "unitsSave", month: `${+yr - 1}-06`, unit: "354 CES" } }); assert.equal(y.status, 200, "a different year is fine");
+          y = await call("/api/artists?units=1"); assert.equal(y.data.current.unit, "354 CES"); }
         // the floating button: +1 and undo on a barber's count
         y = await call("/api/admin/books", { body: { action: "challengeRebook", slug: "mike-fade" } }); assert.equal(y.data.live, true); const base = y.data.count;
         y = await call("/api/admin/books", { body: { action: "challengeRebook", slug: "mike-fade", add: true } }); assert.equal(y.data.count, base + 1, JSON.stringify(y.data));

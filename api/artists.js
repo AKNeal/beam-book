@@ -32,6 +32,13 @@ module.exports = async function handler(req, res) {
     return files.stream(res, a.photo, send);
   }
 
+  if (q.get("units")) { // Beam: Freshest Unit (Level Up's monthly event) for the shop's website
+    const data = await require("../lib/units").publicView();
+    res.statusCode = 200; res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=0, s-maxage=60, stale-while-revalidate=600");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    return res.end(JSON.stringify(data));
+  }
   if (q.get("site")) { // Beam: the shop's own website content (checklist answers + Google reviews)
     const data = await require("../lib/site").publicView();
     res.statusCode = 200; res.setHeader("Content-Type", "application/json; charset=utf-8");

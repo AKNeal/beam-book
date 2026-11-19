@@ -58,6 +58,14 @@ function build(d) {
     h += c.rows.slice(0, c.team ? 4 : 7).map((r, i) => `<div class="row ${i === 0 && r.value > 0 ? "lead" : ""}"><div class="pos">${i === 0 && r.value > 0 ? "👑" : i + 1}</div><div class="name">${esc(r.name)}</div><div class="bar ${r.pct >= 100 ? "done" : ""}"><i style="width:${r.pct}%"></i></div><div class="val">${fmt(c.metric, r.value)}</div></div>`).join("");
     p.push(h);
   }
+  // Freshest Unit: this month's winner
+  if (d.units && (d.units.current || d.units.previous)) {
+    const u = d.units, w = u.current || u.previous;
+    p.push(`<h2>${esc(u.title)} <em>${esc(u.current ? u.monthLabel : "last winner")}</em></h2><p class="sub">Tally for your unit on the whiteboard. One win per unit per year.</p>` +
+      `<div class="team" style="text-align:center;border-color:var(--gold)"><div class="val" style="text-align:center;font-size:16vh">${esc(w.unit)}</div>` +
+      (u.current ? `<span class="prize" style="margin:0;font-size:3vh">🏆 ${esc(u.prize)} all ${esc(u.monthLabel.split(" ")[0])}</span>` : `<span class="sub">${esc(w.monthLabel)}</span>`) + `</div>` +
+      (u.past.length > 1 ? `<p class="sub">Past winners: ${u.past.slice(u.current ? 1 : 0, 7).map((x) => esc(x.unit) + " (" + esc(x.monthLabel.split(" ")[0]) + ")").join(" · ")}</p>` : ""));
+  }
   // 2. This week's leaderboards
   const board = (title, key, metric, sub) => {
     const rows = d.leaders.filter((x) => x[key] != null).sort((a, b) => (b[key] || 0) - (a[key] || 0)).slice(0, 7);

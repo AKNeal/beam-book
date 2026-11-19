@@ -60,6 +60,18 @@ module.exports = async function handler(req, res) {
     try { return send(res, 200, await require("../../lib/instant").staffBook(b, me, require("../../lib/http").baseUrl(req))); }
     catch (e) { return send(res, e.clash ? 409 : 400, { error: e.message, clash: Boolean(e.clash) }); }
   }
+  if (/^units/.test(String(b.action || ""))) { // Freshest Unit winners (lib/units.js): everyone can see; the Owner / Administrator set them
+    const U = require("../../lib/units");
+    try {
+      if (b.action === "unitsGet") return send(res, 200, { ...(await U.publicView()), winners: await U.winners(), canEdit: auth.isFull(me) });
+      if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or an Administrator can change the winner." });
+      if (b.action === "unitsSave") await U.setWinner(b, me.name);
+      else if (b.action === "unitsRemove") await U.removeWinner(str(b.month, 7));
+      else if (b.action === "unitsSettings") await U.saveSettings(b);
+      else return send(res, 400, { error: "Unknown action." });
+      return send(res, 200, { ...(await U.publicView()), winners: await U.winners(), canEdit: true });
+    } catch (e) { return send(res, 400, { error: e.message }); }
+  }
   if (b.action === "paperFields") { // Owner: field names in an official form (for setting up the paperwork maps)
     if (!auth.isFull(me)) return send(res, 403, { error: "Owner or an Administrator only." });
     try { const P = require("../../lib/paperwork"); return send(res, 200, { form: b.form, fields: await P.fields(String(b.form || "")) }); }
