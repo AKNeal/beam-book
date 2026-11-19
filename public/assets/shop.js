@@ -89,6 +89,8 @@
       if (vals[k] !== undefined) n.textContent = vals[k];
       if (n.tagName === "A" && hrefs[k]) n.href = hrefs[k];
     });
+    // The header name/logo goes back to the shop's own website when it has one.
+    if (shop.website) document.querySelectorAll("a.brand").forEach(function (a) { a.href = shop.website; });
     // The business's own words: data-word="cta" etc.; a capitalized name (data-word="Providers") capitalizes the word.
     var W = shop.words || {};
     document.querySelectorAll("[data-word]").forEach(function (n) {

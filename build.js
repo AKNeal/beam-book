@@ -17,7 +17,8 @@ const headHtml = () => `<meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
-<script src="/assets/shop.js"></script>`;
+<script src="/assets/shop.js"></script>
+<script src="/assets/datepicker.js" defer></script>`;
 
 const NAV = [["/artists", "Team", "artists"]];
 const header = (page) => `<a class="skip" href="#main">Skip to content</a>

@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beam · Booking that works the way your business does</title>
+<meta name="description" content="Beam is online booking for real businesses: request forms with your own questions, offers and counter-offers, instant booking for barbershops, one inbox, calendar sync and reminders. Request a call.">
+<meta name="theme-color" content="#ffffff">
+<meta property="og:title" content="Beam · Booking that works the way your business does">
+<meta property="og:description" content="Requests, offers, instant booking, one inbox, calendar sync and reminders. Built by Neal Media &amp; Production.">
+<meta property="og:image" content="/assets/brand/beam-icon-512.png">
+<link rel="icon" href="/assets/brand/beam-icon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #2BB0FF; --blue: #1265B8; --navy: #0D2236;
+    --grad: linear-gradient(135deg, var(--sky), var(--blue));
+    --bg: #ffffff; --bg-2: #f5f7fa; --bg-3: #eef1f5; --line: #e3e8ee;
+    --text: #0D2236; --muted: #5b6b7b; --soft: #8a97a5;
+    --radius: 18px; --shadow: 0 1px 2px rgba(13,34,54,.04), 0 12px 32px rgba(13,34,54,.07);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--text); background: var(--bg); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  a { color: var(--blue); }
+  img { max-width: 100%; display: block; }
+  .wrap { width: min(1120px, 100% - 40px); margin-inline: auto; }
+  .skip { position: absolute; left: -999px; }
+  .skip:focus { left: 16px; top: 16px; background: #fff; padding: 8px 12px; border-radius: 8px; z-index: 10; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; font: inherit; font-weight: 700; font-size: 16px; border: 0; border-radius: 999px; padding: 15px 26px; cursor: pointer; text-decoration: none; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
+  .btn-primary { background: var(--grad); color: #fff; box-shadow: 0 8px 22px rgba(18,101,184,.28); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(18,101,184,.34); }
+  .btn-ghost { background: #fff; color: var(--navy); border: 1px solid var(--line); }
+  .btn-ghost:hover { background: var(--bg-2); }
+  .btn-sm { padding: 10px 18px; font-size: 14px; }
+  .btn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(43,176,255,.45); outline-offset: 2px; }
+  .btn svg { width: 18px; height: 18px; }
+
+  /* Header */
+  .top { position: sticky; top: 0; z-index: 5; background: rgba(255,255,255,.86); backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid transparent; transition: border-color .2s; }
+  .top.scrolled { border-bottom-color: var(--line); }
+  .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .logo img { height: 34px; width: auto; }
+
+  /* Hero */
+  .hero { position: relative; overflow: hidden; background: linear-gradient(180deg, #fff 0%, var(--bg-2) 100%); }
+  .hero::before { content: ""; position: absolute; width: 720px; height: 720px; right: -220px; top: -260px; border-radius: 50%; background: radial-gradient(closest-side, rgba(43,176,255,.20), rgba(43,176,255,0)); pointer-events: none; }
+  .hero .wrap { position: relative; display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; padding: 72px 0 88px; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--blue); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px 6px 8px; }
+  .eyebrow i { width: 8px; height: 8px; border-radius: 50%; background: var(--grad); }
+  h1 { font-size: clamp(38px, 5.4vw, 62px); line-height: 1.04; letter-spacing: -.035em; margin: 20px 0 18px; font-weight: 800; }
+  h1 span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lead { font-size: 19px; color: var(--muted); max-width: 34em; margin: 0 0 30px; }
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .note { font-size: 14px; color: var(--soft); margin-top: 16px; }
+
+  /* Hero mock */
+  .mock { position: relative; margin-bottom: 40px; background: #fff; border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); padding: 22px; }
+  .mock-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .mock-head b { font-size: 15px; }
+  .pill { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--bg-3); color: var(--muted); }
+  .pill.new { background: rgba(43,176,255,.14); color: var(--blue); }
+  .pill.ok { background: #e6f6ee; color: #18794e; }
+  .req { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; padding: 12px; border-radius: 14px; border: 1px solid var(--line); margin-bottom: 10px; background: #fff; }
+  .req:last-child { margin-bottom: 0; }
+  .av { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: #fff; background: var(--grad); }
+  .av.g { background: linear-gradient(135deg, #94a3b8, #64748b); }
+  .req small { display: block; color: var(--soft); font-size: 13px; }
+  .req strong { font-size: 15px; }
+  .offer { position: absolute; left: -28px; bottom: -64px; width: 230px; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 14px 16px; }
+  .offer small { color: var(--soft); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+  .offer p { margin: 4px 0 10px; font-weight: 700; }
+  .offer .row { display: flex; gap: 8px; }
+  .offer .row span { flex: 1; text-align: center; font-size: 13px; font-weight: 700; padding: 7px 0; border-radius: 10px; background: var(--bg-2); }
+  .offer .row span:first-child { background: var(--grad); color: #fff; }
+
+  /* Framed product shots: read as pictures, not as controls on the page */
+  .shot { position: relative; border-radius: 28px; border: 1px solid var(--line); background:
+      radial-gradient(120% 90% at 100% 0%, rgba(43,176,255,.18), rgba(43,176,255,0) 60%),
+      linear-gradient(160deg, #f3f8fd 0%, #e9eef4 100%);
+    box-shadow: inset 0 1px 0 #fff, inset 0 -18px 40px rgba(13,34,54,.04), 0 24px 60px rgba(13,34,54,.12), 0 2px 6px rgba(13,34,54,.05);
+    pointer-events: none; user-select: none; overflow: hidden; }
+  .shot-hero { padding: 40px 36px 84px 60px; }
+  .shot-hero .mock { margin: 0; }
+  .shot-tag { position: absolute; right: 18px; bottom: 16px; font-size: 12px; font-weight: 700; color: var(--muted); background: rgba(255,255,255,.75); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; }
+
+  .promo-grid { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 22px; align-items: start; }
+  .promo-item { display: flex; flex-direction: column; gap: 14px; }
+  .promo-item .shot { height: 460px; display: grid; place-items: center; padding: 24px 20px 60px; }
+  .promo-item h3 { margin: 0; font-size: 18px; letter-spacing: -.01em; }
+  .promo-item p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .phone { width: 210px; background: #fff; border: 8px solid var(--navy); border-radius: 34px; padding: 16px 12px 14px; box-shadow: 0 18px 40px rgba(13,34,54,.22); }
+  .phone .notch { width: 70px; height: 6px; border-radius: 6px; background: var(--bg-3); margin: -6px auto 12px; }
+  .phone h5 { margin: 0 0 2px; font-size: 14px; }
+  .phone .sub { font-size: 11px; color: var(--soft); margin-bottom: 10px; }
+  .svc { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; }
+  .svc.on { border-color: var(--sky); background: rgba(43,176,255,.08); }
+  .svc span { color: var(--muted); font-weight: 500; }
+  .lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--soft); margin: 10px 0 6px; }
+  .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .slots i { font-style: normal; font-size: 11px; font-weight: 700; text-align: center; padding: 6px 0; border-radius: 8px; background: var(--bg-2); color: var(--navy); }
+  .slots i.on { background: var(--grad); color: #fff; }
+  .slots i.off { color: #c3ccd6; text-decoration: line-through; }
+  .phone .go { margin-top: 10px; text-align: center; font-size: 12px; font-weight: 800; color: #fff; background: var(--grad); border-radius: 10px; padding: 9px 0; }
+
+  .cal { width: 100%; max-width: 380px; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 14px; box-shadow: var(--shadow); }
+  .cal-head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+  .cal-head span { color: var(--soft); font-weight: 600; }
+  .cal-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; font-size: 10px; }
+  .cal-grid .d { text-align: center; font-weight: 700; color: var(--muted); padding-bottom: 4px; }
+  .cal-grid .t { color: var(--soft); text-align: right; padding-right: 2px; height: 30px; }
+  .cal-col { position: relative; background: repeating-linear-gradient(180deg, var(--bg-2) 0 29px, var(--line) 29px 30px); border-radius: 8px; height: 240px; }
+  .ev { position: absolute; left: 3px; right: 3px; border-radius: 6px; padding: 4px 5px; font-size: 9.5px; font-weight: 700; line-height: 1.2; color: #fff; background: var(--grad); overflow: hidden; }
+  .ev.b { background: linear-gradient(135deg, #7cc8f5, #3d8fd6); }
+  .ev.g { background: #e6f6ee; color: #18794e; }
+  .ev.n { background: var(--navy); }
+
+  .dash { width: 100%; max-width: 260px; display: grid; gap: 10px; }
+  .tile { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); }
+  .tile small { display: block; font-size: 11px; font-weight: 600; color: var(--soft); }
+  .tile b { font-size: 22px; letter-spacing: -.02em; }
+  .tile em { font-style: normal; font-size: 11px; font-weight: 700; color: #18794e; margin-left: 6px; }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 54px; margin-top: 8px; }
+  .bars i { flex: 1; border-radius: 4px 4px 2px 2px; background: rgba(43,176,255,.25); }
+  .bars i.hi { background: var(--grad); }
+  .race { margin-top: 6px; display: grid; gap: 6px; font-size: 11px; font-weight: 600; }
+  .race div { display: grid; grid-template-columns: 52px 1fr 30px; gap: 6px; align-items: center; }
+  .race s { display: block; height: 7px; border-radius: 6px; background: var(--grad); text-decoration: none; }
+  .race span { color: var(--muted); text-align: right; }
+
+  /* Sections */
+  section { padding: 88px 0; }
+  .sec-head { max-width: 640px; margin-bottom: 40px; }
+  .sec-head h2 { font-size: clamp(28px, 3.4vw, 40px); letter-spacing: -.025em; line-height: 1.12; margin: 10px 0 12px; }
+  .sec-head p { color: var(--muted); font-size: 18px; margin: 0; }
+  .kicker { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--blue); }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; transition: box-shadow .2s, transform .2s; }
+  .card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+  .ico { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: rgba(43,176,255,.12); color: var(--blue); margin-bottom: 18px; }
+  .ico svg { width: 24px; height: 24px; }
+  .card h3 { font-size: 19px; margin: 0 0 8px; letter-spacing: -.01em; }
+  .card p { margin: 0; color: var(--muted); }
+
+  .band { background: var(--bg-2); border-block: 1px solid var(--line); }
+  /* Date picker (assets/datepicker.js) in Beam's colors: same shapes as the shops' pickers */
+  .bdp, .bdp-trigger, .bdp-scrim { --white: #ffffff; --ink: #0D2236; --graphite: #5b6b7b; --line: #e3e8ee; --field: #d5dce4; --sign: #1265B8; --on-sign: #ffffff; --radius: 12px; --body: inherit; }
+  .bdp .bdp-d.on button, .bdp .bdp-chip.on { background: linear-gradient(135deg, #2BB0FF, #1265B8); }
+  .bdp .bdp-done { background: linear-gradient(135deg, #2BB0FF, #1265B8); }
+  .concierge { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
+  .concierge .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: s; }
+  .concierge .steps li { position: relative; padding: 16px 18px 16px 58px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); color: var(--muted); counter-increment: s; }
+  .concierge .steps li::before { content: counter(s); position: absolute; left: 16px; top: 15px; width: 28px; height: 28px; border-radius: 50%; background: var(--grad); color: #fff; font-weight: 700; display: grid; place-items: center; font-size: 14px; }
+  .concierge .steps b { color: var(--text); display: block; }
+  @media (max-width: 860px) { .concierge { grid-template-columns: 1fr; gap: 28px; } }
+  .types { display: flex; flex-wrap: wrap; gap: 10px; }
+  .types span { background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 10px 18px; font-weight: 600; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+  .checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 12px; color: var(--muted); }
+  .checks li b { color: var(--text); }
+  .checks svg { width: 22px; height: 22px; color: var(--blue); margin-top: 2px; }
+
+  .final { text-align: center; }
+  .final-box { background: var(--navy); color: #fff; border-radius: 28px; padding: 64px 28px; position: relative; overflow: hidden; }
+  .final-box::after { content: ""; position: absolute; inset: auto -120px -220px auto; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(closest-side, rgba(43,176,255,.35), rgba(43,176,255,0)); }
+  .final-box h2 { position: relative; font-size: clamp(28px, 3.6vw, 42px); letter-spacing: -.025em; margin: 0 0 12px; }
+  .final-box p { position: relative; color: #b9c7d6; font-size: 18px; margin: 0 auto 28px; max-width: 36em; }
+  .final-box .btn { position: relative; }
+
+  /* Footer */
+  footer { border-top: 1px solid var(--line); background: var(--bg-2); padding: 40px 0 28px; font-size: 14px; color: var(--muted); }
+  .foot-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 32px; margin-bottom: 32px; }
+  .foot-grid h4 { margin: 0 0 12px; color: var(--text); font-size: 14px; }
+  .foot-grid ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .foot-grid a { color: var(--muted); text-decoration: none; }
+  .foot-grid a:hover { color: var(--blue); }
+  .foot-bottom { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding-top: 20px; border-top: 1px solid var(--line); }
+  .credit { color: var(--muted); text-decoration: none; font-weight: 600; }
+  .credit:hover { color: var(--blue); }
+
+  /* Dialog */
+  dialog { width: min(560px, 100% - 24px); border: 0; padding: 0; border-radius: 24px; box-shadow: 0 30px 80px rgba(13,34,54,.25); color: var(--text); }
+  dialog::backdrop { background: rgba(13,34,54,.45); backdrop-filter: blur(3px); }
+  .dlg { padding: 30px; }
+  .dlg-head { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 18px; }
+  .dlg-head h2 { margin: 0 0 4px; font-size: 26px; letter-spacing: -.02em; }
+  .dlg-head p { margin: 0; color: var(--muted); }
+  .x { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: #fff; cursor: pointer; font-size: 20px; line-height: 1; color: var(--muted); }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .full { grid-column: 1 / -1; }
+  label { display: grid; gap: 6px; align-content: start; font-size: 14px; font-weight: 600; }
+  label em { font-style: normal; font-weight: 500; color: var(--soft); }
+  input, select, textarea { font: inherit; font-size: 16px; color: var(--text); background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; width: 100%; }
+  input:focus, select:focus, textarea:focus { background: #fff; border-color: var(--sky); }
+  textarea { resize: vertical; min-height: 92px; }
+  .hp { position: absolute; left: -5000px; width: 1px; height: 1px; overflow: hidden; }
+  .err { color: #b42318; font-size: 14px; margin: 12px 0 0; min-height: 1em; }
+  .dlg .btn-primary { width: 100%; margin-top: 18px; }
+  .done { text-align: center; padding: 18px 0 6px; }
+  .done .tick { width: 64px; height: 64px; border-radius: 50%; background: var(--grad); display: grid; place-items: center; margin: 0 auto 16px; color: #fff; }
+  .done h2 { margin: 0 0 8px; }
+  .done p { color: var(--muted); margin: 0 0 22px; }
+
+  @media (max-width: 900px) {
+    .hero .wrap, .split { grid-template-columns: 1fr; gap: 40px; }
+    .hero .wrap { padding: 48px 0 72px; }
+    .shot-hero { padding: 28px 20px 76px 40px; }
+    .promo-grid { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: 1fr 1fr; }
+    .foot-grid { grid-template-columns: 1fr 1fr; }
+    .foot-grid > :first-child { grid-column: 1 / -1; }
+  }
+  @media (max-width: 600px) {
+    section { padding: 64px 0; }
+    .grid, .fields { grid-template-columns: 1fr; }
+    .top .btn-sm { padding: 9px 14px; }
+    .logo img { height: 28px; }
+    .offer { left: -14px; width: 200px; }
+    .shot-hero { padding: 22px 14px 76px 28px; }
+    .dlg { padding: 22px; }
+    .foot-grid { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top" id="top">
+  <div class="wrap">
+    <a class="logo" href="/" aria-label="Beam home"><img src="/assets/brand/beam-logo-dark-text.svg" alt="Beam" width="117" height="34"></a>
+    <button class="btn btn-primary btn-sm" type="button" data-call>Request a call</button>
+  </div>
+</header>
+
+<main id="main">
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow"><i></i>Online booking for every kind of business</span>
+        <h1>Booking that works the way <span>your business</span> does.</h1>
+        <p class="lead">Beam gives your business its own booking page, inbox and calendar. Clients send requests with your questions, you send offers they can accept or counter, and everything lands on the calendar with reminders sent for you.</p>
+        <div class="cta-row">
+          <button class="btn btn-primary" type="button" data-call>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>
+            Request a call
+          </button>
+          <a class="btn btn-ghost" href="#features">Explore the features</a>
+        </div>
+        <p class="note">We'll call you to walk through it and set up your page.</p>
+      </div>
+
+      <div class="shot shot-hero" role="img" aria-label="Example of the Beam inbox with a counter-offer">
+      <div class="mock" aria-hidden="true">
+        <div class="mock-head"><b>Inbox</b><span class="pill">Today</span></div>
+        <div class="req"><div class="av">JM</div><div><strong>Fade + beard trim</strong><small>Fri 2:30 pm · with Marcus</small></div><span class="pill ok">Booked</span></div>
+        <div class="req"><div class="av g">TR</div><div><strong>Wedding reception DJ</strong><small>Jun 14 · 120 guests</small></div><span class="pill new">New</span></div>
+        <div class="req"><div class="av">AK</div><div><strong>Gutter cleaning</strong><small>2-story · photos attached</small></div><span class="pill">Offer sent</span></div>
+        <div class="offer">
+          <small>Counter-offer</small>
+          <p>$450 · Sat, Jun 14 · 4 hrs</p>
+          <div class="row"><span>Accept</span><span>Counter</span></div>
+        </div>
+      </div>
+        <span class="shot-tag">Your inbox</span>
+      </div>
+    </div>
+  </div>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">What you get</span>
+        <h2>One app for requests, offers and the calendar.</h2>
+        <p>Every business gets its own page, inbox, logins, colors and logo.</p>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></div>
+          <h3>Your questions, your form</h3>
+          <p>Ask exactly what you need: photos, addresses, dates, guest counts, sizes. Change the wording any time.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+          <h3>Offers and counter-offers</h3>
+          <p>Send a price, date and terms. Clients accept, ask a question or counter. Once it's agreed, it's booked.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></svg></div>
+          <h3>Instant booking</h3>
+          <p>Barbershops and salons: clients pick a service, a barber and an open time, and they're booked on the spot.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+          <h3>Calendar sync</h3>
+          <p>Works alongside the calendar you already use, so you never double-book.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <h3>Texts and reminders</h3>
+          <p>Confirmations and day-before reminders go out by email and text. Clients can move or cancel from the link.</p>
+        </div>
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></div>
+          <h3>Your team and clients</h3>
+          <p>Logins for every barber, artist or tech, a client list you can import, and a dashboard for the owner.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="promo" id="tour">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="kicker">A look inside</span>
+        <h2>Your clients book. You stay on top of it.</h2>
+        <p>A booking page with your name on it, a calendar that fills itself, and numbers that show how the business is doing.</p>
+      </div>
+      <div class="promo-grid">
+        <div class="promo-item">
+          <div class="shot" role="img" aria-label="Example booking page on a phone">
+            <div class="phone" aria-hidden="true">
+              <div class="notch"></div>
+              <h5>Northside Cuts</h5>
+              <div class="sub">Open today until 7 pm</div>
+              <div class="svc on">Skin fade <span>$35 · 45m</span></div>
+              <div class="svc">Cut + beard <span>$45 · 60m</span></div>
+              <div class="svc">Kids cut <span>$25 · 30m</span></div>
+              <div class="lbl">Friday</div>
+              <div class="slots"><i>10:00</i><i class="off">11:00</i><i>12:30</i><i class="on">2:30</i><i>3:15</i><i class="off">4:00</i></div>
+              <div class="go">Book 2:30 pm</div>
+            </div>
+            <span class="shot-tag">Booking page</span>
+          </div>
+          <h3>Booked in seconds</h3>
+          <p>Clients pick a service, a person and an open time from their phone. No back-and-forth texts.</p>
+        </div>
+        <div class="promo-item">
+          <div class="shot" role="img" aria-label="Example weekly calendar">
+            <div class="cal" aria-hidden="true">
+              <div class="cal-head">This week <span>Mon – Fri</span></div>
+              <div class="cal-grid">
+                <span class="d">Mon</span><span class="d">Tue</span><span class="d">Wed</span><span class="d">Thu</span><span class="d">Fri</span>
+                <div class="cal-col"><div class="ev" style="top:4px;height:52px">Fade · Jay</div><div class="ev g" style="top:96px;height:40px">Consult</div></div>
+                <div class="cal-col"><div class="ev b" style="top:34px;height:64px">Gutters · 2-story</div></div>
+                <div class="cal-col"><div class="ev n" style="top:4px;height:28px">Trim</div><div class="ev" style="top:66px;height:52px">Beard · Leo</div><div class="ev b" style="top:126px;height:46px">Kids cut</div></div>
+                <div class="cal-col"><div class="ev g" style="top:20px;height:40px">Deposit in</div><div class="ev" style="top:100px;height:70px">Tattoo session</div></div>
+                <div class="cal-col"><div class="ev" style="top:4px;height:40px">Fade · Sam</div><div class="ev n" style="top:60px;height:110px">DJ · Wedding</div></div>
+              </div>
+            </div>
+            <span class="shot-tag">Calendar</span>
+          </div>
+          <h3>A calendar that fills itself</h3>
+          <p>Bookings and accepted offers land on the calendar and sync with the one you already use.</p>
+        </div>
+        <div class="promo-item">
+          <div class="shot" role="img" aria-label="Example owner dashboard">
+            <div class="dash" aria-hidden="true">
+              <div class="tile"><small>Booked this week</small><b>$4,820</b><em>+12%</em>
+                <div class="bars"><i style="height:40%"></i><i style="height:62%"></i><i style="height:48%"></i><i style="height:80%"></i><i class="hi" style="height:100%"></i><i style="height:70%"></i></div>
+              </div>
+              <div class="tile"><small>Rebook challenge</small>
+                <div class="race"><div>Marcus<s style="width:82%"></s><span>71%</span></div><div>Leo<s style="width:66%"></s><span>58%</span></div><div>Sam<s style="width:50%"></s><span>44%</span></div></div>
+              </div>
+            </div>
+            <span class="shot-tag">Owner dashboard</span>
+          </div>
+          <h3>Know how the week is going</h3>
+          <p>Sales, rebook rates and team challenges at a glance, with each person seeing only their own numbers.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap split">
+      <div class="sec-head" style="margin:0">
+        <span class="kicker">Built for</span>
+        <h2>Set up for your kind of business from day one.</h2>
+        <p>Start from a template, then make every word and question your own.</p>
+        <div class="types" style="margin-top:26px">
+          <span>Barbershops &amp; salons</span><span>Tattoo shops</span><span>DJs &amp; performers</span><span>Trades &amp; services</span><span>Photo &amp; video</span><span>Any other business</span>
+        </div>
+      </div>
+      <ul class="checks">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg><div><b>Lives where your clients are.</b> Use your Beam address or drop the form right into your existing website.</div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg><div><b>Switching is painless.</b> Bring your client list from your old booking app. Payment details never leave your computer.</div></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg><div><b>Real people behind it.</b> Built and supported by Neal Media &amp; Production in Alaska.</div></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="concierge">
+    <div class="wrap concierge">
+      <div class="sec-head" style="margin:0;text-align:left">
+        <span class="kicker">Concierge web building</span>
+        <h2>Don't have a website? We'll build it for you.</h2>
+        <p>Neal Media designs and builds your business a complete website with Beam booking built in. You tell us about the business; we handle the design, the writing, the setup and the launch. Then we keep it running.</p>
+        <p style="margin-top:22px"><button class="btn btn-primary" type="button" data-call data-need="Concierge website build">Talk to us about a website</button></p>
+      </div>
+      <ol class="steps">
+        <li><b>A quick call</b>We learn about your business, your clients and the look you want.</li>
+        <li><b>We build it</b>Your pages, photos, services and prices, with booking, texts and your calendar already connected.</li>
+        <li><b>You check it</b>Look it over, test a booking and tell us what to change.</li>
+        <li><b>It goes live</b>On your own domain, and we stay on hand for updates.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <div class="final-box">
+        <h2>Want to see it with your business in it?</h2>
+        <p>Tell us a little about your business and when to call. We'll walk you through Beam and get your page set up.</p>
+        <button class="btn btn-primary" type="button" data-call>Request a call</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <img src="/assets/brand/beam-logo-dark-text.svg" alt="Beam" width="104" height="30" style="height:30px;width:auto;margin-bottom:12px">
+        <p style="margin:0;max-width:30em">Online booking with requests, offers and instant booking. Built by Neal Media &amp; Production.</p>
+      </div>
+      <div>
+        <h4>Beam</h4>
+        <ul>
+          <li><a href="https://beam.nealmedia.app">Beam digital business cards</a></li>
+          <li><a href="#" data-call>Request a call</a></li>
+          <li><a href="mailto:Nealmedia@yahoo.com">Nealmedia@yahoo.com</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>More from Neal Media</h4>
+        <ul>
+          <li><a href="https://nealmedia.app">Neal Media</a></li>
+          <li><a href="https://work.nealmedia.app">Our work</a></li>
+          <li><a href="https://levelup.nealmedia.app">Level Up Barbershop</a></li>
+          <li><a href="https://crave.nealmedia.app">Crave Coffee &amp; Bakery</a></li>
+          <li><a href="https://rise.nealmedia.app">RISE Leadership Collaborative</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <a class="credit" href="https://nealmedia.app">Site by NealMedia</a>
+      <span>© <span id="yr"></span> Neal Media &amp; Production · <a href="/privacy" style="color:inherit">Privacy</a> · <a href="/terms" style="color:inherit">Terms</a></span>
+    </div>
+  </div>
+</footer>
+
+<dialog id="call" aria-labelledby="call-title">
+  <div class="dlg">
+    <form id="call-form" novalidate>
+      <div class="dlg-head">
+        <div>
+          <h2 id="call-title">Request a call</h2>
+          <p>We'll reach out to walk you through Beam.</p>
+        </div>
+        <button class="x" type="button" data-close aria-label="Close">×</button>
+      </div>
+      <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+      <div class="fields">
+        <label>Your name <input name="name" autocomplete="name" required maxlength="80"></label>
+        <label><span>Business name <em>(optional)</em></span><input name="business" autocomplete="organization" maxlength="120"></label>
+        <label>Phone <input name="phone" type="tel" autocomplete="tel" inputmode="tel" required maxlength="40"></label>
+        <label><span>Email <em>(optional)</em></span><input name="email" type="email" autocomplete="email" maxlength="120"></label>
+        <label class="full">What are you looking for?
+          <select name="need">
+            <option>Beam booking for my business</option>
+            <option>Concierge website build (with Beam)</option>
+            <option>Not sure yet</option>
+          </select>
+        </label>
+        <label>Type of business
+          <select name="type">
+            <option value="">Choose one</option>
+            <option>Barbershop / salon</option>
+            <option>Tattoo shop</option>
+            <option>DJ / performer / band</option>
+            <option>Trades and services</option>
+            <option>Photo / video / design</option>
+            <option>Something else</option>
+          </select>
+        </label>
+        <label><span>Best day to call <em>(optional)</em></span><input name="day" type="date" data-min="today" placeholder="Pick a day"></label>
+        <label>Best time to call
+          <select name="when">
+            <option value="">Any time</option>
+            <option>Morning</option>
+            <option>Afternoon</option>
+            <option>Evening</option>
+          </select>
+        </label>
+        <label class="full"><span>Anything we should know? <em>(optional)</em></span><textarea name="notes" maxlength="1500" placeholder="What you use now, how many people book with you, questions you have…"></textarea></label>
+      </div>
+      <p class="err" id="call-err" role="alert"></p>
+      <button class="btn btn-primary" type="submit" id="call-send">Request my call</button>
+    </form>
+    <div class="done" id="call-done" hidden>
+      <div class="tick"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div>
+      <h2>Got it, thanks!</h2>
+      <p>We'll give you a call soon.</p>
+      <button class="btn btn-ghost" type="button" data-close>Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  document.getElementById("yr").textContent = new Date().getFullYear();
+  const top = document.getElementById("top");
+  addEventListener("scroll", () => top.classList.toggle("scrolled", scrollY > 8), { passive: true });
+
+  const dlg = document.getElementById("call");
+  const form = document.getElementById("call-form");
+  const done = document.getElementById("call-done");
+  const err = document.getElementById("call-err");
+  const sendBtn = document.getElementById("call-send");
+
+  const open = (e) => {
+    e && e.preventDefault();
+    const need = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.need;
+    if (need) form.need.value = /Concierge/.test(need) ? "Concierge website build (with Beam)" : need;
+    form.hidden = false; done.hidden = true; err.textContent = "";
+    if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
+    setTimeout(() => form.name.focus(), 50);
+  };
+  const close = () => (typeof dlg.close === "function" ? dlg.close() : dlg.removeAttribute("open"));
+  document.querySelectorAll("[data-call]").forEach((b) => b.addEventListener("click", open));
+  dlg.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", close));
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) close(); });
+  if (location.hash === "#call") open();
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    err.textContent = "";
+    const data = Object.fromEntries(new FormData(form));
+    if ((data.name || "").trim().length < 2) { err.textContent = "Please enter your name."; form.name.focus(); return; }
+    if ((data.phone || "").replace(/\D/g, "").length < 7) { err.textContent = "Please enter a phone number we can call."; form.phone.focus(); return; }
+    sendBtn.disabled = true; sendBtn.textContent = "Sending…";
+    try {
+      const r = await fetch("/api/callback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "Something went wrong. Please try again.");
+      form.reset(); form.hidden = true; done.hidden = false;
+    } catch (ex) {
+      err.textContent = ex.message;
+    } finally {
+      sendBtn.disabled = false; sendBtn.textContent = "Request my call";
+    }
+  });
+})();
+</script>
+<script src="/assets/datepicker.js"></script>
+</body>
+</html>

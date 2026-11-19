@@ -69,7 +69,7 @@ p { margin: 0 0 1em; }
 .site-header { position: sticky; top: 0; z-index: 20; background: var(--snow); border-bottom: 1px solid var(--line); }
 .header-inner { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 20px; }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink); }
-.brand img { width: 46px; height: 46px; }
+.brand img { width: 64px; height: 64px; }
 .brand span { font: 700 1.375rem/1 var(--head); }
 .nav { display: flex; align-items: center; gap: 26px; }
 .nav a { color: var(--ink); text-decoration: none; font-weight: 500; font-size: 1rem; }
@@ -236,10 +236,10 @@ details > div { padding: 0 0 18px; color: var(--graphite); max-width: var(--text
 .field > label, .field > .label { display: block; font-weight: 600; margin-bottom: 6px; }
 .hint { display: block; font-weight: 400; color: var(--graphite); font-size: .9375rem; margin-top: 2px; }
 .opt { font-weight: 400; color: var(--graphite); font-size: .9375rem; }
-input[type=text], input[type=email], input[type=tel], input[type=url], input[type=number], input[type=password], input[type=date], input[type=time], input[type=datetime-local], select, textarea {
+input[type=text], input[type=email], input[type=tel], input[type=url], input[type=number], input[type=password], input[type=date], input[type=time], input[type=datetime-local], select, textarea, .bdp-trigger {
   width: 100%; font: 1rem var(--body); color: var(--ink); background: var(--white); border: 1.5px solid var(--field); border-radius: var(--radius); padding: 12px 13px; }
 textarea { min-height: 130px; resize: vertical; line-height: 1.5; }
-input:focus, select:focus, textarea:focus { border-color: var(--ink); outline: none; box-shadow: 0 0 0 3px rgba(188,158,100,.4); }
+input:focus, select:focus, textarea:focus, .bdp-trigger:focus-visible, .bdp-trigger[aria-expanded=true] { border-color: var(--ink); outline: none; box-shadow: 0 0 0 3px rgba(188,158,100,.4); }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
 .check { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 12px; font-weight: 400; cursor: pointer; }
@@ -289,14 +289,14 @@ input:focus, select:focus, textarea:focus { border-color: var(--ink); outline: n
 .booking-split { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
 @media (max-width: 860px) { .booking-split { grid-template-columns: minmax(0, 1fr); } }
 .field > label.check { display: flex; font-weight: 400; margin-bottom: 0; }
-@media (max-width: 420px) { .brand span { font-size: 1.2rem; } .brand img { width: 36px; height: 36px; } }
+@media (max-width: 420px) { .brand span { font-size: 1.2rem; } .brand img { width: 48px; height: 48px; } .brand img.shop-logo { height: 48px; } }
 
 /* ---------- Pick your time ---------- */
-.day-row { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; margin: 0 -2px 20px; scroll-snap-type: x proximity; }
+.day-row { display: flex; gap: 8px; overflow-x: auto; padding: 6px 6px 14px; margin: 0 -2px 20px; scroll-snap-type: x proximity; }
 .day { flex: none; scroll-snap-align: start; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 104px;
   border: 1.5px solid var(--field); border-radius: var(--radius); background: var(--white); padding: 10px 12px; font: inherit; color: var(--ink); cursor: pointer; text-align: left; }
 .day:hover { border-color: var(--ink); }
-.day[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--snow); }
+.day[aria-pressed="true"] { border-color: var(--sign); background: var(--sign); color: var(--on-sign, #14110c); box-shadow: 0 0 0 2px var(--ink), 0 0 16px color-mix(in srgb, var(--ink) 35%, transparent); }
 .day .wd { font: 600 1.25rem/1 var(--head); }
 .day .dt { font-weight: 600; }
 .day .n { font-size: .8125rem; color: var(--graphite); }
@@ -305,7 +305,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--ink); outline: n
 .slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
 .slot { min-height: 48px; border: 1.5px solid var(--field); border-radius: var(--radius); background: var(--white); font: 600 1rem var(--body); color: var(--ink); cursor: pointer; }
 .slot:hover { border-color: var(--ink); }
-.slot[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 -4px 0 var(--gold); }
+.slot[aria-pressed="true"] { border-color: var(--sign); background: var(--sign); color: var(--on-sign, #14110c); box-shadow: 0 0 0 2px var(--ink), 0 0 16px color-mix(in srgb, var(--ink) 35%, transparent); }
 .confirm { margin-top: 24px; padding: 20px; background: var(--white); border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: 0 var(--radius) var(--radius) 0; }
 
 /* Client request page: quote answer + messages */
@@ -432,7 +432,7 @@ html.embed body { background: var(--snow); }
 
 /* A business's own heading color (theme.ink), when set */
 h1, h2, h3, .brand span { color: var(--head-ink, inherit); }
-.brand img.shop-logo { width: auto; height: 40px; }
+.brand img.shop-logo { width: auto; height: 64px; }
 
 /* Beam inbox: setup checklist (compact, like Black Wolf's). Red light = still needed, green = done. */
 .setup { margin: 22px 0 8px; padding: 0 !important; overflow: hidden; }

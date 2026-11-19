@@ -20,3 +20,11 @@ assert.equal(by.d1.rebooked, null, "future visits aren't judged");
 assert.equal(by.a1.firstSeen, true); assert.equal(by.a2.firstSeen, false);
 an.markRebooks(all, 24 * 4, now); assert.equal(by.b1.rebooked, true, "a wider window counts it");
 console.log("ok - rebook rule: in the chair or within the window; later bookings and future visits don't count");
+
+// Needs a rebook: A's last visit was 2 days ago with nothing ahead (listed); B and D have something booked; C was 5 days ago.
+for (const x of all) x.name = "Client " + x.client;
+const nr = an.needsRebook(all, now, 21, null, 24);
+assert.deepEqual(nr.map((x) => x.name), ["Client C", "Client A"], "oldest first, only clients with nothing booked");
+assert.equal(an.needsRebook(all, now, 3, null, 24).length, 1, "only the last few days");
+assert.equal(an.needsRebook([v("e1", "E", now - 3 * H, now - D)], now, 21, null, 24).length, 0, "still inside the rebook window");
+console.log("ok - needs a rebook: last visit within 3 weeks, past the rebook window, nothing on the books");

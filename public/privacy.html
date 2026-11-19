@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy Policy</title>
+<style>
+  body { margin: 0; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2937; background: #fafafa; }
+  main { max-width: 720px; margin: 0 auto; padding: 36px 20px 60px; }
+  h1 { font-size: 1.8rem; margin: 0 0 4px; } h2 { font-size: 1.25rem; margin: 32px 0 6px; }
+  .muted { color: #6b7280; font-size: 14px; } a { color: #1d4ed8; }
+  ul { padding-left: 20px; } li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacy Policy</h1>
+  <p class="muted"><span class="shop">This shop</span> · online booking run by Neal Media &amp; Production (Beam) · Last updated November 18, 2026</p>
+
+  <h2>What we collect</h2>
+  <p>When you book online with <span class="shop">the shop</span>, we collect your name, mobile phone number, email (if you give it), the appointment you choose, and any note you add. If you pay by card, Stripe processes the payment; we never see or store your full card number.</p>
+
+  <h2>How we use it</h2>
+  <ul>
+    <li>To book, confirm, remind you about, change or cancel your appointment.</li>
+    <li>To let the shop and your barber contact you about your appointment.</li>
+    <li>To keep the shop's appointment history and receipts.</li>
+  </ul>
+
+  <h2>Who we share it with</h2>
+  <p>Only the shop and the services that run the booking system for it: Neal Media &amp; Production, and its providers for hosting, email (Resend), text messages (Twilio) and payments (Stripe). We don't sell your information.</p>
+  <p><strong>We do not sell or share your SMS opt-in data or personal information with third parties for marketing purposes.</strong> No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. Text messaging originator opt-in data and consent are not shared with any third parties.</p>
+
+  <h2 id="sms">Text messages</h2>
+  <p>Full text message terms are in our <a href="/terms">Terms &amp; Conditions</a>.</p>
+  <ul>
+    <li><strong>What you'll get:</strong> if you tick "Text me" when booking, <span class="shop">the shop</span> texts you about your appointments: a confirmation, a reminder the day before, and any change or cancellation.</li>
+    <li><strong>How often:</strong> message frequency varies, usually 2 to 4 texts per appointment.</li>
+    <li><strong>Cost:</strong> message and data rates may apply.</li>
+    <li><strong>Stop any time:</strong> reply <strong>STOP</strong> to stop texts. Reply <strong>START</strong> to get them again.</li>
+    <li><strong>Help:</strong> reply <strong>HELP</strong>, or contact the shop at <span class="contact">the number on its website</span>.</li>
+    <li>Texting is optional and not required to book. Carriers are not liable for delayed or undelivered messages.</li>
+  </ul>
+
+  <h2>Your choices</h2>
+  <p>You can ask the shop to update or delete your information at any time.</p>
+
+  <h2>Contact</h2>
+  <p><span class="shop">The shop</span><span class="contactline"></span><br>Booking system: Neal Media &amp; Production, North Pole, Alaska · <a href="mailto:nealmedia@yahoo.com">nealmedia@yahoo.com</a></p>
+</main>
+<script>
+fetch("/api/artists").then((r) => r.json()).then((d) => {
+  const s = d.shop || d.studio || {}; if (!s.name) return;
+  document.title = "Privacy Policy · " + s.name;
+  document.querySelectorAll(".shop").forEach((n) => { n.textContent = s.name; });
+  const bits = [s.phone, s.address].filter(Boolean);
+  if (s.phone) document.querySelectorAll(".contact").forEach((n) => { n.textContent = s.phone; });
+  if (bits.length) document.querySelector(".contactline").textContent = " · " + bits.join(" · ");
+}).catch(() => {});
+</script>
+</body>
+</html>

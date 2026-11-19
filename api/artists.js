@@ -57,6 +57,13 @@ module.exports = async function handler(req, res) {
 
   const st = config.studio, th = config.theme || {};
   res.setHeader("Access-Control-Allow-Origin", "*"); // public shop info: the shop's own website reads it too (Meet the Team, socials)
+  if (q.get("rank") === "public") { // the shop's latest Google ranks, for a badge on its own website (no fees, no competitors)
+    const rc = require("../lib/rankcheck");
+    const sm = rc.enabled() ? await rc.summary() : null;
+    res.setHeader("Cache-Control", "public, max-age=600");
+    return send(res, 200, sm && !sm.pending ? { date: sm.date, rating: sm.rating ?? null, reviews: sm.reviews ?? null,
+      searches: sm.searches.map((x) => ({ q: x.q, rank: Number.isFinite(x.rank) && x.rank <= 10 ? x.rank : null })) } : { searches: [] });
+  }
   if (q.get("onboard")) { // Beam: the private onboarding page's current answers
     const ob = require("../lib/onboarding");
     if (!(await ob.check(q.get("onboard")))) return send(res, 404, { error: "This link has expired. Ask Neal Media for a new one." });
@@ -133,7 +140,7 @@ async function igCallback(req, res) {
       if (q.get("error")) throw new Error(q.get("error_reason") === "user_denied" ? "Instagram wasn't connected (the login was cancelled)." : (q.get("error_description") || "Instagram said no."));
       const auth = require("../lib/auth");
       const u = (await auth.users()).find((x) => x.id === st.uid);
-      if (!u || u.active === false || !auth.isFull(u)) throw new Error("Only the Owner or a Site manager can connect Instagram.");
+      if (!u || u.active === false || !auth.isFull(u)) throw new Error("Only the Owner or a Administrator can connect Instagram.");
       await ig.finishConnect(q.get("code"), igRedirect(req), st.name);
     });
   } catch (e) { msg = e.message || "Instagram couldn't be connected."; }

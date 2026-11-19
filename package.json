@@ -2,7 +2,7 @@
   "name": "beam-book",
   "version": "1.0.0",
   "private": true,
-  "description": "Beam Book \u2014 tattoo booking for many shops: request form, quotes, scheduling, shop inbox, calendar sync. Powered by Beam.",
+  "description": "Beam Book — tattoo booking for many shops: request form, quotes, scheduling, shop inbox, calendar sync. Powered by Beam.",
   "scripts": {
     "dev": "node build.js && node dev-server.js",
     "test": "node test/smoke.js && node test/analytics.js && node test/import.js",
@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@vercel/blob": "^2.8.2",
-    "node-ical": "^0.27.3"
+    "node-ical": "^0.27.3",
+    "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4"
   }
 }

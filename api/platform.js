@@ -73,7 +73,7 @@ async function login(req, res, b) {
 }
 
 const urlFor = (rec) => {
-  const host = (rec.hosts || [])[0] || (process.env.BEAMBOOK_DOMAIN ? `${rec.slug}.${process.env.BEAMBOOK_DOMAIN}` : "");
+  const host = (rec.hosts || [])[0] || (tenant.mainDomain() ? `${rec.slug}.${tenant.mainDomain()}` : "");
   return host ? (host.endsWith(".localhost") ? `http://${host}` : `https://${host}`) : "";
 };
 
@@ -95,7 +95,7 @@ async function get(req, res) {
   const shops = (await tenant.listShops()).map((r) => ({ slug: r.slug, name: r.studio?.name || r.slug, city: r.studio?.city || "",
     hosts: r.hosts || [], active: r.active !== false, createdAt: r.createdAt, url: urlFor(r), plan: require("../lib/plans").planOf(r) }));
   const T = require("../lib/templates");
-  return send(res, 200, { loggedIn: true, shops, domain: process.env.BEAMBOOK_DOMAIN || "", defaults: tenant.DEFAULTS,
+  return send(res, 200, { loggedIn: true, shops, domain: tenant.mainDomain(), defaults: tenant.DEFAULTS,
     kinds: Object.fromEntries(Object.entries(T.KINDS).map(([k, v]) => [k, { label: v.label, words: v.words, form: v.form, negotiate: v.negotiate }])), types: T.TYPES });
 }
 
@@ -178,7 +178,7 @@ async function createWith(reply, b) {
   if (ownerName.length < 2) throw new Error("Enter the owner's name.");
   if (!EMAIL_RE.test(ownerEmail)) throw new Error("Enter the owner's email. It's what they'll log in with.");
   const set = settingsFrom({ ...b, studio: { contactEmail: ownerEmail, ...(b.studio || {}) } });
-  if (!process.env.BEAMBOOK_DOMAIN && !(set.hosts || []).length) throw new Error("Add the shop's web address (or set BEAMBOOK_DOMAIN in Vercel for automatic ones).");
+  if (!tenant.mainDomain() && !(set.hosts || []).length) throw new Error("Add the shop's web address (or set BEAMBOOK_DOMAIN in Vercel for automatic ones).");
   if (!set.studio?.name) throw new Error("Enter the shop's name.");
   const artistSlug = artistName.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "artist";
   const T = require("../lib/templates");

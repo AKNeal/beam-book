@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--#head-->
+<title>Apprenticeship application | %SHOP%</title>
+<meta name="description" content="Apply for the barber apprenticeship. No experience needed.">
+</head>
+<body>
+<!--#header apply-->
+<main id="main">
+  <div class="page" style="max-width:760px">
+    <header class="page-head">
+      <h1>Apply for the apprenticeship</h1>
+      <p class="intro">No experience needed, just the drive to get better every day. Fill this in and the shop will reach out.</p>
+    </header>
+    <form id="apply" class="form" novalidate>
+      <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+      <h2 style="font-size:1.25rem;margin:22px 0 4px">About you</h2>
+      <div class="field" data-f="first"><label for="f-first">First name</label><input id="f-first" name="first" type="text" autocomplete="given-name" maxlength="60" required><div class="err"></div></div>
+      <div class="field" data-f="middle"><label for="f-middle">Middle name <span class="hint">Optional</span></label><input id="f-middle" name="middle" type="text" autocomplete="additional-name" maxlength="60"><div class="err"></div></div>
+      <div class="field" data-f="last"><label for="f-last">Last name</label><input id="f-last" name="last" type="text" autocomplete="family-name" maxlength="60" required><div class="err"></div></div>
+      <div class="field" data-f="suffix"><label for="f-suffix">Suffix <span class="hint">Optional. Jr., III</span></label><input id="f-suffix" name="suffix" type="text" maxlength="10" style="max-width:120px"><div class="err"></div></div>
+      <div class="field" data-f="otherNames"><label for="f-otherNames">Other names you've used <span class="hint">Optional. Maiden name, etc. The state asks.</span></label><input id="f-otherNames" name="otherNames" type="text" maxlength="200"><div class="err"></div></div>
+      <div class="field" data-f="email"><label for="f-email">Email</label><input id="f-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="120" required><div class="err"></div></div>
+      <div class="field" data-f="phone"><label for="f-phone">Phone</label><input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="30" required><div class="err"></div></div>
+      <div class="field" data-f="street"><label for="f-street">Mailing address</label><input id="f-street" name="street" type="text" autocomplete="street-address" maxlength="120" required><div class="err"></div></div>
+      <div class="field" data-f="city"><label for="f-city">City</label><input id="f-city" name="city" type="text" autocomplete="address-level2" maxlength="60" required><div class="err"></div></div>
+      <div class="field" data-f="state"><label for="f-state">State</label><input id="f-state" name="state" type="text" autocomplete="address-level1" maxlength="2" style="max-width:90px" value="AK" required><div class="err"></div></div>
+      <div class="field" data-f="zip"><label for="f-zip">ZIP</label><input id="f-zip" name="zip" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="10" style="max-width:140px" required><div class="err"></div></div>
+      <div class="field" data-f="correspondence"><label for="f-correspondence">The state board should contact you by</label><select id="f-correspondence" name="correspondence"><option value="email">Email</option><option value="mail">Mail</option></select><div class="err"></div></div>
+      <h2 style="font-size:1.25rem;margin:22px 0 4px">Experience</h2>
+      <div class="field" data-f="trained"><label for="f-trained">Have you trained at a barber school or shop before?</label><select id="f-trained" name="trained"><option value="no">No</option><option value="yes">Yes</option></select><div class="err"></div></div>
+      <div id="priorBox" hidden>
+        <div class="field"><label for="f-p0">School or shop</label><input id="f-p0" data-prior="name" type="text" maxlength="120"><label for="f-h0" style="margin-top:6px">Hours there</label><input id="f-h0" data-prior="hours" type="number" min="0" max="5000" style="max-width:140px"></div>
+        <div class="field"><label for="f-p1">Another school or shop</label><input id="f-p1" data-prior="name" type="text" maxlength="120"><label for="f-h1" style="margin-top:6px">Hours there</label><input id="f-h1" data-prior="hours" type="number" min="0" max="5000" style="max-width:140px"></div>
+      </div>
+      <div class="field" data-f="startDate"><label for="f-startDate">When could you start? <span class="hint">Optional</span></label><input id="f-startDate" name="startDate" type="date" data-picker data-min="today" data-placeholder="Pick a start date"><div class="err"></div></div>
+      <div class="field" data-f="availability"><label for="f-availability">Days and hours you can work <span class="hint">Optional</span></label><input id="f-availability" name="availability" type="text" maxlength="200" placeholder="Weekdays after 3, all day Saturday"><div class="err"></div></div>
+      <div class="field" data-f="about"><label for="f-about">Why do you want to be a barber?</label><textarea id="f-about" name="about" rows="4" maxlength="1500" required></textarea><div class="err"></div></div>
+      <p class="small muted">Don't send your Social Security number or ID here. If you're accepted, you'll fill those in privately from your own login.</p>
+      <p class="form-error" id="formErr" role="alert" hidden></p>
+      <button class="btn sign" type="submit">Submit application</button>
+    </form>
+    <div id="done" hidden>
+      <h2>Thanks, we got your application.</h2>
+      <p>The shop will reach out by phone or email.</p>
+    </div>
+  </div>
+<!--#poweredby--></main>
+<!--#footer-->
+<script src="/assets/common.js"></script>
+<script>
+(function () {
+  var f = document.getElementById("apply"), err = document.getElementById("formErr");
+  var tr = document.getElementById("f-trained"); tr.addEventListener("change", function () { document.getElementById("priorBox").hidden = tr.value !== "yes"; });
+  f.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    f.querySelectorAll(".field").forEach(function (x) { x.classList.remove("invalid"); });
+    err.hidden = true;
+    var body = { action: "apprApply" };
+    new FormData(f).forEach(function (v, k) { body[k] = String(v); });
+    body.prior = [];
+    if (body.trained === "yes") f.querySelectorAll('[data-prior="name"]').forEach(function (n) { var h = n.parentNode.querySelector('[data-prior="hours"]'); if (n.value.trim()) body.prior.push({ name: n.value.trim(), hours: h.value }); });
+    var btn = f.querySelector("button"); btn.disabled = true;
+    try {
+      var r = await fetch("/api/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      var d = await r.json().catch(function () { return {}; });
+      if (!r.ok) {
+        Object.entries(d.fields || {}).forEach(function (kv) { var x = f.querySelector('[data-f="' + kv[0] + '"]'); if (x) { x.classList.add("invalid"); x.querySelector(".err").textContent = kv[1]; } });
+        err.textContent = d.error || "Something went wrong. Please try again."; err.hidden = false; btn.disabled = false; return;
+      }
+      f.hidden = true; document.getElementById("done").hidden = false; window.scrollTo(0, 0);
+    } catch (x) { err.textContent = "Couldn't send. Check your connection and try again."; err.hidden = false; btn.disabled = false; }
+  });
+})();
+</script>
+</body>
+</html>

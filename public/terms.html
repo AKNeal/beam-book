@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terms &amp; Conditions</title>
+<style>
+  body { margin: 0; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2937; background: #fafafa; }
+  main { max-width: 720px; margin: 0 auto; padding: 36px 20px 60px; }
+  h1 { font-size: 1.8rem; margin: 0 0 4px; } h2 { font-size: 1.25rem; margin: 32px 0 6px; }
+  .muted { color: #6b7280; font-size: 14px; } a { color: #1d4ed8; }
+  ul { padding-left: 20px; } li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Terms &amp; Conditions</h1>
+  <p class="muted"><span class="shop">This shop</span> · online booking provided by Neal Media &amp; Production (Beam) · Last updated November 18, 2026</p>
+
+  <h2 id="booking">Online booking</h2>
+  <ul>
+    <li><strong>Booked right away.</strong> When you book online, your appointment is confirmed immediately. There's no approval step, and the time is reserved for you with the barber shown in your confirmation.</li>
+    <li><strong>Changes and cancellations.</strong> You can move or cancel your appointment from the link in your confirmation, up to the cutoff the shop sets (shown when you book and in your confirmation). After that, call the shop. The shop's own no-show and late-arrival rules apply.</li>
+    <li><strong>Prices.</strong> Prices are set by each barber and shown when you book, for the service you pick. Anything extra is agreed with your barber in person before it's done.</li>
+    <li><strong>Payment.</strong> Nothing is charged online. You pay the shop at your appointment, by card or in cash.</li>
+    <li><strong>If the shop has to change your time.</strong> If your barber is unavailable, the shop will contact you to move or cancel your appointment.</li>
+  </ul>
+
+  <h2 id="cash">Paying cash</h2>
+  <ul>
+    <li>If you choose cash when you book, you agree to pay in cash, in U.S. currency, at the time of your appointment, and to bring enough to cover your service.</li>
+    <li>Where the shop offers a cash price, it's a discount for paying cash. It applies only when you actually pay in cash. If you pay by card instead, the regular price applies.</li>
+    <li>If the shop has an ATM, it's there as a courtesy only. It's owned and operated by a third party, may charge its own fees, and may be out of service or out of cash at any time. The shop doesn't guarantee that it will be available, so please bring cash with you.</li>
+    <li>When you book, the wording you agreed to is saved with your appointment, along with the date and time.</li>
+  </ul>
+
+  <h2 id="sms">SMS Terms</h2>
+  <ul>
+    <li><strong>Program:</strong> <span class="shop">the shop</span> appointment texts, sent through Neal Media &amp; Production's Beam booking system.</li>
+    <li><strong>What you'll get:</strong> if you tick "Text me" when booking, you get a confirmation, a reminder the day before, and notices if your appointment changes or is cancelled. You can reply to ask about your appointment.</li>
+    <li><strong>How often:</strong> message frequency varies, usually 2 to 4 texts per appointment.</li>
+    <li><strong>Message and data rates may apply.</strong></li>
+    <li><strong>Opt out:</strong> reply <strong>STOP</strong> at any time to stop texts. Reply <strong>START</strong> to get them again.</li>
+    <li><strong>Help:</strong> reply <strong>HELP</strong>, or call the shop at <span class="contact">the number on its website</span>.</li>
+    <li>Texting is optional and not required to book. Carriers are not liable for delayed or undelivered messages.</li>
+    <li>See our <a href="/privacy">Privacy Policy</a>. We do not sell or share your SMS opt-in data or personal information with third parties for marketing purposes.</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p><span class="shop">The shop</span><span class="contactline"></span><br>Booking system: Neal Media &amp; Production, North Pole, Alaska · <a href="mailto:nealmedia@yahoo.com">nealmedia@yahoo.com</a></p>
+</main>
+<script>
+fetch("/api/artists").then((r) => r.json()).then((d) => {
+  const s = d.shop || d.studio || {}; if (!s.name) return;
+  document.title = "Terms & Conditions · " + s.name;
+  document.querySelectorAll(".shop").forEach((n) => { n.textContent = s.name; });
+  const bits = [s.phone, s.address].filter(Boolean);
+  if (s.phone) document.querySelectorAll(".contact").forEach((n) => { n.textContent = s.phone; });
+  if (bits.length) document.querySelector(".contactline").textContent = " · " + bits.join(" · ");
+}).catch(() => {});
+</script>
+</body>
+</html>

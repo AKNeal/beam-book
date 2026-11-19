@@ -4,6 +4,28 @@
   "cleanUrls": true,
   "redirects": [
     {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "(?<shop>[a-z0-9-]+)\\.book\\.nealmedia\\.app"
+        }
+      ],
+      "destination": "https://:shop.beam-book.com/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "book\\.nealmedia\\.app"
+        }
+      ],
+      "destination": "https://www.beam-book.com/:path*",
+      "permanent": true
+    },
+    {
       "source": "/book",
       "destination": "/booking",
       "permanent": true

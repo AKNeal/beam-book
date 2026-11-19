@@ -558,6 +558,161 @@ const valid = (o = {}) => ({
         cookie = "";
         open = (await call(`/api/schedule?id=${cid}&t=${ctok}`)).data.days;
         assert.ok(open.flatMap((d) => d.slots).some((x) => x.start === target), "removing the calendar frees the time");
+        { // Test bookings: "test" in the name means no shop alert
+          const isTest = (c) => require("../lib/tenant").runAs("blackwolf", () => require("../lib/testbook").isTest(c));
+          assert.equal(await isTest({ name: "TEST" }), true); assert.equal(await isTest({ name: "Testa Rossa", email: "x@example.com" }), false);
+        }
+        { // Apprenticeship application (public /apply) → owner's Applications list
+          cookie = "";
+          let a = await call("/api/status", { body: { action: "apprApply", first: "", last: "Rivers", email: "nope", phone: "12" } });
+          assert.equal(a.status, 400); assert.ok(a.data.fields.first && a.data.fields.email && a.data.fields.phone);
+          a = await call("/api/status", { body: { action: "apprApply", first: "Jamie", last: "Rivers", email: "jamie@example.com", phone: "907-555-0100", about: "Cut my brother's hair for years", street: "1 Main St", city: "North Pole", state: "ak", zip: "99705", prior: [{ name: "Home practice", hours: 0 }] } });
+          assert.equal(a.status, 200, JSON.stringify(a.data));
+          cookie = real;
+          let v = await call("/api/admin/books", { body: { action: "apprView" } });
+          assert.equal(v.status, 200, JSON.stringify(v.data)); assert.equal(v.data.applications[0].first, "Jamie"); assert.equal(v.data.applications[0].status, "new");
+          assert.equal(v.data.applications[0].state, "AK");
+          { // paperwork details: encrypted at rest, SSN masked; qualified-task reps
+            process.env.SESSION_SECRET = process.env.SESSION_SECRET || "s3cret";
+            const P = require("../lib/paperwork"), A = require("../lib/apprentice"), store = require("../lib/store");
+            await require("../lib/tenant").runAs("blackwolf", async () => {
+              const app = (await A.applications())[0];
+              assert.equal(P.fromApplication(app).city, "North Pole");
+              await P.saveProfile("zz-test", { ...app, ssn: "123-45-6789", dob: "2000-01-02", i9Status: "citizen", w4Filing: "single", education: "hs" });
+              const raw = JSON.stringify(await store.getJSON("appr:pw:zz-test")); assert.ok(!raw.includes("6789") && !raw.includes("North Pole"), "stored encrypted");
+              let m = P.masked(await P.profile("zz-test")); assert.equal(m.ssn, "***-**-6789"); assert.deepEqual(m.missing, []);
+              await P.saveProfile("zz-test", { ...m, ssn: m.ssn }); assert.equal((await P.profile("zz-test")).ssn, "123456789", "masked SSN keeps the saved one");
+              await assert.rejects(P.saveProfile("zz-test", { ssn: "12" }));
+              await A.logRep("zz-test", "t3", { count: 3 }, "Owner"); let vw = await A.view("zz-test");
+              assert.equal(vw.checklist.find((c) => c.id === "t3").repsPending, 3);
+              await A.reviewRep("zz-test", "t3", vw.reps.t3[0].id, true, "Owner"); vw = await A.view("zz-test");
+              assert.equal(vw.checklist.find((c) => c.id === "t3").repsApproved, 1);
+              await A.logHours("zz-test", { date: "2026-01-05", hours: 2, kind: "theory", approved: true }, "Owner");
+              assert.equal((await A.view("zz-test")).theoryHours, 2);
+              await store.del("appr:pw:zz-test"); await store.del("appr:zz-test");
+              const Demo = require("../lib/apprdemo"); await Demo.seed("Owner");
+              assert.equal((await Demo.people()).length, 4); assert.ok((await A.list()).includes("demo-eli-santos"));
+              assert.equal((await A.view("demo-eli-santos")).approvedHours, 1650); assert.ok((await A.view("demo-maya-chen")).pendingHours > 0);
+              assert.ok((await A.applications()).some((x) => x.demo));
+              await Demo.clear(); assert.equal((await A.list()).filter((x) => /^demo-/.test(x)).length, 0); assert.ok(!(await A.applications()).some((x) => x.demo));
+            });
+          }
+          { // Onboard an apprentice in one step, then upload paperwork that was already filled out
+            const appId = v.data.applications[0].id;
+            let o = await call("/api/admin/books", { body: { action: "apprOnboard", first: "", last: "X" } }); assert.equal(o.status, 400);
+            o = await call("/api/admin/books", { body: { action: "apprOnboard", first: "Kiley", last: "Test", email: "kiley@example.com", phone: "907-555-0101", startDate: "2026-11-02", permit: "BAHA-1", appId } });
+            assert.equal(o.status, 200, JSON.stringify(o.data)); assert.ok(o.data.invite && /\/admin\?reset=/.test(o.data.invite.link));
+            const ks = o.data.slug;
+            let lv = await call("/api/admin/books", { body: { action: "apprView" } });
+            const kr = lv.data.apprentices.find((x) => x.slug === ks); assert.ok(kr && !kr.demo && kr.permit === "BAHA-1" && kr.startDate === "2026-11-02", JSON.stringify(kr));
+            assert.equal(lv.data.applications.find((x) => x.id === appId).status, "accepted");
+            const pub = await fetch(BASE + "/api/artists", { headers: { "X-Forwarded-Host": SHOPHOST } }).then((r) => r.json());
+            assert.ok(!JSON.stringify(pub).includes(ks), "a new apprentice isn't on the booking page");
+            const dup = await call("/api/admin/books", { body: { action: "apprOnboard", first: "K", email: "kiley@example.com" } }); assert.equal(dup.status, 400, "email already has a login");
+            const pdf = "data:application/pdf;base64," + Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF").toString("base64");
+            let fu = await call("/api/admin/books", { body: { action: "apprFileAdd", slug: ks, kind: "ak4194", filename: "enrollment.pdf", data: pdf } });
+            assert.equal(fu.status, 200, JSON.stringify(fu.data)); assert.equal(fu.data.files.length, 1); assert.equal(fu.data.files[0].label, fu.data.kinds.ak4194);
+            assert.equal((await call("/api/admin/books", { body: { action: "apprFileAdd", slug: ks, kind: "w4", data: "data:text/plain;base64," + Buffer.from("hello").toString("base64") } })).status, 400, "only PDFs and images");
+            assert.equal((await call("/api/admin/books", { body: { action: "apprFileAdd", slug: "demo-maya-chen", kind: "w4", data: pdf } })).status, 404);
+            const fileUrl = "/api/admin/photo?p=" + encodeURIComponent(fu.data.files[0].name);
+            const got = await fetch(BASE + fileUrl, { headers: { Cookie: cookie, "X-Forwarded-Host": SHOPHOST } });
+            assert.equal(got.status, 200); assert.ok((await got.text()).startsWith("%PDF-"));
+            assert.equal((await fetch(BASE + fileUrl, { headers: { "X-Forwarded-Host": SHOPHOST } })).status, 401, "logged out can't open it");
+            lv = await call("/api/admin/books", { body: { action: "apprView" } }); assert.equal(lv.data.apprentices.find((x) => x.slug === ks).files, 1);
+            fu = await call("/api/admin/books", { body: { action: "apprFileDel", slug: ks, id: fu.data.files[0].id } }); assert.equal(fu.data.files.length, 0);
+            { // someone already on the team: Add as apprentice, then Onboard next to their name
+              const ts = await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").add("Kiley Kuykendall"));
+              assert.equal((await call("/api/admin/books", { body: { action: "apprSet", slug: ts, on: true } })).status, 200);
+              let tv = await call("/api/admin/books", { body: { action: "apprView" } });
+              assert.equal(tv.data.apprentices.find((x) => x.slug === ts).onboarded, false);
+              const ob = await call("/api/admin/books", { body: { action: "apprOnboard", slug: ts, startDate: "2026-11-10", permit: "BAHA-7" } });
+              assert.equal(ob.status, 200, JSON.stringify(ob.data)); assert.equal(ob.data.invite, null); assert.equal(ob.data.slug, ts);
+              tv = await call("/api/admin/books", { body: { action: "apprView" } });
+              const tr = tv.data.apprentices.find((x) => x.slug === ts); assert.ok(tr.onboarded && tr.permit === "BAHA-7" && tr.startDate === "2026-11-10");
+              await call("/api/admin/books", { body: { action: "apprSet", slug: ts, on: false } });
+              await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").remove(ts).catch(() => {}));
+            }
+            { // applied through the website with the same name as a team member: onboarding uses that team member
+              const ts = await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").add("Rae Quill"));
+              const ap = await call("/api/status", { body: { action: "apprApply", first: "Rae", last: "Quill", email: "rae@example.com", phone: "907-555-0102", about: "Love it", street: "1 Main St", city: "North Pole", state: "AK", zip: "99705" } });
+              assert.equal(ap.status, 200, JSON.stringify(ap.data));
+              const apps = (await call("/api/admin/books", { body: { action: "apprView" } })).data.applications; const rid = apps.find((x) => x.first === "Rae").id;
+              const ob = await call("/api/admin/books", { body: { action: "apprOnboard", first: "Rae", last: "Quill", appId: rid } });
+              assert.equal(ob.status, 200, JSON.stringify(ob.data)); assert.equal(ob.data.slug, ts, "no duplicate team member");
+              await call("/api/admin/books", { body: { action: "apprSet", slug: ts, on: false } }); await call("/api/admin/books", { body: { action: "apprApp", id: rid, status: "delete" } });
+              const tm2 = await call("/api/admin/login", { body: { action: "team" } }); const ru = (tm2.data.users || tm2.data.team || []).find((x) => x.email === "rae@example.com");
+              if (ru) await call("/api/admin/login", { body: { action: "remove", id: ru.id } });
+              await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").remove(ts).catch(() => {}));
+            }
+            { // Instructor role: signs off apprentices; no applications, paperwork or settings. Owner / Instructor keeps everything.
+              const owner = cookie;
+              let ad = await call("/api/admin/login", { body: { action: "add", name: "Ivy Teach", email: "ivy@example.com", role: "instructor", newArtist: "Ivy Teach", password: "ivy teaches fades 1", mustChange: false } });
+              assert.equal(ad.status, 200, JSON.stringify(ad.data));
+              const iv = ad.data.users.find((x) => x.email === "ivy@example.com"); assert.equal(iv.roleName, "Instructor"); assert.equal(iv.roleKey, "instructor"); assert.equal(iv.role, "artist");
+              await call("/api/admin/books", { body: { action: "apprLog", slug: ks, date: "2026-11-12", hours: 2 } }); // owner logs: signed off
+              cookie = "";
+              const li = await call("/api/admin/login", { body: { action: "login", email: "ivy@example.com", password: "ivy teaches fades 1" } }); assert.equal(li.status, 200, JSON.stringify(li.data));
+              let iv2 = await call("/api/admin/books", { body: { action: "apprView" } });
+              assert.equal(iv2.status, 200, JSON.stringify(iv2.data)); assert.equal(iv2.data.full, false); assert.deepEqual(iv2.data.applications, []);
+              assert.ok(iv2.data.apprentices.some((x) => x.slug === ks));
+              iv2 = await call("/api/admin/books", { body: { action: "apprLog", slug: ks, date: "2026-11-13", hours: 3 } }); assert.equal(iv2.status, 200, JSON.stringify(iv2.data));
+              assert.equal(iv2.data.approvedHours, 5, "instructor's entries are signed off");
+              assert.equal((await call("/api/admin/books", { body: { action: "apprCheck", slug: ks, id: "m1", on: true } })).status, 200);
+              assert.equal((await call("/api/admin/books", { body: { action: "apprFiles", slug: ks } })).status, 403, "no paperwork");
+              assert.equal((await call("/api/admin/books", { body: { action: "apprProfile", slug: ks, get: true } })).status, 403, "no private details");
+              assert.equal((await call("/api/admin/books", { body: { action: "apprOnboard", first: "X" } })).status, 403);
+              assert.equal((await call("/api/admin/books", { body: { action: "apprApp", id: "x", status: "accepted" } })).status, 403);
+              cookie = owner;
+              const tm = await call("/api/admin/login", { body: { action: "team" } });
+              const me0 = tm.data.users.find((x) => x.role === "owner" && x.email); 
+              const up = await call("/api/admin/login", { body: { action: "update", id: me0.id, role: "ownerInstructor" } }); assert.equal(up.status, 200, JSON.stringify(up.data));
+              const me1 = up.data.users.find((x) => x.id === me0.id); assert.equal(me1.roleName, "Owner / Instructor"); assert.equal(me1.role, "owner");
+              assert.equal((await call("/api/admin/books", { body: { action: "apprView" } })).data.full, true, "owner keeps everything");
+              await call("/api/admin/login", { body: { action: "update", id: me0.id, role: "owner" } });
+              const ivu = tm.data.users.find((x) => x.email === "ivy@example.com"); await call("/api/admin/login", { body: { action: "remove", id: ivu.id } });
+              await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").remove(iv.artist).catch(() => {}));
+            }
+            // tidy up so later checks see the same team
+            await call("/api/admin/books", { body: { action: "apprSet", slug: ks, on: false } });
+            const tm = await call("/api/admin/login", { body: { action: "team" } }); const ku = (tm.data.users || tm.data.team || []).find((x) => x.email === "kiley@example.com");
+            if (ku) await call("/api/admin/login", { body: { action: "remove", id: ku.id } });
+            await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").remove(ks).catch(() => {}));
+          }
+          v = await call("/api/admin/books", { body: { action: "apprApp", id: v.data.applications[0].id, status: "contacted" } }); assert.equal(v.data.applications[0].status, "contacted");
+          v = await call("/api/admin/books", { body: { action: "apprApp", id: v.data.applications[0].id, status: "delete" } }); assert.equal(v.data.applications.length, 0);
+          cookie = "";
+        }
+        { // Shop setup link: setup status, texting sign-up, steps, feedback
+          cookie = real;
+          const OL = await call("/api/admin/books", { body: { action: "onboardLink" } }); assert.equal(OL.status, 200, JSON.stringify(OL.data));
+          const ot = new URL(OL.data.url).searchParams.get("t");
+          cookie = "";
+          let o = await call("/api/status", { body: { action: "onboardSetup", t: "nope" } }); assert.equal(o.status, 404);
+          o = await call("/api/status", { body: { action: "onboardSetup", t: ot } }); assert.equal(o.status, 200, JSON.stringify(o.data));
+          assert.ok(Array.isArray(o.data.calendars) && o.data.links.booking.endsWith("/appointment")); assert.equal(o.data.texting, false);
+          o = await call("/api/status", { body: { action: "onboardA2p", t: ot, a2p: { legalName: "Test Shop LLC", ein: "12345", contactEmail: "a@example.com" } } }); assert.equal(o.status, 400, "bad EIN refused");
+          o = await call("/api/status", { body: { action: "onboardA2p", t: ot, a2p: { legalName: "Test Shop LLC", ein: "12-3456789", businessType: "LLC", contactEmail: "a@example.com" } } });
+          assert.equal(o.status, 200, JSON.stringify(o.data)); assert.equal(o.data.a2p.ein, "••-•••6789", "EIN masked when shown back");
+          o = await call("/api/status", { body: { action: "onboardTestText", t: ot, phone: "9075550123" } }); assert.equal(o.status, 400, "no texting without Twilio");
+          o = await call("/api/status", { body: { action: "onboardDone", t: ot, step: "test" } }); assert.ok(o.data.done.test);
+          o = await call("/api/status", { body: { action: "onboardFeedback", t: ot, area: "Inbox", text: "Love the day view" } }); assert.equal(o.status, 200);
+          o = await call("/api/status", { body: { action: "onboardSetup", t: ot } }); assert.equal(o.data.feedback.length, 1); assert.equal(o.data.a2p.legalName, "Test Shop LLC");
+          cookie = real;
+          o = await call("/api/admin/books", { body: { action: "onboardFeedback" } }); assert.equal(o.data.feedback[0].text, "Love the day view");
+          cookie = "";
+        }
+        { // Barber's own calendar-sync link (onboarding pages): no login, key-checked
+          cookie = real;
+          const L = await call("/api/admin/books", { body: { action: "calsyncLinks" } }); assert.equal(L.status, 200, JSON.stringify(L.data));
+          const lk = new URL(L.data.links.find((x) => x.slug === "nathan-ealey").url);
+          const qb = lk.searchParams.get("b"), qk = lk.searchParams.get("k");
+          cookie = "";
+          let g = await call(`/api/calsync?b=${qb}&k=${qk.replace(/.$/, (c) => (c === "0" ? "1" : "0"))}`); assert.equal(g.status, 404, "wrong key refused");
+          g = await call(`/api/calsync?b=${qb}&k=${qk}`); assert.equal(g.status, 200); assert.equal(g.data.calendars.length, 0);
+          g = await call("/api/calsync", { body: { b: qb, k: qk, name: "iPhone", url: icsUrl } }); assert.equal(g.status, 200, JSON.stringify(g.data));
+          assert.equal(g.data.calendars[0].events, 1, "all-day off by default from the sync page"); assert.ok(!JSON.stringify(g.data).includes("Sleeve"), "no event details");
+          g = await call("/api/calsync", { body: { b: qb, k: qk, remove: g.data.calendars[0].id } }); assert.equal(g.data.calendars.length, 0);
+        }
         cookie = real;
         await call("/api/admin/update", { body: { id: cid, action: "delete" } });
       } finally { icsSrv.close(); }
@@ -742,9 +897,17 @@ const valid = (o = {}) => ({
       assert.equal(slot.barber, "mike-fade");
       x = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "any", start: slot.start, name: "J", phone: "12" } });
       assert.equal(x.status, 400); assert.ok(x.data.fields.name && x.data.fields.phone);
-      x = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "any", start: slot.start, name: "Client 3 Test", phone: "907-555-1003", email: "three@example.com", textOk: true } });
-      assert.equal(x.status, 200, JSON.stringify(x.data)); assert.equal(x.data.barber, "Mike Fade");
-      x = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: slot.start, name: "Someone Else", phone: "907-555-2222" } });
+      { // paying: must choose; cash needs the agreement
+        let pz = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "any", start: slot.start, name: "Client 3 Test", phone: "907-555-1003" } });
+        assert.equal(pz.status, 400); assert.ok(pz.data.fields.pay, "must choose how to pay");
+        pz = await call("/api/schedule", { body: { instant: true, pay: "cash", service: svc.id, barber: "any", start: slot.start, name: "Client 3 Test", phone: "907-555-1003" } });
+        assert.equal(pz.status, 400); assert.ok(pz.data.fields.cashAgree, "cash needs the agreement");
+        const g = await call("/api/schedule?instant=1"); assert.ok(g.data.pay.ask && /confirmed as soon as you book/.test(g.data.bookingTerms));
+        const gt = await call(`/api/schedule?instant=1&service=${svc.id}&barber=any`); assert.ok(/pay in cash/.test(gt.data.cashTerms));
+      }
+      x = await call("/api/schedule", { body: { instant: true, pay: "cash", cashAgree: true, service: svc.id, barber: "any", start: slot.start, name: "Client 3 Test", phone: "907-555-1003", email: "three@example.com", textOk: true } });
+      assert.equal(x.status, 200, JSON.stringify(x.data)); assert.equal(x.data.barber, "Mike Fade"); assert.equal(x.data.pay, "cash");
+      x = await call("/api/schedule", { body: { instant: true, pay: "card", service: svc.id, barber: "mike-fade", start: slot.start, name: "Someone Else", phone: "907-555-2222" } });
       assert.equal(x.status, 409, "same time can't be booked twice");
       // First available is fair: two clients at the same open time land with two different barbers, not the first one listed.
       { const days = (await call(`/api/schedule?instant=1&service=${svc.id}&barber=any`)).data.days;
@@ -776,7 +939,7 @@ const valid = (o = {}) => ({
         let y = await call(`/api/schedule?instant=1&service=${svc.id}&barber=mike-fade`);
         const allSlots = y.data.days.flatMap((d) => d.slots);
         const [s1, s2] = [allSlots[3], allSlots[8]];
-        y = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: s1.start, name: "Client 10 Test", phone: "907-555-1010" } });
+        y = await call("/api/schedule", { body: { instant: true, pay: "card", service: svc.id, barber: "mike-fade", start: s1.start, name: "Client 10 Test", phone: "907-555-1010" } });
         assert.equal(y.status, 200, JSON.stringify(y.data));
         const st = new URL(y.data.statusUrl, "http://x").searchParams; const id = st.get("id"), t = st.get("t");
         y = await call(`/api/status?id=${id}&t=${t}`); assert.equal(y.data.canChange, true); assert.equal(y.data.instant, true); assert.equal(y.data.service.id, svc.id);
@@ -785,7 +948,7 @@ const valid = (o = {}) => ({
         y = await call(`/api/schedule?instant=1&service=${svc.id}&barber=mike-fade`);
         let open = y.data.days.flatMap((d) => d.slots).map((sl) => sl.start);
         assert.ok(open.includes(s1.start), "old time is open again"); assert.ok(!open.includes(s2.start), "new time is taken");
-        y = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: s2.start, name: "Late Comer", phone: "907-555-3002" } });
+        y = await call("/api/schedule", { body: { instant: true, pay: "card", service: svc.id, barber: "mike-fade", start: s2.start, name: "Late Comer", phone: "907-555-3002" } });
         assert.equal(y.status, 409, "nobody else can take the moved-to time");
         y = await call("/api/status", { body: { id, t, action: "reschedule", start: slot.start } });
         assert.equal(y.status, 409, "can't move onto someone else's appointment");
@@ -795,7 +958,7 @@ const valid = (o = {}) => ({
         open = y.data.days.flatMap((d) => d.slots).map((sl) => sl.start); assert.ok(open.includes(s2.start), "cancelled time is open again");
         y = await call("/api/status", { body: { id, t, action: "cancel" } }); assert.equal(y.status, 409, "can't cancel twice");
         // Inside the shop's cutoff, the link says to call instead.
-        y = await call("/api/schedule", { body: { instant: true, service: svc.id, barber: "mike-fade", start: s1.start, name: "Client 11 Test", phone: "907-555-1011" } });
+        y = await call("/api/schedule", { body: { instant: true, pay: "card", service: svc.id, barber: "mike-fade", start: s1.start, name: "Client 11 Test", phone: "907-555-1011" } });
         const st2 = new URL(y.data.statusUrl, "http://x").searchParams;
         cookie = owner;
         y = await call("/api/admin/books", { body: { action: "bookingSettings", changeCutoffHours: 168 } }); assert.equal(y.data.changeCutoffHours, 168);
@@ -819,6 +982,10 @@ const valid = (o = {}) => ({
         y = await call("/api/admin/books", { body: { action: "dashPay", slug: "mike-fade", pay: { model: "commission", rate: 60 } } }); assert.equal(y.data.pay["mike-fade"].rate, 60);
         y = await call("/api/admin/books", { body: { action: "challengeSave", title: "Rebook Rumble", metric: "rebookRate", goal: 70, startDate: T.dateKey(Date.now()), endDate: T.dateKey(Date.now() + 14 * 864e5), prize: "$100" } });
         assert.equal(y.status, 200, JSON.stringify(y.data)); assert.equal(y.data.challenges[0].status, "live"); assert.equal(y.data.challenges[0].rows[0].name, "Mike Fade");
+        // the floating button: +1 and undo on a barber's count
+        y = await call("/api/admin/books", { body: { action: "challengeRebook", slug: "mike-fade" } }); assert.equal(y.data.live, true); const base = y.data.count;
+        y = await call("/api/admin/books", { body: { action: "challengeRebook", slug: "mike-fade", add: true } }); assert.equal(y.data.count, base + 1, JSON.stringify(y.data));
+        y = await call("/api/admin/books", { body: { action: "challengeRebook", slug: "mike-fade", undo: true } }); assert.equal(y.data.count, base);
         y = await call("/api/admin/books", { body: { action: "challengeSave", title: "Bad", metric: "rebookRate", goal: 150, startDate: "2026-01-01", endDate: "2026-01-02" } }); assert.equal(y.status, 400, "rebook goal over 100% refused");
         y = await call("/api/admin/books", { body: { action: "boardLink" } }); const tok = y.data.token;
         cookie = "";
@@ -867,6 +1034,21 @@ const valid = (o = {}) => ({
           : { rating, userRatingCount: 40 } });
         process.env.RANK_SOURCE = "places"; // the Places API check only runs and counts when switched on (the server runs with it too)
         delete process.env.GOOGLE_PLACES_KEY;
+        { // Owner removes a barber who came with the shop (no appointments, no login)
+          const A = require("../lib/artists");
+          const n0 = await tenant.runAs("levelup", async () => (await A.list()).length);
+          const extra = await tenant.runAs("levelup", () => A.add("Temp Barber"));
+          await tenant.runAs("levelup", () => A.remove(extra));
+          assert.equal(await tenant.runAs("levelup", async () => (await A.list()).length), n0, "added barber removed");
+          if (n0 > 1) {
+            const first = await tenant.runAs("levelup", async () => (await A.list()).find((a) => !a.added)?.slug);
+            const users = await tenant.runAs("levelup", async () => (await require("../lib/store").getJSON("users")) || []);
+            if (first && !users.some((u) => u.artist === first) && !(await tenant.runAs("levelup", () => require("../lib/calendar").apptsBetween(first, Date.now(), Date.now() + 400 * 864e5))).length) {
+              await tenant.runAs("levelup", () => A.remove(first));
+              assert.ok(!(await tenant.runAs("levelup", () => A.bySlug(first))), "built-in barber removed");
+            }
+          }
+        }
         let r1 = await tenant.runAs("levelup", () => rc.run({ force: true })); assert.equal(r1.skipped, "no key", "no key, no guessing");
         process.env.GOOGLE_PLACES_KEY = "test";
         const day1 = Date.UTC(2026, 10, 12, 20), day2 = Date.UTC(2026, 10, 13, 20); // Thu, Fri (Alaska)

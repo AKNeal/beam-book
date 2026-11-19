@@ -4,21 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Inbox</title>
+<title>Beam</title>
 <link rel="icon" href="/assets/brand/beam-icon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=Press+Start+2P&family=Anton&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&family=Alfa+Slab+One&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
+<script>try{var lk=localStorage.getItem("bb-look");if(lk&&/^(floor|chrome|pole)$/.test(lk))document.documentElement.dataset.look=lk}catch(e){}</script>
 <style>
   body { font-size: 16px; }
   .shell { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
   .adminbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; min-height: 60px; padding-top: 10px; padding-bottom: 10px; }
-  .adminbar nav { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+  .adminbar nav { display: flex; flex-wrap: wrap; gap: 4px 18px; flex-basis: 100%; }
+  .adminbar .look { margin-left: auto; }
   .adminbar nav a { margin-left: 0; white-space: nowrap; }
   @media (max-width: 480px) { .adminbar .brand { font-size: 18px; } .adminbar nav a { font-size: 14px; } }
   .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 20px 0 12px; }
-  .tab { border: 1.5px solid var(--line); background: #fff; border-radius: 99px; padding: 6px 14px; font: 600 14px var(--body); cursor: pointer; color: var(--ink); }
+  .tab { border: 1.5px solid var(--line); background: var(--white); border-radius: 99px; padding: 6px 14px; font: 600 14px var(--body); cursor: pointer; color: var(--ink); }
   .tab[aria-pressed="true"] { border: 1.5px dashed var(--sign-dark); background: var(--soft); }
   .tab .n { color: var(--graphite); font-weight: 400; margin-left: 4px; }
   .filters { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -28,14 +30,14 @@
   .list { border-top: 1.5px solid var(--ink); max-height: calc(100vh - 220px); overflow: auto; }
   @media (max-width: 860px) { .list { max-height: none; } }
   .item { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: transparent; padding: 12px 10px; cursor: pointer; font: inherit; color: inherit; }
-  .item:hover { background: #fff; }
+  .item:hover { background: var(--white); }
   .item[aria-current="true"] { background: var(--soft); box-shadow: inset 3px 0 0 var(--sign-dark); }
   .item .who { font-weight: 700; }
   .item .what { color: var(--graphite); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .item .meta { font-size: 13px; color: var(--graphite); margin-top: 4px; }
   .st { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; margin-left: 6px; }
   .st.new { color: var(--ink); } .st.quoted, .st.deposit, .st.scheduling { color: #8a5a00; } .st.booked { color: var(--ok); } .st.done, .st.declined { color: var(--graphite); }
-  .panel { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  .panel { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
   .facts { display: grid; grid-template-columns: 140px 1fr; gap: 6px 14px; margin: 16px 0; font-size: 15px; }
   .facts dt { color: var(--graphite); } .facts dd { margin: 0; }
   .pics { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin: 12px 0; }
@@ -174,13 +176,72 @@
     .award-q { font-size: 12px; } .award-ahead { display: none; }
   }
 
+
+  /* ---------- Looks: one dropdown in the header, remembered on this device (from Artemis's Level Up dashboard).
+     Classic = the shop's own light inbox. Shop Floor and Clean Chrome keep the shop's accent color; Barber Pole has its own. */
+  .look { display: inline-flex; align-items: center; gap: 8px; font: 700 12px var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--graphite); }
+  .look select { font: 600 14px var(--body); letter-spacing: 0; text-transform: none; color: var(--ink); background: var(--white); border: 1px solid var(--line); border-radius: 99px; padding: 6px 10px; cursor: pointer; }
+  html[data-look] header.top { position: sticky; top: 0; z-index: 30; }
+  /* Classic inbox for a dark-mode shop: the inbox is light, so derive the soft and link colors for light (fixes unreadable selected tabs). */
+  html:not(.light):not([data-look]) body.admin { --soft: color-mix(in srgb, var(--sign) 12%, #ffffff) !important;
+    --sign-dark: color-mix(in srgb, var(--sign) 72%, #000000) !important; --gold-bright: color-mix(in srgb, var(--sign) 72%, #000000) !important; }
+  html[data-look="floor"] body.admin {
+    color-scheme: dark;
+    --snow: #0d0d0f; --white: #17171b; --ink: #f4f4f5; --graphite: #a1a1aa; --line: #2e2e35; --field: #3f3f46; --night: #07090b;
+    --danger-soft: #3a1f1c; --error: #ff8a80; --ok: #4ade80; --radius: 12px; --btn-hover: #ffffff;
+    --head: Anton, Impact, "Arial Narrow", sans-serif; --body: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --sign-dark: color-mix(in srgb, var(--sign) 65%, #ffffff) !important; --gold-bright: color-mix(in srgb, var(--sign) 65%, #ffffff) !important;
+    --gold: var(--sign) !important; --soft: color-mix(in srgb, var(--sign) 16%, #0d0d0f) !important;
+  }
+  html[data-look="floor"] header.top { background: #17171b; border-bottom: 1px solid #2e2e35; }
+  html[data-look="floor"] h1, html[data-look="floor"] h2 { font-weight: 400; text-transform: uppercase; letter-spacing: .01em; }
+  html[data-look="chrome"] body.admin {
+    color-scheme: light;
+    --snow: #eef0f4; --white: #ffffff; --ink: #15171c; --graphite: #6b7280; --line: #dfe2e8; --field: #cfd3da; --radius: 16px; --btn-hover: #000;
+    --head: Oswald, Impact, sans-serif; --body: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --sign-dark: color-mix(in srgb, var(--sign) 75%, #000000) !important; --gold-bright: color-mix(in srgb, var(--sign) 75%, #000000) !important;
+    --gold: color-mix(in srgb, var(--sign) 85%, #000000) !important; --soft: color-mix(in srgb, var(--sign) 10%, #ffffff) !important;
+  }
+  html[data-look="chrome"] header.top { background: #ffffff; border-bottom: 1px solid #dfe2e8; }
+  html[data-look="chrome"] .panel, html[data-look="chrome"] .dash .kpi, html[data-look="chrome"] .dash .ch { box-shadow: 0 1px 2px rgba(16,24,40,.05), 0 4px 14px rgba(16,24,40,.04); }
+  html[data-look="chrome"] h1, html[data-look="chrome"] h2 { font-weight: 600; text-transform: uppercase; }
+  html[data-look="pole"] body.admin {
+    color-scheme: light;
+    --snow: #f3ead7; --white: #fffaf0; --ink: #1b2540; --graphite: #6e6550; --line: #d8c7a2; --field: #c9b68e; --radius: 6px; --btn-hover: #1b2540;
+    --head: "Alfa Slab One", Georgia, serif; --body: "Source Sans 3", system-ui, sans-serif;
+    --sign: #b3121f !important; --sign-hover: #d42a36 !important; --on-sign: #ffffff !important; --sign-dark: #b3121f !important;
+    --gold: #1f4e9c !important; --gold-bright: #1f4e9c !important; --soft: #efe3c8 !important;
+  }
+  html[data-look="pole"] header.top { background: #1b2540; color: #fffaf0; position: sticky; }
+  html[data-look="pole"] header.top::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 6px; pointer-events: none;
+    background: repeating-linear-gradient(-45deg, #b3121f 0 14px, #fffaf0 14px 28px, #1f4e9c 28px 42px, #fffaf0 42px 56px); }
+  html[data-look="pole"] header.top a, html[data-look="pole"] header.top .look { color: #fffaf0; }
+  html[data-look="pole"] header.top .whoami { color: #d8c7a2; }
+  html[data-look="pole"] .panel { box-shadow: 3px 3px 0 var(--line); }
+  html[data-look="pole"] h1, html[data-look="pole"] h2 { font-weight: 400; }
+  .brand .powered { display: block; font: 600 11px/1.2 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; opacity: .6; margin-top: 2px; }
 </style>
 </head>
 <body class="admin">
 <header class="top"><div class="shell adminbar">
-  <div><a class="brand" href="/admin"><img class="shop-logo" data-shop="logo" alt="" hidden><span><b id="shopName" style="font-weight:inherit">Shop</b> · Inbox</span></a><div class="whoami" id="whoami"></div></div>
-  <nav id="nav" hidden><a href="#" id="viewDash">Dashboard</a><a href="#" id="viewCheckout">Checkout</a><a href="#" id="viewDay">Day</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewSite" hidden>Website</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
+  <div><a class="brand" href="/admin"><img class="shop-logo" data-shop="logo" alt="" hidden><span><b id="shopName" style="font-weight:inherit">Shop</b><small class="powered">Powered by Beam</small></span></a><div class="whoami" id="whoami"></div></div>
+  <label class="look">Theme <select id="lookSel" aria-label="Theme">
+    <option value="">Classic</option><option value="floor">Shop Floor</option><option value="chrome">Clean Chrome</option><option value="pole">Barber Pole</option>
+  </select></label>
+  <nav id="nav" hidden><a href="#" id="viewDash">Dashboard</a><a href="#" id="viewCheckout">Checkout</a><a href="#" id="viewDay">Shop calendar</a><a href="#" id="viewReq">Requests</a><a href="#" id="viewCal">Calendar</a><a href="#" id="viewClients">Clients</a><a href="#" id="viewArt">Books and waitlist</a><a href="#" id="viewAppr" hidden>Apprenticeship</a><a href="#" id="viewForm" hidden>Booking form</a><a href="#" id="viewTeam" hidden>Team</a><a href="#" id="viewSite" hidden>Website</a><a href="#" id="viewSetup" hidden>Setup</a><a href="#" id="viewAcct">Account</a><a href="#" id="logout">Log out</a></nav>
 </div></header>
+<div class="shell setup-banner" id="setupBanner" hidden><div class="sb-in">
+  <div class="sb-text"><b>Setup checklist</b> <span id="setupBannerLeft"></span><div class="sb-prog" aria-hidden="true"><i id="setupBannerBar"></i></div></div>
+  <a href="#" class="btn sm" id="setupBannerGo">Open checklist</a>
+</div></div>
+<style>
+.setup-banner{margin-top:14px}
+.setup-banner .sb-in{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:var(--white);border:1px solid var(--line);border-left:5px solid var(--sign);border-radius:8px;padding:12px 16px}
+.setup-banner .sb-text{flex:1;min-width:220px}.setup-banner .sb-text span{color:var(--graphite)}
+.setup-banner .sb-prog{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px;max-width:420px}.setup-banner .sb-prog i{display:block;height:100%;background:var(--sign);border-radius:99px;width:0}
+</style>
+<script>(function(){var sel=document.getElementById("lookSel");sel.value=document.documentElement.dataset.look||"";
+sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentElement.dataset.look=v;else delete document.documentElement.dataset.look;try{v?localStorage.setItem("bb-look",v):localStorage.removeItem("bb-look")}catch(e){}});})();</script>
 
 <main class="shell" id="app">
   <p id="bootMsg" class="authbox" role="alert" hidden></p>
@@ -233,6 +294,8 @@
   <div id="rankView" hidden></div>
   <div id="dashView" hidden></div>
   <div id="checkoutView" hidden></div>
+  <div id="setupView" hidden></div>
+  <div id="apprView" hidden></div>
 </main>
 
 <script>
@@ -250,6 +313,7 @@
 })();
 </script>
 <script src="/assets/common.js"></script>
+<script src="/assets/datepicker.js"></script>
 <script src="/assets/shop.js"></script>
 <script src="/assets/formbuilder.js"></script>
 <script src="/assets/clients.js"></script>
@@ -257,6 +321,9 @@
 <script src="/assets/website.js"></script>
 <script src="/assets/dashboard.js"></script>
 <script src="/assets/checkout.js"></script>
+<script src="/assets/apprentice.js"></script>
+<script src="/assets/setup.js"></script>
+<script src="/assets/rebook.js"></script>
 <script>
 (() => {
   const { api, el, datetime, date } = BW;
@@ -289,6 +356,8 @@
     await load();
     rankBadge();
     if (["owner", "admin"].includes(ME.role)) window.BBSite.nudge("siteNudge", showSite, { calendar: () => { showCalendar(); let n = 0; const t = setInterval(() => { const f = $("calFeed"); if (f || ++n > 40) { clearInterval(t); if (f) f.scrollIntoView({ behavior: "smooth", block: "start" }); } }, 100); }, team: showTeam, account: showAccount });
+    $("viewAppr").hidden = !(D.instant && (["owner", "admin"].includes(ME.role) || ME.instructor || (D.apprentices || []).includes(ME.artist)));
+    window.BBSetup.refreshBadge(); window.BBRebook.start(D);
     $("viewDay").hidden = !D.instant; // request-style shops (gutters, tattoo) use Calendar; Day is for walk-in shops
     if (q.get("ig")) { // back from connecting Instagram
       const ok = q.get("ig") === "connected";
@@ -298,6 +367,12 @@
     }
     selected = location.hash.slice(1) || null;
     if (selected) { const r = D.requests.find((x) => x.id === selected); if (r) tab = r.status; }
+    // Apprentices get a dashboard cut down to their training: hours, qualified tasks, materials, paperwork.
+    if (ME.role === "artist" && D.instant && (D.apprentices || []).includes(ME.artist)) {
+      for (const id of ["viewDash", "viewCheckout", "viewDay", "viewReq", "viewCal", "viewClients", "viewArt"]) if ($(id)) $(id).hidden = true;
+      $("viewAppr").textContent = "My training";
+      return window.BBAppr.show({ only, toast, D });
+    }
     if (!selected && D.instant) return showDay(); // barbershops open on today's schedule
     showRequests();
   }
@@ -305,7 +380,7 @@
   let loadedAt = Date.now();
   async function load() {
     D = await api("/api/admin/inbox"); loadedAt = Date.now();
-    if (D.shopName) { SHOP = D.shopName; $("shopName").textContent = SHOP; document.title = `Inbox — ${SHOP}`; }
+    if (D.shopName) { SHOP = D.shopName; $("shopName").textContent = SHOP; document.title = `${SHOP} · Powered by Beam`; }
   }
   const fail = (id, msg) => { $(id).textContent = msg; $(id).hidden = false; };
 
@@ -362,8 +437,11 @@
   const showSite = () => { $("siteNudge").hidden = true; window.BBSite.show({ only, toast }); };
   $("viewSite").addEventListener("click", (e) => { e.preventDefault(); showSite(); });
   $("viewDash").addEventListener("click", (e) => { e.preventDefault(); window.BBDash.show({ only, toast, D }); });
+  $("viewSetup").addEventListener("click", (e) => { e.preventDefault(); window.BBSetup.show({ only, toast, D }); });
+  $("setupBannerGo").addEventListener("click", (e) => { e.preventDefault(); window.BBSetup.show({ only, toast, D }); });
   $("viewCheckout").addEventListener("click", (e) => { e.preventDefault(); window.BBCheckout.show({ only, toast, D }); });
-  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView", "siteView", "rankView", "dashView", "checkoutView"];
+  $("viewAppr").addEventListener("click", (e) => { e.preventDefault(); window.BBAppr.show({ only, toast, D }); });
+  const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView", "siteView", "rankView", "dashView", "checkoutView", "apprView", "setupView"];
   function only(v) { for (const x of views) $(x).hidden = x !== v; window.scrollTo({ top: 0 }); }
 
   // ---------- Requests ----------
@@ -493,6 +571,13 @@
     if (r.status === "agreed") facts.push(["Next", "Set the time: Book a time myself, or send a booking link."]);
     if (r.status === "declined" && r.declinedBy === "client") facts.push(["Client", "Turned down the offer"]);
     if (r.clientView?.deposit) facts.push(["Deposit", r.clientView.deposit]);
+    if (r.payment?.plan) facts.push(["Paying", r.payment.plan === "cash"
+      ? el("span", {}, `Cash at the appointment${r.payment.cashPrice != null ? ` ($${r.payment.cashPrice})` : ""}. `,
+          el("details", { style: "display:inline" }, el("summary", { class: "small", style: "display:inline;cursor:pointer" }, `Agreed ${datetime(r.payment.cashAgreedAt)}`),
+            el("p", { class: "small muted", style: "margin:6px 0 0" }, r.payment.cashTerms)))
+      : "Card at the shop"]);
+    if (r.terms?.booking) facts.push(["Booking terms", el("details", {}, el("summary", { class: "small", style: "cursor:pointer" }, `Shown when they booked (${datetime(r.terms.at)})`),
+      el("p", { class: "small muted", style: "margin:6px 0 0" }, r.terms.booking))]);
     if (r.clientView?.when) facts.push([r.status === "pending" ? "Requested time" : "Appointment", r.clientView.when]);
     if (r.status === "scheduling") facts.push(["Booking link", D.emailReady ? "Sent. Waiting for the client to pick a time." : "Ready. Text or copy it below; email isn't connected."]);
     p.append(el("dl", { class: "facts" }, facts.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)])));
@@ -855,7 +940,11 @@
         el("div", { style: "display:grid;gap:8px" }, el("label", { class: "switch" }, sw, "Books open"),
           D.me.full && a.added ? el("label", { class: "switch" }, el("input", { type: "checkbox", checked: a.listed, onchange: async (e) => {
             try { const res = await api("/api/admin/books", { body: { action: "listed", slug: a.slug, listed: e.target.checked } }); D.artists = res.artists; toast(e.target.checked ? `${a.name} is on the booking form` : `${a.name} is off the booking form`); }
-            catch (err) { e.target.checked = !e.target.checked; toast(err.message); } } }), "Show on booking form") : null)), profileBox);
+            catch (err) { e.target.checked = !e.target.checked; toast(err.message); } } }), "Show on booking form") : null,
+          D.me.full && D.artists.length > 1 ? el("button", { class: "linkbtn small", type: "button", style: "justify-self:start", onclick: async () => {
+            if (!confirm(`Remove ${a.name} from the shop? They come off the booking page, calendar and team lists. Past visits stay in your reports.`)) return;
+            try { const res = await api("/api/admin/books", { body: { action: "removeBarber", slug: a.slug } }); D.artists = res.artists; toast(`${res.removed} removed`); showArtists(); }
+            catch (err) { toast(err.message); } } }, "Remove barber") : null)), profileBox);
       if (wl.length) {
         const emails = wl.map((w) => w.email).join(", ");
         v.append(el("div", { style: "padding:8px 0 16px" }, el("p", { class: "small" }, el("strong", {}, `Waitlist (${wl.length}): `), wl.map((w) => `${w.name} <${w.email}>`).join(", ")),
@@ -949,7 +1038,7 @@
     const v = $("teamView"); v.textContent = "";
     v.append(el("h1", { style: "font-size:44px;margin:28px 0 6px" }, "Team"),
       el("p", { class: "muted", style: "margin-top:0" }, `Everyone gets their own login. Create it here with a password you choose, or send them a link to choose their own. ${T.roles.artist}s only see the jobs assigned to them and their own calendar.`));
-    const roleHelp = { owner: "The business owner. Everything, including logins", admin: "Runs the site. Everything, including logins", desk: "All requests and calendars; can't manage logins", artist: "Only their own jobs and calendar" };
+    const roleHelp = { owner: "The business owner. Everything, including logins", ownerInstructor: "The business owner who also trains apprentices. Everything, including logins", admin: "Runs the site. Everything, including logins", desk: "All requests and calendars; can't manage logins", artist: "Only their own jobs and calendar", instructor: "Their own jobs and calendar, and signs off apprentices' hours and checkoffs" };
     const artistName2 = (slug) => T.artists.find((a) => a.slug === slug)?.name || slug;
     const list = el("section", { class: "panel" });
     if (!T.users.length) list.append(el("p", { class: "muted" }, "No one has a login yet."));
@@ -961,7 +1050,7 @@
       const row = el("div", { class: "team-row" },
         el("div", {}, el("strong", {}, u.name), isMe ? el("span", { class: "pill" }, "You") : null, status,
           el("div", { class: "small" }, u.email),
-          el("div", { class: "small muted" }, `${u.roleName}${u.role === "artist" ? `: ${artistName2(u.artist)}` : ""} · ${roleHelp[u.role]}`),
+          el("div", { class: "small muted" }, `${u.roleName}${u.role === "artist" ? `: ${artistName2(u.artist)}` : ""} · ${roleHelp[u.roleKey || u.role]}`),
           el("div", { class: "small muted" }, u.lastLogin ? `Last login ${datetime(u.lastLogin)}` : "Never logged in")),
         acts);
       const btn = (label, fn, cls = "btn sm line") => acts.append(el("button", { class: cls, type: "button", onclick: fn }, label));
@@ -971,6 +1060,10 @@
         btn("Change role", () => { roleEditor(u, row); });
         btn(u.active ? "Turn off" : "Turn on", () => teamCall({ action: "update", id: u.id, active: !u.active }, u.active ? `${u.name} can't log in now` : `${u.name} can log in again`));
         btn("Remove", () => { if (confirmBox(row, `Remove ${u.name}'s login? Their requests and bookings stay.`, () => teamCall({ action: "remove", id: u.id }, `${u.name} removed`))) {} }, "btn sm danger");
+      } else { // your own login: same tools, except turning yourself off or removing yourself
+        btn("Set password", () => showAccount());
+        btn("Password link", async () => { const r = await teamCall({ action: "resetLink", id: u.id }); teamNote = { id: u.id, invite: r.invite }; renderTeam(); });
+        if (["owner", "admin"].includes(u.role)) btn("Change role", () => { roleEditor(u, row); });
       }
       list.append(row);
       if (teamNote && teamNote.id === u.id) list.append(teamNote.details ? detailsOut(u, teamNote.details) : linkOut(u, teamNote.invite));
@@ -987,7 +1080,7 @@
     const newArt = el("div", { class: "field" }, el("label", {}, `New ${wProv()}'s name (as clients will see it)`), el("input", { type: "text", name: "newArtist", maxlength: 60 }),
       el("p", { class: "hint" }, "They won't show on the public booking form until you switch them on in Books and waitlist."));
     const artField = el("div", { class: "field" }, el("label", {}, `Which ${wProv()}`), artSel);
-    const sync = () => { const isA = roleSel.value === "artist"; artField.hidden = !isA; newArt.hidden = !isA || artSel.value !== "__new"; };
+    const sync = () => { const isA = ["artist", "instructor"].includes(roleSel.value); artField.hidden = !isA; newArt.hidden = !isA || artSel.value !== "__new"; };
     roleSel.addEventListener("change", sync); artSel.addEventListener("change", sync);
     const err = el("p", { class: "form-error", role: "alert", hidden: true });
     f.append(el("div", { class: "row" },
@@ -1006,11 +1099,11 @@
     sync(); syncHow();
     f.addEventListener("submit", async (e) => {
       e.preventDefault(); err.hidden = true; const fd = new FormData(f);
-      const role = fd.get("role"), isNew = role === "artist" && fd.get("artist") === "__new";
+      const role = fd.get("role"), isA = ["artist", "instructor"].includes(role), isNew = isA && fd.get("artist") === "__new";
       const setNow = fd.get("how") === "set", password = setNow ? fd.get("password") : "", mustChange = fd.has("mustChange");
       try {
         const r = await api("/api/admin/login", { body: { action: "add", name: fd.get("name"), email: fd.get("email"), role,
-          artist: role === "artist" && !isNew ? fd.get("artist") : undefined, newArtist: isNew ? fd.get("newArtist") : undefined,
+          artist: isA && !isNew ? fd.get("artist") : undefined, newArtist: isNew ? fd.get("newArtist") : undefined,
           password: setNow ? password : undefined, mustChange } });
         T = r; const u = r.users.find((x) => x.id === r.created.id);
         teamNote = setNow ? { id: u.id, details: { password, mustChange } } : { id: u.id, invite: r.invite };
@@ -1045,13 +1138,14 @@
   }
   function roleEditor(u, row) {
     row.querySelector(".confirm")?.remove();
-    const rs = el("select", { "aria-label": "Role" }, Object.entries(T.roles).map(([k, l]) => el("option", { value: k }, l))); rs.value = u.role;
+    const rs = el("select", { "aria-label": "Role" }, Object.entries(T.roles).map(([k, l]) => el("option", { value: k }, l))); rs.value = u.roleKey || u.role;
     const as = el("select", { "aria-label": "Artist" }, T.artists.map((a) => el("option", { value: a.slug }, a.name))); if (u.artist) as.value = u.artist;
-    const sync = () => { as.hidden = rs.value !== "artist"; }; rs.addEventListener("change", sync); sync();
+    const isArt = () => ["artist", "instructor"].includes(rs.value);
+    const sync = () => { as.hidden = !isArt(); }; rs.addEventListener("change", sync); sync();
     row.append(el("div", { class: "confirm act-form", style: "grid-column:1/-1;margin:8px 0 0" },
       el("div", { class: "row" }, el("div", { class: "field" }, el("label", {}, "Role"), rs), el("div", { class: "field" }, el("label", {}, "Artist"), as)),
       el("div", { class: "actions", style: "margin:0" },
-        el("button", { class: "btn sm", type: "button", onclick: () => teamCall({ action: "update", id: u.id, role: rs.value, artist: rs.value === "artist" ? as.value : undefined }, "Role changed") }, "Save"),
+        el("button", { class: "btn sm", type: "button", onclick: () => teamCall({ action: "update", id: u.id, role: rs.value, artist: isArt() ? as.value : undefined }, "Role changed") }, "Save"),
         el("button", { class: "btn sm line", type: "button", onclick: (e) => e.target.closest(".confirm").remove() }, "Cancel"))));
   }
 
@@ -1143,6 +1237,9 @@
     const cutoff = el("input", { type: "number", min: 0, max: 168, step: 0.5, id: "changeCutoff", value: D.changeCutoffHours ?? 2, style: "max-width:110px" });
     p.append(el("div", { class: "field", style: "margin:4px 0 16px" }, el("label", { for: "changeCutoff" }, "Clients can change or cancel online up to this many hours before"), cutoff,
       el("p", { class: "small muted" }, "Inside that window their booking link tells them to call. 0 = any time before it starts.")));
+    const payAsk = el("input", { type: "checkbox", checked: D.payAtBooking !== false }), atm = el("input", { type: "checkbox", checked: Boolean(D.atmOnSite) });
+    p.append(el("label", { class: "check" }, payAsk, "Ask clients how they'll pay (card or cash, both at the shop). Clients who pick cash agree to pay cash at their appointment."),
+      el("label", { class: "check", style: "margin-bottom:16px" }, atm, "There's an ATM in the shop (clients picking cash are told it's a courtesy and isn't guaranteed to work or have cash)."));
     const rows = el("div", {});
     const addRow = (sv = {}) => {
       const r = el("div", { style: "display:flex;flex-wrap:wrap;align-items:end;gap:8px;margin-bottom:10px" },
@@ -1161,7 +1258,7 @@
         const services = [...rows.children].map((r) => ({ id: r.dataset.id || undefined, barbers: JSON.parse(r.dataset.barbers || "[]"),
           ...Object.fromEntries([...r.querySelectorAll("[data-k]")].map((i) => [i.dataset.k, i.value])) })).filter((x) => x.name.trim());
         if (on.checked && !services.length) { err.textContent = "Add at least one service before turning instant booking on."; err.hidden = false; return; }
-        try { await api("/api/admin/books", { body: { action: "bookingSettings", instant: on.checked, services, changeCutoffHours: cutoff.value } }); await load(); toast("Services saved"); showForm(); }
+        try { await api("/api/admin/books", { body: { action: "bookingSettings", instant: on.checked, services, changeCutoffHours: cutoff.value, payAtBooking: payAsk.checked, atmOnSite: atm.checked } }); await load(); toast("Services saved"); showForm(); }
         catch (x) { err.textContent = x.message; err.hidden = false; }
       } }, "Save services"), el("a", { class: "btn sm line", href: "/appointment", target: "_blank", rel: "noopener" }, "See the booking page")));
     return p;

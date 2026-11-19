@@ -65,7 +65,7 @@ module.exports = async function handler(req, res) {
   let historyNote = message || undefined;
 
   if (b.action === "delete") {
-    if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can delete requests." });
+    if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Administrator can delete requests." });
     if (r.apptId) await cal.cancelAppt(slugFor(r), r.apptId);
     await files.removeAll([...(r.images || []), ...(r.donePhotos || []).map((ph) => ph.name)]);
     await store.indexRemove("reqs", r.id);
@@ -322,7 +322,7 @@ module.exports = async function handler(req, res) {
       sendEmail({ to: [config.studio.contactEmail, artist?.email, ...(await auth.artistEmails(slug))].filter(Boolean), replyTo: r.client.email,
         subject: `Booked: ${r.client.name}, ${r.clientView?.when}`, title: "Appointment confirmed",
         paragraphs: [note, `Confirmed by ${by === "shop" ? "the shop" : by}.`, [r.client.phone, r.client.email].filter(Boolean).join(" · ")],
-        button: { label: "Open in the inbox", url: `${site}/admin#${r.id}` } }),
+        button: { label: "Open your dashboard", url: `${site}/admin#${r.id}` } }),
       sms.textArtists(slug, `Booked: ${note}`),
     ]);
   }
