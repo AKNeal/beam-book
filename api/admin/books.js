@@ -36,7 +36,7 @@ module.exports = async function handler(req, res) {
   if (/^pay/.test(String(b.action || ""))) return payApi(req, res, me, b);
   if (/^appr/.test(String(b.action || ""))) return apprApi(req, res, me, b);
   if (b.action === "testEmail") { // Owner: check that booking email works (sent to the address given, or the shop's email)
-    if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can send a test." });
+    if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or an Administrator can send a test." });
     const { sendEmail, emailReady } = require("../../lib/email");
     if (!emailReady()) return send(res, 400, { error: "Email isn't switched on yet (RESEND_API_KEY and EMAIL_FROM)." });
     const to = String(b.to || require("../../config/studio").studio.contactEmail || "").trim().slice(0, 120);
@@ -45,27 +45,27 @@ module.exports = async function handler(req, res) {
     return send(res, r && r.ok ? 200 : 502, { ok: Boolean(r && r.ok), to, ...(r && r.ok ? {} : { error: "Resend didn't accept it. Check the domain and key." }) });
   }
   if (b.action === "paperFields") { // Owner: field names in an official form (for setting up the paperwork maps)
-    if (me.role !== "owner") return send(res, 403, { error: "Owner only." });
+    if (!auth.isFull(me)) return send(res, 403, { error: "Owner or an Administrator only." });
     try { const P = require("../../lib/paperwork"); return send(res, 200, { form: b.form, fields: await P.fields(String(b.form || "")) }); }
     catch (e) { return send(res, 400, { error: e.message }); }
   }
   if (b.action === "onboardLink") { // Owner: the shop's private setup link (the current one; fresh:true makes a new one and stops the old)
-    if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can make the setup link." });
+    if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or an Administrator can make the setup link." });
     const base = `https://${String(req.headers["x-forwarded-host"] || req.headers.host).split(",")[0]}`;
     return send(res, 200, { url: await require("../../lib/onboarding").makeLink(base, { keep: b.fresh !== true }) });
   }
   if (b.action === "onboardFeedback") { // Owner / Neal Media: what the shop sent from the setup page
-    if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can see this." });
+    if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or an Administrator can see this." });
     const ob = require("../../lib/onboarding");
     return send(res, 200, { feedback: await ob.feedback(), a2p: await require("../../lib/store").getJSON("onboard:a2p") });
   }
   if (b.action === "calsyncLinks") { // Owner: each barber's private calendar-sync link (for onboarding pages)
-    if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can see sync links." });
+    if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or an Administrator can see sync links." });
     const base = `https://${String(req.headers["x-forwarded-host"] || req.headers.host).split(",")[0]}`, cs = require("../calsync");
     return send(res, 200, { links: (await artists.list()).map((a) => ({ slug: a.slug, name: a.name, url: cs.linkFor(base, a.slug) })) });
   }
   if (b.action === "rankManual") { // Owner: record today's ranks by hand from a live Google search (when the morning check didn't run)
-    if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can record ranks." });
+    if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or an Administrator can record ranks." });
     try {
       const rc = require("../../lib/rankcheck");
       const searches = {}; for (const [q, r] of Object.entries(b.ranks || {})) searches[q] = { rank: r == null ? null : Number(r) };
@@ -125,11 +125,11 @@ module.exports = async function handler(req, res) {
         await extcal.syncAll(slug);
         return send(res, 200, { ok: true, calendars: await extcal.summary(slug) });
       case "listed":
-        if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can change the booking form." });
+        if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Administrator can change the booking form." });
         await artists.setListed(slug, b.listed === true);
         return send(res, 200, { ok: true, artists: await artists.list() });
       case "removeBarber": {
-        if (me.role !== "owner") return send(res, 403, { error: "Only the Owner can remove a barber." });
+        if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or an Administrator can remove a barber." });
         const name = await artists.remove(slug);
         return send(res, 200, { ok: true, removed: name, artists: await artists.list() });
       }
@@ -146,7 +146,7 @@ module.exports = async function handler(req, res) {
 
 // The shop's Instagram feed (Owner / Site admin).
 async function instagram(req, res, me, action) {
-  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can change the shop's Instagram." });
+  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Administrator can change the shop's Instagram." });
   const ig = require("../../lib/instagram");
   const { baseUrl } = require("../../lib/http");
   try {
@@ -162,8 +162,8 @@ async function instagram(req, res, me, action) {
 async function clientsApi(req, res, me, b) {
   const clients = require("../../lib/clients");
   const store = require("../../lib/store");
-  const staffOnly = () => { if (!auth.seesAll(me)) { send(res, 403, { error: "Only the Owner, a Site manager or Staff can change clients." }); return false; } return true; };
-  const ownerOnly = () => { if (!auth.isFull(me)) { send(res, 403, { error: "Only the Owner or a Site manager can do that." }); return false; } return true; };
+  const staffOnly = () => { if (!auth.seesAll(me)) { send(res, 403, { error: "Only the Owner, a Administrator or Staff can change clients." }); return false; } return true; };
+  const ownerOnly = () => { if (!auth.isFull(me)) { send(res, 403, { error: "Only the Owner or a Administrator can do that." }); return false; } return true; };
   try {
     switch (b.action) {
       case "clients": {
@@ -220,11 +220,11 @@ async function clientsApi(req, res, me, b) {
 module.exports = require("../../lib/tenant").handler(module.exports);
 
 // The business's own request questions, words and negotiation rules (Owner / Site admin).
-// Beam: the shop's website checklist and change requests (lib/site.js). Owner and Site manager only.
+// Beam: the shop's website checklist and change requests (lib/site.js). Owner and Administrator only.
 //   {action:"site"} · {action:"siteSave", key, value | photo (data URL) | remove | skip}
-//   {action:"siteChange", text, photos?} · {action:"siteReview", id, status?, note?} (Site manager)
+//   {action:"siteChange", text, photos?} · {action:"siteReview", id, status?, note?} (Administrator)
 async function siteApi(req, res, me, b) {
-  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can work on the website." });
+  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Administrator can work on the website." });
   const site = require("../../lib/site");
   try {
     if (b.action === "siteSave") await site.saveItem(b);
@@ -256,7 +256,7 @@ async function dashApi(req, res, me, b) {
       return send(res, 200, { dash: d, challenges: await an.standings(), owner, barbers: all ? (await artists.list()).map((a) => ({ slug: a.slug, name: a.name })) : [] });
     }
     if (b.action === "challenges") return send(res, 200, { challenges: await an.standings(), metrics: an.METRICS });
-    if (!owner) return send(res, 403, { error: "Only the Owner or a Site manager can change this." });
+    if (!owner) return send(res, 403, { error: "Only the Owner or a Administrator can change this." });
     if (b.action === "dashSettings") return send(res, 200, { settings: await an.saveSettings(b.settings || {}), pay: await an.pay() });
     if (b.action === "dashPay") { if (!(await artists.bySlug(str(b.slug, 60)))) return send(res, 400, { error: "Unknown barber." }); return send(res, 200, { pay: await an.savePay(str(b.slug, 60), b.pay || {}) }); }
     if (b.action === "dashConfig") return send(res, 200, { settings: await an.settings(), pay: await an.pay(), barbers: (await artists.list()).map((a) => ({ slug: a.slug, name: a.name })) });
@@ -276,7 +276,7 @@ async function payApi(req, res, me, b) {
   const pay = require("../../lib/payments");
   const owner = auth.isFull(me);
   try {
-    if (["paySetup", "payConnect", "payReader", "payRates"].includes(b.action) && !owner) return send(res, 403, { error: "Only the Owner or a Site manager can set up payments." });
+    if (["paySetup", "payConnect", "payReader", "payRates"].includes(b.action) && !owner) return send(res, 403, { error: "Only the Owner or a Administrator can set up payments." });
     if (b.action === "paySetup") return send(res, 200, await pay.status());
     if (b.action === "payConnect") { const base = require("../../lib/http").baseUrl(req); return send(res, 200, { url: await pay.connectLink(`${base}/admin?payments=1`) }); }
     if (b.action === "payReader") return send(res, 200, await pay.addReader({ code: b.code, label: b.label }));
@@ -300,7 +300,7 @@ async function payApi(req, res, me, b) {
 }
 
 async function bookingSettings(req, res, me, b) {
-  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can change the booking form." });
+  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Administrator can change the booking form." });
   const tenant = require("../../lib/tenant");
   const config = require("../../config/studio");
   try {
@@ -313,7 +313,7 @@ async function bookingSettings(req, res, me, b) {
 }
 
 // ---------- apprentice portal (lib/apprentice.js) ----------
-//   {action:"apprView", slug?}                       an apprentice sees their own; Owner / Site manager see any (no slug: the list)
+//   {action:"apprView", slug?}                       an apprentice sees their own; Owner / Administrator see any (no slug: the list)
 //   {action:"apprLog", date, hours, note, slug?}     an apprentice logs their own hours (waiting for sign-off); the Owner's are signed off
 //   {action:"apprDelete", id}                        an apprentice removes their own hours that aren't signed off yet
 //   {action:"apprReview", slug, id, approve}         Owner: approve true | false | "delete"
@@ -321,17 +321,33 @@ async function bookingSettings(req, res, me, b) {
 //   {action:"apprSet", slug, on} · {action:"apprStart", slug, date}
 //   {action:"apprSettings", goalHours} · {action:"apprChecklist", items} · {action:"apprMaterials", items}
 async function apprApi(req, res, me, b) {
-  const A = require("../../lib/apprentice"), artists = require("../../lib/artists");
+  const A = require("../../lib/apprentice"), Demo = require("../../lib/apprdemo"), store = require("../../lib/store");
+  // Demo apprentices exist only here (never on the team or the booking page).
+  const team = await require("../../lib/artists").list(), demos = await Demo.people();
+  const artists = { list: async () => [...team, ...demos], bySlug: async (s) => team.find((x) => x.slug === s) || demos.find((x) => x.slug === s) || null };
   const full = auth.isFull(me), mine = me.artist && (await A.list()).includes(me.artist);
   const by = me.name || "Owner";
-  const needFull = () => { if (!full) { send(res, 403, { error: "Only the Owner or a Site manager can do that." }); return false; } return true; };
+  const needFull = () => { if (!full) { send(res, 403, { error: "Only the Owner or a Administrator can do that." }); return false; } return true; };
   try {
     switch (b.action) {
       case "apprView": {
         if (full && !b.slug) {
+          const P = require("../../lib/paperwork");
           const roster = await artists.list(), slugs = await A.list();
-          const people = []; for (const s of slugs) { const a = roster.find((x) => x.slug === s); if (a) { const v = await A.view(s); people.push({ slug: s, name: a.name, approvedHours: v.approvedHours, pendingHours: v.pendingHours, pct: v.pct, checksDone: v.checksDone, checksTotal: v.checksTotal }); } }
-          return send(res, 200, { owner: true, applications: await A.applications(), apprentices: people, team: roster.map((a) => ({ slug: a.slug, name: a.name })), settings: await A.settings(), checklist: await A.checklist(), materials: await A.materials() });
+          const people = [], docs = [];
+          for (const s2 of slugs) {
+            const a = roster.find((x) => x.slug === s2); if (!a) continue;
+            const v = await A.view(s2), tasks = v.checklist.filter((c) => c.target);
+            let prof = null; try { prof = await P.profile(s2); } catch {}
+            people.push({ slug: s2, name: a.name, demo: Demo.isDemo(s2), approvedHours: v.approvedHours, pendingHours: v.pendingHours, practicalHours: v.practicalHours, theoryHours: v.theoryHours, pct: v.pct,
+              checksDone: v.checksDone, checksTotal: v.checksTotal, tasksQualified: tasks.filter((c) => c.done).length, tasksTotal: tasks.length,
+              repsPending: tasks.reduce((n, c) => n + c.repsPending, 0), modulesDone: v.checklist.filter((c) => !c.target && c.done).length, modulesTotal: v.checklist.filter((c) => !c.target).length,
+              permit: v.permit, startDate: v.startDate, paperwork: prof ? P.missing(prof) : null });
+            for (const d of (await store.getJSON(`appr:docs:${s2}`)) || []) docs.push({ ...d, slug: s2, name: a.name });
+          }
+          docs.sort((x, y) => y.at - x.at);
+          return send(res, 200, { owner: true, applications: await A.applications(), apprentices: people, docs: docs.slice(0, 60), demo: demos.length > 0,
+            team: team.map((a) => ({ slug: a.slug, name: a.name })), settings: await A.settings(), checklist: await A.checklist(), materials: await A.materials() });
         }
         const slug = full ? str(b.slug, 60) : me.artist;
         if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
@@ -346,7 +362,7 @@ async function apprApi(req, res, me, b) {
       }
       case "apprRepReview": { // Owner: approve true | false | "delete"; apprentice: "delete" on their own pending rep
         const slug = full ? str(b.slug, 60) : me.artist;
-        if (!full && !(mine && b.approve === "delete")) return send(res, 403, { error: "Only the Owner or a Site manager can do that." });
+        if (!full && !(mine && b.approve === "delete")) return send(res, 403, { error: "Only the Owner or a Administrator can do that." });
         await A.reviewRep(slug, str(b.id, 20), str(b.rep, 20), b.approve === "delete" ? "delete" : Boolean(b.approve), by, !full);
         return send(res, 200, { ok: true, ...(await A.view(slug)) });
       }
@@ -360,10 +376,11 @@ async function apprApi(req, res, me, b) {
         const slug = full && b.slug ? str(b.slug, 60) : me.artist;
         if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
         if (b.get) {
+          const docs = full ? ((await store.getJSON(`appr:docs:${slug}`)) || []).map((d) => ({ ...d, slug })) : undefined;
           let p = await P.profile(slug);
-          if (p) return send(res, 200, { ok: true, saved: true, profile: P.masked(p) });
+          if (p) return send(res, 200, { ok: true, saved: true, docs, profile: P.masked(p) });
           const v = await A.view(slug), app = v.appId ? (await A.applications()).find((x) => x.id === v.appId) : null;
-          return send(res, 200, { ok: true, saved: false, profile: P.fromApplication(app) });
+          return send(res, 200, { ok: true, saved: false, docs, profile: P.fromApplication(app) });
         }
         if (full && slug !== me.artist) return send(res, 403, { error: "Apprentices fill in their own details from their login." });
         const p = await P.saveProfile(slug, b.profile || {});
@@ -391,7 +408,17 @@ async function apprApi(req, res, me, b) {
         const buf = form === "packet" ? await P.packet(p, S, ctx2) : await P.build(form, p, S, ctx2);
         const nm = (p.last || a.name).replace(/[^a-z0-9]+/gi, "-");
         const fname = form === "packet" ? `Apprentice-paperwork-${nm}.pdf` : `${P.FORMS[form].file}-${nm}${form === "ak4315" && months[0] ? `-${months[0]}` : ""}.pdf`;
+        if (!b.view) { // keep a list of what was made (the PDFs themselves aren't stored: View makes a fresh one from the current details)
+          const log = (await store.getJSON(`appr:docs:${slug}`)) || [];
+          log.unshift({ form, title: form === "packet" ? "Full paperwork packet" : P.FORMS[form].title, months, at: Date.now(), by, filename: fname, missing: P.missing(p).length });
+          await store.setJSON(`appr:docs:${slug}`, log.slice(0, 40));
+        }
         return send(res, 200, { ok: true, filename: fname, pdf: buf.toString("base64"), missing: P.missing(p) });
+      }
+      case "apprDemo": { // Owner: add (on) or remove the demo apprentices
+        if (!needFull()) return;
+        if (b.on) await Demo.seed(by); else await Demo.clear();
+        return send(res, 200, { ok: true });
       }
       case "apprApp": { // Owner: application status (new / contacted / accepted / declined) or "delete"
         if (!needFull()) return;

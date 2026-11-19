@@ -1,7 +1,7 @@
 /* Beam inbox: the Website screen.
    - Checklist: facts and photos for the shop's own website. Saving one puts it on the site right away.
-   - Change requests: anything else the owner wants changed. The Site manager reviews these before anything changes.
-   - Google reviews: shows whether they're linked (the Site manager links them on the Beam control page). */
+   - Change requests: anything else the owner wants changed. The Administrator reviews these before anything changes.
+   - Google reviews: shows whether they're linked (the Administrator links them on the Beam control page). */
 (function () {
   var BW = window.BW, el = BW.el;
   var S = null, ctx = null;
@@ -174,7 +174,7 @@
       el("h2", { style: "margin-top:0;font-size:30px" }, "Google reviews"),
       g.linked
         ? el("p", {}, "Linked. Your newest Google reviews show on your website automatically" + (g.rating ? " (" + g.rating.toFixed(1) + " stars from " + g.count + " reviews)." : "."))
-        : el("p", { class: "muted" }, "Not linked yet. Your Site manager connects your Google Business listing, then new reviews show on your website on their own."));
+        : el("p", { class: "muted" }, "Not linked yet. Your Administrator connects your Google Business listing, then new reviews show on your website on their own."));
   }
 
   // ---------- change requests ----------

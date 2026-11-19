@@ -144,7 +144,7 @@ async function changeOwn(req, res, b) {
 async function team(req, res, b) {
   const me = await auth.currentUser(req);
   if (!me) return send(res, 401, { error: "Log in first." });
-  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Site manager can manage logins." });
+  if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or a Administrator can manage logins." });
   const site = baseUrl(req);
   const list = await auth.users();
   const find = () => { const u = list.find((x) => x.id === str(b.id, 40)); if (!u) throw new Error("That person isn't on the team."); return u; };
@@ -190,11 +190,11 @@ async function team(req, res, b) {
       if (b.name !== undefined) { const n = str(b.name, 60); if (n.length < 2) throw new Error("Enter their name."); u.name = n; }
       const role = b.role !== undefined ? str(b.role, 10) : u.role;
       const artist = role === "artist" ? (b.artist !== undefined ? str(b.artist, 60) : u.artist) : null;
-      const fullSwap = auth.isFull(u) && ["owner", "admin"].includes(role); // Owner <-> Site manager keeps full access
+      const fullSwap = auth.isFull(u) && ["owner", "admin"].includes(role); // Owner <-> Administrator keeps full access
       if (u.id === me.id && (b.active === false || (role !== u.role && !fullSwap))) throw new Error("You can't change your own role or turn off your own login.");
       await checkRole(role, artist);
       if (auth.isFull(u) && (!auth.ROLES[role] || !["owner", "admin"].includes(role) || b.active === false) && !fullLeft(u.id))
-        throw new Error("Keep at least one Owner or Site manager login.");
+        throw new Error("Keep at least one Owner or Administrator login.");
       const changedAccess = role !== u.role || artist !== u.artist || (b.active !== undefined && Boolean(b.active) !== (u.active !== false));
       u.role = role; u.artist = artist;
       if (b.active !== undefined) u.active = Boolean(b.active);
@@ -206,7 +206,7 @@ async function team(req, res, b) {
     case "remove": {
       const u = find();
       if (u.id === me.id) throw new Error("You can't remove your own login.");
-      if (auth.isFull(u) && !fullLeft(u.id)) throw new Error("Keep at least one Owner or Site manager login.");
+      if (auth.isFull(u) && !fullLeft(u.id)) throw new Error("Keep at least one Owner or Administrator login.");
       const next = list.filter((x) => x.id !== u.id);
       await auth.saveUsers(next);
       return send(res, 200, { ok: true, ...(await teamOut(next)) });

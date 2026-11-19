@@ -590,6 +590,11 @@ const valid = (o = {}) => ({
               await A.logHours("zz-test", { date: "2026-01-05", hours: 2, kind: "theory", approved: true }, "Owner");
               assert.equal((await A.view("zz-test")).theoryHours, 2);
               await store.del("appr:pw:zz-test"); await store.del("appr:zz-test");
+              const Demo = require("../lib/apprdemo"); await Demo.seed("Owner");
+              assert.equal((await Demo.people()).length, 4); assert.ok((await A.list()).includes("demo-eli-santos"));
+              assert.equal((await A.view("demo-eli-santos")).approvedHours, 1650); assert.ok((await A.view("demo-maya-chen")).pendingHours > 0);
+              assert.ok((await A.applications()).some((x) => x.demo));
+              await Demo.clear(); assert.equal((await A.list()).filter((x) => /^demo-/.test(x)).length, 0); assert.ok(!(await A.applications()).some((x) => x.demo));
             });
           }
           v = await call("/api/admin/books", { body: { action: "apprApp", id: v.data.applications[0].id, status: "contacted" } }); assert.equal(v.data.applications[0].status, "contacted");

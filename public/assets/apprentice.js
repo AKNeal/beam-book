@@ -1,6 +1,6 @@
 /* Beam inbox: the Apprenticeship screen (lib/apprentice.js).
    An apprentice sees their own hours (toward the shop's required hours), the checkoffs and the course materials, and logs hours.
-   The Owner / Site manager picks who is an apprentice, signs off hours and checkoffs, and edits the checklist and materials. */
+   The Owner / Administrator picks who is an apprentice, signs off hours and checkoffs, and edits the checklist and materials. */
 (function () {
   const { el, api } = window.BW;
   const call = (body) => api("/api/admin/books", { body });
@@ -32,18 +32,48 @@
     v.append(el("h1", {}, "Apprenticeship"));
     const sec = el("section", { class: "panel" }, el("h2", {}, "Apprentices"));
     if (!R.apprentices.length) sec.append(el("p", { class: "muted" }, "Nobody yet. Pick a team member below to start their apprenticeship. They log in with their own Beam login and see their hours, checkoffs and course materials."));
-    for (const a of R.apprentices) sec.append(el("div", { class: "row" },
-      el("div", {}, el("strong", {}, a.name), el("div", { class: "meta" }, `${fmtH(a.approvedHours)} of ${fmtH(R.settings.goalHours)} hours signed off (${a.pct}%)${a.pendingHours ? ` · ${fmtH(a.pendingHours)} waiting for you` : ""} · ${a.checksDone}/${a.checksTotal} checkoffs`)),
-      el("div", { class: "actions", style: "margin:0" }, el("button", { class: "btn sm", type: "button", onclick: () => show(ctx, a.slug) }, "Open"),
-        el("button", { class: "btn sm line", type: "button", onclick: async () => { if (!confirmTwice(`end ${a.name}'s apprenticeship`)) return; try { await call({ action: "apprSet", slug: a.slug, on: false }); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Remove"))));
+    for (const a of R.apprentices) {
+      const bar = (pct) => el("div", { class: "prog", style: "height:8px;margin:4px 0" }, el("i", { style: `width:${Math.min(100, pct)}%` }));
+      const paper = a.paperwork === null ? "Paperwork: details not filled in" : a.paperwork.length ? `Paperwork: missing ${a.paperwork.length}` : "Paperwork: ready";
+      sec.append(el("div", { class: "row", style: "align-items:flex-start" },
+        el("div", { style: "flex:1;min-width:240px" }, el("strong", {}, a.name), a.permit ? el("span", { class: "meta" }, ` · permit #${a.permit}`) : el("span", { class: "meta" }, " · no permit # yet"),
+          el("div", { class: "meta" }, `Hours ${fmtH(a.approvedHours)} / ${fmtH(R.settings.goalHours)} (${fmtH(a.practicalHours)} practical, ${fmtH(a.theoryHours)} theory)${a.pendingHours ? ` · ${fmtH(a.pendingHours)} waiting for you` : ""}`), bar(a.pct),
+          el("div", { class: "meta" }, `Qualified tasks ${a.tasksQualified} / ${a.tasksTotal}${a.repsPending ? ` · ${a.repsPending} reps waiting` : ""} · Modules ${a.modulesDone} / ${a.modulesTotal}`), bar(a.tasksTotal ? 100 * a.tasksQualified / a.tasksTotal : 0),
+          el("div", { class: "meta" }, `${a.startDate ? `Started ${a.startDate} · ` : ""}${paper}`)),
+        el("div", { class: "actions", style: "margin:0" }, el("button", { class: "btn sm", type: "button", onclick: () => show(ctx, a.slug) }, "Open"),
+          a.demo ? null : el("button", { class: "btn sm line", type: "button", onclick: async () => { if (!confirmTwice(`end ${a.name}'s apprenticeship`)) return; try { await call({ action: "apprSet", slug: a.slug, on: false }); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Remove"))));
+    }
     const others = R.team.filter((t) => !R.apprentices.some((a) => a.slug === t.slug));
     if (others.length) {
       const sel = el("select", {}, others.map((t) => el("option", { value: t.slug }, t.name)));
       sec.append(el("div", { class: "actions", style: "margin-top:14px" }, sel, el("button", { class: "btn", type: "button", onclick: async () => { try { await call({ action: "apprSet", slug: sel.value, on: true }); ctx.toast("Apprenticeship started"); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Make apprentice")));
     }
     sec.append(el("p", { class: "small muted" }, "An apprentice needs their own login: Team → add them with their email and link the login to their name. They get an email to set a password."));
-    v.append(appsPanel(), sec, paperSettingsPanel(), setupPanel());
+    sec.append(el("div", { class: "actions", style: "margin-top:14px" }, el("button", { class: "btn sm line", type: "button", onclick: async () => {
+      if (R.demo && !confirmTwice("remove the demo apprentices")) return;
+      try { await call({ action: "apprDemo", on: !R.demo }); ctx.toast(R.demo ? "Demo apprentices removed" : "Demo apprentices added"); show(ctx); } catch (e) { ctx.toast(e.message); } } }, R.demo ? "Remove demo apprentices" : "Show demo apprentices")));
+    v.append(sec, appsPanel(), formsPanel(), paperSettingsPanel(), setupPanel());
   }
+
+  // ---------- owner: every form that's been made ----------
+  function formsPanel() {
+    const sec = el("section", { class: "panel" }, el("h2", {}, "Forms"),
+      el("p", { class: "small muted" }, "Every form you've generated. View opens a fresh copy with the apprentice's current details. Make new ones from an apprentice's page (Open → Paperwork)."));
+    if (!(R.docs || []).length) sec.append(el("p", { class: "muted" }, "None yet."));
+    for (const d of R.docs || []) sec.append(docRow(d, true));
+    return sec;
+  }
+  function docRow(d, withName) {
+    const go = async (open) => {
+      const w = open ? window.open("", "_blank") : null;
+      try { const r = await call({ action: "apprPaper", slug: d.slug || R.slug, form: d.form, months: d.months, view: true }); open ? viewPdf(r, w) : download(r); }
+      catch (e) { if (w) w.close(); ctx.toast(e.message); }
+    };
+    return el("div", { class: "row" }, el("div", {}, el("strong", {}, d.title), el("div", { class: "meta" }, `${withName ? d.name + " · " : ""}${new Date(d.at).toLocaleString()}${d.by ? " · " + d.by : ""}${d.missing ? ` · ${d.missing} blanks` : ""}`)),
+      el("div", { class: "actions", style: "margin:0" }, el("button", { class: "btn sm", type: "button", onclick: () => go(true) }, "View"), el("button", { class: "btn sm line", type: "button", onclick: () => go(false) }, "Download")));
+  }
+  function pdfUrl(r) { const bin = atob(r.pdf), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return URL.createObjectURL(new Blob([u8], { type: "application/pdf" })); }
+  function viewPdf(r, w) { const url = pdfUrl(r); if (w) w.location.href = url; else window.open(url, "_blank"); setTimeout(() => URL.revokeObjectURL(url), 300000); }
 
   // ---------- owner: applications from the public /apply page ----------
   function appsPanel() {
@@ -210,8 +240,7 @@
   // ---------- paperwork: the owner's side ----------
   const MONTHS = () => { const out = [], d = new Date(); d.setDate(1); for (let i = 0; i < 12; i++) { out.push(d.toISOString().slice(0, 7)); d.setMonth(d.getMonth() - 1); } return out; };
   function download(r) {
-    const bin = atob(r.pdf), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-    const url = URL.createObjectURL(new Blob([u8], { type: "application/pdf" }));
+    const url = pdfUrl(r);
     const a = el("a", { href: url, download: r.filename }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
   function paperPanel() {
@@ -231,13 +260,17 @@
       }
       const gen = async (form, extra = {}) => {
         ctx.toast("Filling the form…");
-        try { const r = await call({ action: "apprPaper", slug: R.slug, form, ...extra }); download(r); if (r.missing?.length) ctx.toast(`Downloaded. Blank: ${r.missing.slice(0, 3).join(", ")}${r.missing.length > 3 ? "…" : ""}`); } catch (e) { ctx.toast(e.message); }
+        const w = extra.open ? window.open("", "_blank") : null; delete extra.open;
+        try { const r = await call({ action: "apprPaper", slug: R.slug, form, ...extra }); w ? viewPdf(r, w) : download(r); setTimeout(() => { if (sec.isConnected) { const nb = paperPanel(); sec.replaceWith(nb); } }, 400); if (r.missing?.length) ctx.toast(`Downloaded. Blank: ${r.missing.slice(0, 3).join(", ")}${r.missing.length > 3 ? "…" : ""}`); } catch (e) { if (w) w.close(); ctx.toast(e.message); }
       };
       const forms = [["packet", "Everything, ready to print"], ["ak4194", "Alaska enrollment 08-4194 (+ 4194a, 4194b)"], ["eta671", "DOL ETA-671 apprentice agreement"], ["w4", "W-4"], ["i9", "I-9 (Section 1)"]];
-      for (const [f, l] of forms) sec.append(el("div", { class: "row" }, el("span", {}, l), el("button", { class: "btn sm" + (f === "packet" ? "" : " line"), type: "button", onclick: () => gen(f) }, "Download")));
+      for (const [f, l] of forms) sec.append(el("div", { class: "row" }, el("span", {}, l), el("div", { class: "actions", style: "margin:0" },
+        el("button", { class: "btn sm" + (f === "packet" ? "" : " line"), type: "button", onclick: () => gen(f, { open: true }) }, "Generate & view"),
+        el("button", { class: "btn sm line", type: "button", onclick: () => gen(f) }, "Download"))));
       const m = el("select", {}, MONTHS().map((x) => el("option", { value: x }, new Date(x + "-15").toLocaleString(undefined, { month: "long", year: "numeric" }))));
       sec.append(el("div", { class: "row" }, el("span", {}, "Monthly hours report 08-4315 (3 months, from signed-off hours) starting "), el("div", { class: "actions", style: "margin:0" }, m,
         el("button", { class: "btn sm line", type: "button", onclick: () => { const s0 = m.value, d = new Date(s0 + "-15"); const ms = [0, 1, 2].map((i) => { const x = new Date(d); x.setMonth(d.getMonth() + i); return x.toISOString().slice(0, 7); }); gen("ak4315", { months: ms }); } }, "Download"))));
+      if ((P.docs || []).length) { sec.append(el("h3", {}, "Made so far")); for (const d of P.docs) sec.append(docRow(d, false)); }
       sec.append(el("p", { class: "small muted" }, "The state doesn't take these by email: print, sign and date them, then mail them with the $125 permit fee. No hours count before the permit is issued. ETA-671 goes to your DOL apprenticeship office; keep the W-4 and I-9 in your records (the I-9 needs you to check their ID within 3 days of starting)."));
     })();
     return sec;
