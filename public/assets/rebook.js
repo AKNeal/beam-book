@@ -24,10 +24,18 @@
   const numEl = (n) => (n ? document.createTextNode(roman(n)) : el("span", { class: "rbz", "aria-label": "zero" }, "0"));
   let S = null, fab = null;
 
+  // Preview: an Owner / Administrator login with no barber sees the same button, counting only on this device
+  // (nothing goes into the real challenge).
+  let preview = false;
+  const PKEY = "beam.rebookPreview";
+  const pv = { get: () => { try { return +localStorage.getItem(PKEY) || 0; } catch { return 0; } }, set: (n) => { try { localStorage.setItem(PKEY, String(n)); } catch {} } };
   async function start(D) {
-    if (!D || !D.me || !D.me.artist || !D.instant) return; // barbers only
-    if ((D.apprentices || []).includes(D.me.artist)) return;
-    try { S = await call({}); } catch { return; }
+    if (!D || !D.me || !D.instant) return;
+    preview = !D.me.artist && Boolean(D.me.full || D.me.seesAll);
+    if (!D.me.artist && !preview) return; // barbers (and the preview for the shop's managers)
+    if (D.me.artist && (D.apprentices || []).includes(D.me.artist)) return;
+    try { S = await call(preview ? { preview: true } : {}); } catch { return; }
+    if (preview && S.live) S.count = pv.get();
     if (!S.live) { if (fab) fab.remove(); fab = null; return; }
     if (!document.getElementById("rbCss")) document.head.append(el("style", { id: "rbCss" }, css));
     if (!fab) { fab = el("button", { class: "rbf", type: "button", onclick: open }); document.body.append(fab); }
@@ -40,17 +48,17 @@
   function open() {
     const num = el("div", { class: "num", "aria-live": "polite" }, numEl(S.count));
     const meta = el("div", { class: "meta" });
-    const setMeta = () => { meta.textContent = `${S.title} · ${S.count} rebook${S.count === 1 ? "" : "s"}${S.metric === "rebooks" ? ` of ${S.goal}` : ""} · ${ordinal(S.place)} of ${S.of} · ${S.daysLeft} day${S.daysLeft === 1 ? "" : "s"} left`; };
+    const setMeta = () => { meta.textContent = `${preview ? "Preview (not counted) · " : ""}${S.title} · ${S.count} rebook${S.count === 1 ? "" : "s"}${S.metric === "rebooks" ? ` of ${S.goal}` : ""} · ${ordinal(S.place)} of ${S.of} · ${S.daysLeft} day${S.daysLeft === 1 ? "" : "s"} left`; };
     setMeta();
     const add = el("button", { class: "add", type: "button", onclick: async () => {
       add.disabled = true;
-      try { S = await call({ add: true }); num.replaceChildren(numEl(S.count)); setMeta(); paint(); fab.classList.remove("pop"); void fab.offsetWidth; fab.classList.add("pop"); if (navigator.vibrate) navigator.vibrate(30); setTimeout(close, 700); }
+      try { S = preview ? { ...S, count: S.count + 1 } : await call({ add: true }); if (preview) pv.set(S.count); num.replaceChildren(numEl(S.count)); setMeta(); paint(); fab.classList.remove("pop"); void fab.offsetWidth; fab.classList.add("pop"); if (navigator.vibrate) navigator.vibrate(30); setTimeout(close, 700); }
       catch (e) { meta.textContent = e.message; add.disabled = false; }
     } }, "ADD", el("br"), "REBOOKING");
     const ov = el("div", { class: "rbo", role: "dialog", "aria-label": "Add a rebooking", onclick: (e) => { if (e.target === ov) close(); } },
       el("div", { class: "in" }, num, add, meta,
         el("div", { class: "row" },
-          el("button", { type: "button", onclick: async () => { try { S = await call({ undo: true }); num.replaceChildren(numEl(S.count)); setMeta(); paint(); } catch (e) { meta.textContent = e.message; } } }, "Undo last"),
+          el("button", { type: "button", onclick: async () => { try { if (preview) { if (!S.count) throw new Error("Nothing to undo."); S = { ...S, count: S.count - 1 }; pv.set(S.count); } else S = await call({ undo: true }); num.replaceChildren(numEl(S.count)); setMeta(); paint(); } catch (e) { meta.textContent = e.message; } } }, "Undo last"),
           el("button", { type: "button", onclick: close }, "Close"))));
     function close() { ov.remove(); document.removeEventListener("keydown", esc); }
     function esc(e) { if (e.key === "Escape") close(); }
