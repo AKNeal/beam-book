@@ -139,6 +139,18 @@ async function post(req, res) {
   const b = body(req);
   if (/^onboard/.test(String(b.action || ""))) return onboard(req, res, b);
   if ((await store.hit(`rl:status:${ip(req)}`, 3600)) > 30) return send(res, 429, { error: "Too many tries. Please call the shop." });
+  if (b.action === "apprApply") { // public apprenticeship application (apply.html)
+    if (b.website) return send(res, 200, { ok: true }); // honeypot
+    const A = require("../lib/apprentice");
+    try {
+      const a = await A.apply(b);
+      const to = config.studio.contactEmail;
+      if (to) await sendEmail({ to, replyTo: a.email, subject: `Apprenticeship application: ${a.first} ${a.last}`, title: "New apprenticeship application",
+        paragraphs: [`${a.first} ${a.last}`, `Email: ${a.email}`, `Phone: ${a.phone}`, a.about ? `About them:\n${a.about}` : "", "It's also in your inbox: Apprenticeship → Applications."],
+        button: { label: "Open in the inbox", url: `${baseUrl(req)}/admin` } }).catch(() => {});
+      return send(res, 200, { ok: true });
+    } catch (e) { return send(res, 400, { error: e.message, fields: e.fields }); }
+  }
   if (b.action === "onboardSave") { // Beam: the shop's private onboarding page (lib/onboarding.js)
     const ob = require("../lib/onboarding");
     if (!(await ob.check(b.t))) return send(res, 404, { error: "This link has expired. Ask Neal Media for a new one." });

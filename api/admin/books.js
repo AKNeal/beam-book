@@ -314,12 +314,17 @@ async function apprApi(req, res, me, b) {
         if (full && !b.slug) {
           const roster = await artists.list(), slugs = await A.list();
           const people = []; for (const s of slugs) { const a = roster.find((x) => x.slug === s); if (a) { const v = await A.view(s); people.push({ slug: s, name: a.name, approvedHours: v.approvedHours, pendingHours: v.pendingHours, pct: v.pct, checksDone: v.checksDone, checksTotal: v.checksTotal }); } }
-          return send(res, 200, { owner: true, apprentices: people, team: roster.map((a) => ({ slug: a.slug, name: a.name })), settings: await A.settings(), checklist: await A.checklist(), materials: await A.materials() });
+          return send(res, 200, { owner: true, applications: await A.applications(), apprentices: people, team: roster.map((a) => ({ slug: a.slug, name: a.name })), settings: await A.settings(), checklist: await A.checklist(), materials: await A.materials() });
         }
         const slug = full ? str(b.slug, 60) : me.artist;
         if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
         const a = await artists.bySlug(slug); if (!a) return send(res, 404, { error: "That team member isn't here." });
         return send(res, 200, { owner: full, name: a.name, ...(await A.view(slug)) });
+      }
+      case "apprApp": { // Owner: application status (new / contacted / accepted / declined) or "delete"
+        if (!needFull()) return;
+        await A.setAppStatus(str(b.id, 20), str(b.status, 20));
+        return send(res, 200, { ok: true, applications: await A.applications() });
       }
       case "apprLog": {
         const slug = full && b.slug ? str(b.slug, 60) : me.artist;

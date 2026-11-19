@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--#head-->
+<title>Apprenticeship application | %SHOP%</title>
+<meta name="description" content="Apply for the barber apprenticeship. No experience needed.">
+</head>
+<body>
+<!--#header apply-->
+<main id="main">
+  <div class="page" style="max-width:760px">
+    <header class="page-head">
+      <h1>Apply for the apprenticeship</h1>
+      <p class="intro">No experience needed, just the drive to get better every day. Fill this in and the shop will reach out.</p>
+    </header>
+    <form id="apply" class="form" novalidate>
+      <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+      <div class="field" data-f="first"><label for="f-first">First name</label><input id="f-first" name="first" type="text" autocomplete="given-name" maxlength="60" required><div class="err"></div></div>
+      <div class="field" data-f="last"><label for="f-last">Last name</label><input id="f-last" name="last" type="text" autocomplete="family-name" maxlength="60" required><div class="err"></div></div>
+      <div class="field" data-f="email"><label for="f-email">Email</label><input id="f-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="120" required><div class="err"></div></div>
+      <div class="field" data-f="phone"><label for="f-phone">Phone</label><input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="30" required><div class="err"></div></div>
+      <div class="field" data-f="about"><label for="f-about">Tell us about yourself <span class="hint">Optional. Why barbering, any experience, when you could start.</span></label><textarea id="f-about" name="about" rows="4" maxlength="1500"></textarea><div class="err"></div></div>
+      <p class="form-error" id="formErr" role="alert" hidden></p>
+      <button class="btn sign" type="submit">Submit application</button>
+    </form>
+    <div id="done" hidden>
+      <h2>Thanks, we got your application.</h2>
+      <p>The shop will reach out by phone or email.</p>
+    </div>
+  </div>
+<!--#poweredby--></main>
+<!--#footer-->
+<script src="/assets/common.js"></script>
+<script>
+(function () {
+  var f = document.getElementById("apply"), err = document.getElementById("formErr");
+  f.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    f.querySelectorAll(".field").forEach(function (x) { x.classList.remove("invalid"); });
+    err.hidden = true;
+    var body = { action: "apprApply" };
+    new FormData(f).forEach(function (v, k) { body[k] = String(v); });
+    var btn = f.querySelector("button"); btn.disabled = true;
+    try {
+      var r = await fetch("/api/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      var d = await r.json().catch(function () { return {}; });
+      if (!r.ok) {
+        Object.entries(d.fields || {}).forEach(function (kv) { var x = f.querySelector('[data-f="' + kv[0] + '"]'); if (x) { x.classList.add("invalid"); x.querySelector(".err").textContent = kv[1]; } });
+        err.textContent = d.error || "Something went wrong. Please try again."; err.hidden = false; btn.disabled = false; return;
+      }
+      f.hidden = true; document.getElementById("done").hidden = false; window.scrollTo(0, 0);
+    } catch (x) { err.textContent = "Couldn't send. Check your connection and try again."; err.hidden = false; btn.disabled = false; }
+  });
+})();
+</script>
+</body>
+</html>

@@ -558,6 +558,19 @@ const valid = (o = {}) => ({
         cookie = "";
         open = (await call(`/api/schedule?id=${cid}&t=${ctok}`)).data.days;
         assert.ok(open.flatMap((d) => d.slots).some((x) => x.start === target), "removing the calendar frees the time");
+        { // Apprenticeship application (public /apply) → owner's Applications list
+          cookie = "";
+          let a = await call("/api/status", { body: { action: "apprApply", first: "", last: "Rivers", email: "nope", phone: "12" } });
+          assert.equal(a.status, 400); assert.ok(a.data.fields.first && a.data.fields.email && a.data.fields.phone);
+          a = await call("/api/status", { body: { action: "apprApply", first: "Jamie", last: "Rivers", email: "jamie@example.com", phone: "907-555-0100", about: "Cut my brother's hair for years" } });
+          assert.equal(a.status, 200, JSON.stringify(a.data));
+          cookie = real;
+          let v = await call("/api/admin/books", { body: { action: "apprView" } });
+          assert.equal(v.status, 200, JSON.stringify(v.data)); assert.equal(v.data.applications[0].first, "Jamie"); assert.equal(v.data.applications[0].status, "new");
+          v = await call("/api/admin/books", { body: { action: "apprApp", id: v.data.applications[0].id, status: "contacted" } }); assert.equal(v.data.applications[0].status, "contacted");
+          v = await call("/api/admin/books", { body: { action: "apprApp", id: v.data.applications[0].id, status: "delete" } }); assert.equal(v.data.applications.length, 0);
+          cookie = "";
+        }
         { // Shop setup link: setup status, texting sign-up, steps, feedback
           cookie = real;
           const OL = await call("/api/admin/books", { body: { action: "onboardLink" } }); assert.equal(OL.status, 200, JSON.stringify(OL.data));

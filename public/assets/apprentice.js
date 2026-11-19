@@ -42,7 +42,27 @@
       sec.append(el("div", { class: "actions", style: "margin-top:14px" }, sel, el("button", { class: "btn", type: "button", onclick: async () => { try { await call({ action: "apprSet", slug: sel.value, on: true }); ctx.toast("Apprenticeship started"); show(ctx); } catch (e) { ctx.toast(e.message); } } }, "Make apprentice")));
     }
     sec.append(el("p", { class: "small muted" }, "An apprentice needs their own login: Team → add them with their email and link the login to their name. They get an email to set a password."));
-    v.append(sec, setupPanel());
+    v.append(appsPanel(), sec, setupPanel());
+  }
+
+  // ---------- owner: applications from the public /apply page ----------
+  function appsPanel() {
+    const apps = R.applications || [];
+    const fresh = apps.filter((a) => a.status === "new").length;
+    const sec = el("section", { class: "panel" }, el("h2", {}, "Applications", fresh ? el("span", { class: "meta", style: "margin-left:8px" }, `${fresh} new`) : null),
+      el("p", { class: "small muted" }, "From the Apply page on your website (", el("a", { href: "/apply", target: "_blank", rel: "noopener" }, "see it"), "). You get an email for each one too."));
+    if (!apps.length) { sec.append(el("p", { class: "muted" }, "No applications yet.")); return sec; }
+    for (const a of apps) {
+      const st = el("select", { onchange: async () => { try { R.applications = (await call({ action: "apprApp", id: a.id, status: st.value })).applications; ctx.toast("Saved"); } catch (e) { ctx.toast(e.message); } } },
+        ["new", "contacted", "accepted", "declined"].map((x) => el("option", { value: x, selected: a.status === x }, x[0].toUpperCase() + x.slice(1))));
+      sec.append(el("div", { class: "row", style: "align-items:flex-start" },
+        el("div", {}, el("strong", {}, `${a.first} ${a.last}`),
+          el("div", { class: "meta" }, el("a", { href: `mailto:${a.email}` }, a.email), " · ", el("a", { href: `tel:${a.phone}` }, a.phone), " · ", new Date(a.at).toLocaleDateString()),
+          a.about ? el("p", { class: "small", style: "white-space:pre-line;margin:6px 0 0" }, a.about) : null),
+        el("div", { class: "actions", style: "margin:0" }, st,
+          el("button", { class: "btn sm line", type: "button", onclick: async () => { if (!confirm(`Delete ${a.first}'s application?`)) return; try { R.applications = (await call({ action: "apprApp", id: a.id, status: "delete" })).applications; drawOwner(); } catch (e) { ctx.toast(e.message); } } }, "Delete"))));
+    }
+    return sec;
   }
 
   function setupPanel() {
