@@ -67,7 +67,6 @@
     tiles.push(kp(pct(d.utilization), "Chair utilization (booked vs open hours)"));
     if (d.noShowRate != null) tiles.push(kp(pct(d.noShowRate), `No-show rate (${d.noShows} no-shows, ${d.cancelled} cancelled; Squire history)`));
     if (m.tips && !hide) tiles.push(kp($$(m.tips), mineOnly ? "My tips (through checkout)" : "Tips to barbers (through checkout)"));
-    if (hide) v.append(el("p", { class: "small muted", style: "margin:12px 0 0" }, "The shop's money is on the Owner's dashboard only."));
     v.append(el("div", { class: "kpis" }, tiles));
     v.append(chartsPanel(d));
 
