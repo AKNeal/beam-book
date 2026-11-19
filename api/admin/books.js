@@ -357,11 +357,27 @@ async function apprApi(req, res, me, b) {
   const team = await require("../../lib/artists").list(), demos = await Demo.people();
   const artists = { list: async () => [...team, ...demos], bySlug: async (s) => team.find((x) => x.slug === s) || demos.find((x) => x.slug === s) || null };
   const full = auth.isFull(me), mine = me.artist && (await A.list()).includes(me.artist);
+  // Instructors (Owner / Instructor, or a team member with the Instructor role) sign off any apprentice's hours, reps
+  // and checkoffs. Applications, onboarding, paperwork and settings stay with the Owner / Administrator.
+  const teach = full || auth.isInstructor(me);
   const by = me.name || "Owner";
   const needFull = () => { if (!full) { send(res, 403, { error: "Only the Owner or a Administrator can do that." }); return false; } return true; };
+  const needTeach = () => { if (!teach) { send(res, 403, { error: "Only an instructor can do that." }); return false; } return true; };
   try {
     switch (b.action) {
       case "apprView": {
+        if (teach && !full && !b.slug) { // instructor: the apprentices and their progress only
+          const roster = await artists.list(), people = [];
+          for (const s2 of await A.list()) {
+            const a = roster.find((x) => x.slug === s2); if (!a) continue;
+            const v = await A.view(s2), tasks = v.checklist.filter((c) => c.target);
+            people.push({ slug: s2, name: a.name, demo: Demo.isDemo(s2), approvedHours: v.approvedHours, pendingHours: v.pendingHours, practicalHours: v.practicalHours, theoryHours: v.theoryHours, pct: v.pct,
+              tasksQualified: tasks.filter((c) => c.done).length, tasksTotal: tasks.length, repsPending: tasks.reduce((n, c) => n + c.repsPending, 0),
+              modulesDone: v.checklist.filter((c) => !c.target && c.done).length, modulesTotal: v.checklist.filter((c) => !c.target).length,
+              permit: v.permit, startDate: v.startDate, onboarded: true, instructorView: true });
+          }
+          return send(res, 200, { owner: true, full: false, applications: [], apprentices: people, docs: [], demo: false, team: [], settings: await A.settings(), checklist: await A.checklist(), materials: await A.materials() });
+        }
         if (full && !b.slug) {
           const P = require("../../lib/paperwork");
           const roster = await artists.list(), slugs = await A.list(), logins = await auth.users();
@@ -378,24 +394,27 @@ async function apprApi(req, res, me, b) {
             for (const d of (await store.getJSON(`appr:docs:${s2}`)) || []) docs.push({ ...d, slug: s2, name: a.name });
           }
           docs.sort((x, y) => y.at - x.at);
-          return send(res, 200, { owner: true, applications: await A.applications(), apprentices: people, docs: docs.slice(0, 60), demo: demos.length > 0,
+          return send(res, 200, { owner: true, full: true, applications: await A.applications(), apprentices: people, docs: docs.slice(0, 60), demo: demos.length > 0,
             team: team.map((a) => ({ slug: a.slug, name: a.name, hasLogin: logins.some((u) => u.artist === a.slug && u.active !== false) })), settings: await A.settings(), checklist: await A.checklist(), materials: await A.materials() });
         }
-        const slug = full ? str(b.slug, 60) : me.artist;
-        if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
+        const slug = teach && b.slug ? str(b.slug, 60) : full ? str(b.slug, 60) : me.artist;
+        if (!teach && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
+        if (!full && slug !== me.artist && !(await A.list()).includes(slug)) return send(res, 404, { error: "That apprentice isn't here." });
         const a = await artists.bySlug(slug); if (!a) return send(res, 404, { error: "That team member isn't here." });
-        return send(res, 200, { owner: full, name: a.name, ...(full ? { applications: (await A.applications()).map((x) => ({ id: x.id, first: x.first, last: x.last, status: x.status })) } : {}), ...(await A.view(slug)) });
+        return send(res, 200, { owner: teach && slug !== me.artist || full, full, name: a.name, ...(full ? { applications: (await A.applications()).map((x) => ({ id: x.id, first: x.first, last: x.last, status: x.status })) } : {}), ...(await A.view(slug)) });
       }
       case "apprRep": { // log reps on a qualified task (apprentice: waiting for approval; Owner: approved)
-        const slug = full && b.slug ? str(b.slug, 60) : me.artist;
-        if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
-        await A.logRep(slug, str(b.id, 20), { date: b.date, count: b.count, note: b.note, approved: full }, by);
+        const slug = teach && b.slug ? str(b.slug, 60) : me.artist;
+        if (!teach && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
+        const signer = teach && slug !== me.artist;
+        await A.logRep(slug, str(b.id, 20), { date: b.date, count: b.count, note: b.note, approved: signer }, by);
         return send(res, 200, { ok: true, ...(await A.view(slug)) });
       }
       case "apprRepReview": { // Owner: approve true | false | "delete"; apprentice: "delete" on their own pending rep
-        const slug = full ? str(b.slug, 60) : me.artist;
-        if (!full && !(mine && b.approve === "delete")) return send(res, 403, { error: "Only the Owner or a Administrator can do that." });
-        await A.reviewRep(slug, str(b.id, 20), str(b.rep, 20), b.approve === "delete" ? "delete" : Boolean(b.approve), by, !full);
+        const slug = teach && b.slug ? str(b.slug, 60) : me.artist;
+        const signer = teach && slug !== me.artist;
+        if (!signer && !(mine && b.approve === "delete")) return send(res, 403, { error: "Only an instructor can do that." });
+        await A.reviewRep(slug, str(b.id, 20), str(b.rep, 20), b.approve === "delete" ? "delete" : Boolean(b.approve), by, !signer);
         return send(res, 200, { ok: true, ...(await A.view(slug)) });
       }
       case "apprMeta": { // Owner: permit number, linked application
@@ -518,16 +537,16 @@ async function apprApi(req, res, me, b) {
         return send(res, 200, { ok: true, applications: await A.applications() });
       }
       case "apprLog": {
-        const slug = full && b.slug ? str(b.slug, 60) : me.artist;
-        if (!full && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
-        await A.logHours(slug, { date: b.date, hours: b.hours, kind: b.kind, note: b.note, approved: full }, by);
+        const slug = teach && b.slug ? str(b.slug, 60) : me.artist;
+        if (!teach && !mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
+        await A.logHours(slug, { date: b.date, hours: b.hours, kind: b.kind, note: b.note, approved: teach && slug !== me.artist }, by);
         return send(res, 200, { ok: true, ...(await A.view(slug)) });
       }
       case "apprDelete":
         if (!mine) return send(res, 403, { error: "This login isn't set up as an apprentice." });
         await A.deleteOwnPending(me.artist, str(b.id, 20)); return send(res, 200, { ok: true, ...(await A.view(me.artist)) });
-      case "apprReview": if (!needFull()) return; await A.reviewHours(str(b.slug, 60), str(b.id, 20), b.approve === "delete" ? "delete" : Boolean(b.approve), by); return send(res, 200, { ok: true, ...(await A.view(str(b.slug, 60))) });
-      case "apprCheck": if (!needFull()) return; await A.setCheck(str(b.slug, 60), str(b.id, 20), Boolean(b.on), by); return send(res, 200, { ok: true, ...(await A.view(str(b.slug, 60))) });
+      case "apprReview": if (!needTeach()) return; if (str(b.slug, 60) === me.artist) return send(res, 403, { error: "Someone else signs off your own hours." }); await A.reviewHours(str(b.slug, 60), str(b.id, 20), b.approve === "delete" ? "delete" : Boolean(b.approve), by); return send(res, 200, { ok: true, ...(await A.view(str(b.slug, 60))) });
+      case "apprCheck": if (!needTeach()) return; if (str(b.slug, 60) === me.artist) return send(res, 403, { error: "Someone else signs off your own checkoffs." }); await A.setCheck(str(b.slug, 60), str(b.id, 20), Boolean(b.on), by); return send(res, 200, { ok: true, ...(await A.view(str(b.slug, 60))) });
       case "apprStart": if (!needFull()) return; await A.setStart(str(b.slug, 60), b.date); return send(res, 200, { ok: true, ...(await A.view(str(b.slug, 60))) });
       case "apprSet": {
         if (!needFull()) return;

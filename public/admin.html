@@ -345,7 +345,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     await load();
     rankBadge();
     if (["owner", "admin"].includes(ME.role)) window.BBSite.nudge("siteNudge", showSite, { calendar: () => { showCalendar(); let n = 0; const t = setInterval(() => { const f = $("calFeed"); if (f || ++n > 40) { clearInterval(t); if (f) f.scrollIntoView({ behavior: "smooth", block: "start" }); } }, 100); }, team: showTeam, account: showAccount });
-    $("viewAppr").hidden = !(D.instant && (["owner", "admin"].includes(ME.role) || (D.apprentices || []).includes(ME.artist)));
+    $("viewAppr").hidden = !(D.instant && (["owner", "admin"].includes(ME.role) || ME.instructor || (D.apprentices || []).includes(ME.artist)));
     window.BBSetup.refreshBadge();
     $("viewDay").hidden = !D.instant; // request-style shops (gutters, tattoo) use Calendar; Day is for walk-in shops
     if (q.get("ig")) { // back from connecting Instagram
@@ -1019,7 +1019,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     const v = $("teamView"); v.textContent = "";
     v.append(el("h1", { style: "font-size:44px;margin:28px 0 6px" }, "Team"),
       el("p", { class: "muted", style: "margin-top:0" }, `Everyone gets their own login. Create it here with a password you choose, or send them a link to choose their own. ${T.roles.artist}s only see the jobs assigned to them and their own calendar.`));
-    const roleHelp = { owner: "The business owner. Everything, including logins", admin: "Runs the site. Everything, including logins", desk: "All requests and calendars; can't manage logins", artist: "Only their own jobs and calendar" };
+    const roleHelp = { owner: "The business owner. Everything, including logins", ownerInstructor: "The business owner who also trains apprentices. Everything, including logins", admin: "Runs the site. Everything, including logins", desk: "All requests and calendars; can't manage logins", artist: "Only their own jobs and calendar", instructor: "Their own jobs and calendar, and signs off apprentices' hours and checkoffs" };
     const artistName2 = (slug) => T.artists.find((a) => a.slug === slug)?.name || slug;
     const list = el("section", { class: "panel" });
     if (!T.users.length) list.append(el("p", { class: "muted" }, "No one has a login yet."));
@@ -1031,7 +1031,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
       const row = el("div", { class: "team-row" },
         el("div", {}, el("strong", {}, u.name), isMe ? el("span", { class: "pill" }, "You") : null, status,
           el("div", { class: "small" }, u.email),
-          el("div", { class: "small muted" }, `${u.roleName}${u.role === "artist" ? `: ${artistName2(u.artist)}` : ""} · ${roleHelp[u.role]}`),
+          el("div", { class: "small muted" }, `${u.roleName}${u.role === "artist" ? `: ${artistName2(u.artist)}` : ""} · ${roleHelp[u.roleKey || u.role]}`),
           el("div", { class: "small muted" }, u.lastLogin ? `Last login ${datetime(u.lastLogin)}` : "Never logged in")),
         acts);
       const btn = (label, fn, cls = "btn sm line") => acts.append(el("button", { class: cls, type: "button", onclick: fn }, label));
@@ -1061,7 +1061,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     const newArt = el("div", { class: "field" }, el("label", {}, `New ${wProv()}'s name (as clients will see it)`), el("input", { type: "text", name: "newArtist", maxlength: 60 }),
       el("p", { class: "hint" }, "They won't show on the public booking form until you switch them on in Books and waitlist."));
     const artField = el("div", { class: "field" }, el("label", {}, `Which ${wProv()}`), artSel);
-    const sync = () => { const isA = roleSel.value === "artist"; artField.hidden = !isA; newArt.hidden = !isA || artSel.value !== "__new"; };
+    const sync = () => { const isA = ["artist", "instructor"].includes(roleSel.value); artField.hidden = !isA; newArt.hidden = !isA || artSel.value !== "__new"; };
     roleSel.addEventListener("change", sync); artSel.addEventListener("change", sync);
     const err = el("p", { class: "form-error", role: "alert", hidden: true });
     f.append(el("div", { class: "row" },
@@ -1080,11 +1080,11 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     sync(); syncHow();
     f.addEventListener("submit", async (e) => {
       e.preventDefault(); err.hidden = true; const fd = new FormData(f);
-      const role = fd.get("role"), isNew = role === "artist" && fd.get("artist") === "__new";
+      const role = fd.get("role"), isA = ["artist", "instructor"].includes(role), isNew = isA && fd.get("artist") === "__new";
       const setNow = fd.get("how") === "set", password = setNow ? fd.get("password") : "", mustChange = fd.has("mustChange");
       try {
         const r = await api("/api/admin/login", { body: { action: "add", name: fd.get("name"), email: fd.get("email"), role,
-          artist: role === "artist" && !isNew ? fd.get("artist") : undefined, newArtist: isNew ? fd.get("newArtist") : undefined,
+          artist: isA && !isNew ? fd.get("artist") : undefined, newArtist: isNew ? fd.get("newArtist") : undefined,
           password: setNow ? password : undefined, mustChange } });
         T = r; const u = r.users.find((x) => x.id === r.created.id);
         teamNote = setNow ? { id: u.id, details: { password, mustChange } } : { id: u.id, invite: r.invite };
@@ -1119,13 +1119,14 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
   }
   function roleEditor(u, row) {
     row.querySelector(".confirm")?.remove();
-    const rs = el("select", { "aria-label": "Role" }, Object.entries(T.roles).map(([k, l]) => el("option", { value: k }, l))); rs.value = u.role;
+    const rs = el("select", { "aria-label": "Role" }, Object.entries(T.roles).map(([k, l]) => el("option", { value: k }, l))); rs.value = u.roleKey || u.role;
     const as = el("select", { "aria-label": "Artist" }, T.artists.map((a) => el("option", { value: a.slug }, a.name))); if (u.artist) as.value = u.artist;
-    const sync = () => { as.hidden = rs.value !== "artist"; }; rs.addEventListener("change", sync); sync();
+    const isArt = () => ["artist", "instructor"].includes(rs.value);
+    const sync = () => { as.hidden = !isArt(); }; rs.addEventListener("change", sync); sync();
     row.append(el("div", { class: "confirm act-form", style: "grid-column:1/-1;margin:8px 0 0" },
       el("div", { class: "row" }, el("div", { class: "field" }, el("label", {}, "Role"), rs), el("div", { class: "field" }, el("label", {}, "Artist"), as)),
       el("div", { class: "actions", style: "margin:0" },
-        el("button", { class: "btn sm", type: "button", onclick: () => teamCall({ action: "update", id: u.id, role: rs.value, artist: rs.value === "artist" ? as.value : undefined }, "Role changed") }, "Save"),
+        el("button", { class: "btn sm", type: "button", onclick: () => teamCall({ action: "update", id: u.id, role: rs.value, artist: isArt() ? as.value : undefined }, "Role changed") }, "Save"),
         el("button", { class: "btn sm line", type: "button", onclick: (e) => e.target.closest(".confirm").remove() }, "Cancel"))));
   }
 

@@ -169,7 +169,7 @@ async function team(req, res, b) {
     case "team": break;
 
     case "add": {
-      const name = str(b.name, 60), email = str(b.email, 120).toLowerCase(), role = str(b.role, 10);
+      const name = str(b.name, 60), email = str(b.email, 120).toLowerCase(), [role, instructor] = auth.splitRole(str(b.role, 20));
       if (name.length < 2) throw new Error("Enter their name.");
       if (!EMAIL_RE.test(email)) throw new Error("Enter a valid email. It's what they'll log in with.");
       if (list.some((x) => x.email === email)) throw new Error("Someone already logs in with that email.");
@@ -179,7 +179,7 @@ async function team(req, res, b) {
       if (artist && list.some((x) => x.role === "artist" && x.artist === artist && x.active !== false)) throw new Error("That artist already has a login.");
       const pw = typeof b.password === "string" && b.password ? b.password : "";
       if (pw) { const problem = auth.passwordProblem(pw); if (problem) throw new Error(`Password: ${problem}`); }
-      const u = { id: id(8), name, email, role, artist, hash: pw ? auth.hashPassword(pw) : "", mustChange: Boolean(pw) && b.mustChange !== false,
+      const u = { id: id(8), name, email, role, ...(instructor ? { instructor: true } : {}), artist, hash: pw ? auth.hashPassword(pw) : "", mustChange: Boolean(pw) && b.mustChange !== false,
         ver: 0, active: true, createdAt: new Date().toISOString(), createdBy: me.name };
       list.push(u); await auth.saveUsers(list);
       return send(res, 200, { ok: true, created: { id: u.id, withPassword: Boolean(pw) }, invite: pw ? null : await inviteOut(u, INVITE_HOURS, "add"), ...(await teamOut(list)) });
@@ -188,7 +188,7 @@ async function team(req, res, b) {
     case "update": {
       const u = find();
       if (b.name !== undefined) { const n = str(b.name, 60); if (n.length < 2) throw new Error("Enter their name."); u.name = n; }
-      const role = b.role !== undefined ? str(b.role, 10) : u.role;
+      const [role, instructor] = b.role !== undefined ? auth.splitRole(str(b.role, 20)) : [u.role, Boolean(u.instructor)];
       const artist = role === "artist" ? (b.artist !== undefined ? str(b.artist, 60) : u.artist) : null;
       const fullSwap = auth.isFull(u) && ["owner", "admin"].includes(role); // Owner <-> Administrator keeps full access
       if (u.id === me.id && (b.active === false || (role !== u.role && !fullSwap))) throw new Error("You can't change your own role or turn off your own login.");
@@ -196,7 +196,7 @@ async function team(req, res, b) {
       if (auth.isFull(u) && (!auth.ROLES[role] || !["owner", "admin"].includes(role) || b.active === false) && !fullLeft(u.id))
         throw new Error("Keep at least one Owner or Administrator login.");
       const changedAccess = role !== u.role || artist !== u.artist || (b.active !== undefined && Boolean(b.active) !== (u.active !== false));
-      u.role = role; u.artist = artist;
+      u.role = role; u.artist = artist; if (instructor) u.instructor = true; else delete u.instructor;
       if (b.active !== undefined) u.active = Boolean(b.active);
       if (changedAccess) u.ver = (u.ver || 0) + 1; // log them out so the new access applies right away
       await auth.saveUsers(list);
@@ -233,8 +233,8 @@ async function team(req, res, b) {
 async function teamOut(list) {
   const w = require("../../config/studio").words || {};
   const provider = w.provider ? w.provider.charAt(0).toUpperCase() + w.provider.slice(1) : auth.ROLES.artist;
-  const roles = { ...auth.ROLES, artist: provider };
-  const users = list.map(auth.publicUser).map((u) => (u.role === "artist" ? { ...u, roleName: provider } : u));
+  const roles = { owner: auth.ROLES.owner, ownerInstructor: "Owner / Instructor", admin: auth.ROLES.admin, desk: auth.ROLES.desk, artist: provider, instructor: "Instructor" };
+  const users = list.map(auth.publicUser).map((u) => (u.role === "artist" && !u.instructor ? { ...u, roleName: provider } : u));
   return { users, artists: await artists.list(), roles, emailReady: emailReady() };
 }
 
