@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Inbox</title>
+<title>Beam</title>
 <link rel="icon" href="/assets/brand/beam-icon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -219,11 +219,12 @@
   html[data-look="pole"] header.top .whoami { color: #d8c7a2; }
   html[data-look="pole"] .panel { box-shadow: 3px 3px 0 var(--line); }
   html[data-look="pole"] h1, html[data-look="pole"] h2 { font-weight: 400; }
+  .brand .powered { display: block; font: 600 11px/1.2 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; opacity: .6; margin-top: 2px; }
 </style>
 </head>
 <body class="admin">
 <header class="top"><div class="shell adminbar">
-  <div><a class="brand" href="/admin"><img class="shop-logo" data-shop="logo" alt="" hidden><span><b id="shopName" style="font-weight:inherit">Shop</b> · Inbox</span></a><div class="whoami" id="whoami"></div></div>
+  <div><a class="brand" href="/admin"><img class="shop-logo" data-shop="logo" alt="" hidden><span><b id="shopName" style="font-weight:inherit">Shop</b><small class="powered">Powered by Beam</small></span></a><div class="whoami" id="whoami"></div></div>
   <label class="look">Theme <select id="lookSel" aria-label="Theme">
     <option value="">Classic</option><option value="floor">Shop Floor</option><option value="chrome">Clean Chrome</option><option value="pole">Barber Pole</option>
   </select></label>
@@ -358,7 +359,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
   let loadedAt = Date.now();
   async function load() {
     D = await api("/api/admin/inbox"); loadedAt = Date.now();
-    if (D.shopName) { SHOP = D.shopName; $("shopName").textContent = SHOP; document.title = `Inbox — ${SHOP}`; }
+    if (D.shopName) { SHOP = D.shopName; $("shopName").textContent = SHOP; document.title = `${SHOP} · Powered by Beam`; }
   }
   const fail = (id, msg) => { $(id).textContent = msg; $(id).hidden = false; };
 
