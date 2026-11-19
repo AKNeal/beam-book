@@ -1036,6 +1036,10 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
         btn("Change role", () => { roleEditor(u, row); });
         btn(u.active ? "Turn off" : "Turn on", () => teamCall({ action: "update", id: u.id, active: !u.active }, u.active ? `${u.name} can't log in now` : `${u.name} can log in again`));
         btn("Remove", () => { if (confirmBox(row, `Remove ${u.name}'s login? Their requests and bookings stay.`, () => teamCall({ action: "remove", id: u.id }, `${u.name} removed`))) {} }, "btn sm danger");
+      } else { // your own login: same tools, except turning yourself off or removing yourself
+        btn("Set password", () => showAccount());
+        btn("Password link", async () => { const r = await teamCall({ action: "resetLink", id: u.id }); teamNote = { id: u.id, invite: r.invite }; renderTeam(); });
+        if (["owner", "admin"].includes(u.role)) btn("Change role", () => { roleEditor(u, row); });
       }
       list.append(row);
       if (teamNote && teamNote.id === u.id) list.append(teamNote.details ? detailsOut(u, teamNote.details) : linkOut(u, teamNote.invite));
