@@ -26,6 +26,17 @@
   .adminbar .look { margin-left: auto; }
   .adminbar nav a { margin-left: 0; white-space: nowrap; }
   @media (max-width: 480px) { .adminbar .brand { font-size: 18px; } .adminbar nav a { font-size: 14px; } }
+  /* Phones (and the installed app): the menu is one row you swipe sideways instead of three wrapped rows,
+     and the theme picker shrinks, so the screen's content starts near the top. */
+  @media (max-width: 640px) {
+    .adminbar { min-height: 0; padding-top: 8px; padding-bottom: 6px; gap: 2px 10px; }
+    .adminbar .look { font-size: 0; }
+    .adminbar .look select { font-size: 14px; padding: 4px 26px 4px 10px; min-height: 0; }
+    .adminbar nav { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; gap: 6px; margin: 4px -20px 0; padding: 2px 20px 4px; }
+    .adminbar nav::-webkit-scrollbar { display: none; }
+    .adminbar nav a { flex: none; font-size: 14px; padding: 6px 12px; border: 1.5px solid var(--line); border-radius: 99px; text-decoration: none; background: var(--white); }
+    .adminbar nav a[aria-current="page"], .adminbar nav a.on { border-color: var(--ink); color: var(--ink); font-weight: 600; }
+  }
   .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 20px 0 12px; }
   .tab { border: 1.5px solid var(--line); background: var(--white); border-radius: 99px; padding: 6px 14px; font: 600 14px var(--body); cursor: pointer; color: var(--ink); }
   .tab[aria-pressed="true"] { border: 1.5px dashed var(--sign-dark); background: var(--soft); }
@@ -397,7 +408,13 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
       $("viewAppr").textContent = "My training";
       return window.BBAppr.show({ only, toast, D });
     }
-    if (D.instant) { if (location.hash) history.replaceState(null, "", "/admin"); return window.BBDash.show({ only, toast, D }); } // barbershops open on the dashboard (no bookings list)
+    if (D.instant) {
+      if (location.hash) history.replaceState(null, "", "/admin");
+      // In the installed Beam app, barbers open straight onto their day; everyone else (and the website) opens on the dashboard.
+      const inApp = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true || q.get("source") === "app";
+      if (inApp && ME.role === "artist") return showDay();
+      return window.BBDash.show({ only, toast, D }); // barbershops open on the dashboard (no bookings list)
+    }
     showRequests();
   }
   let SHOP = "the shop";
@@ -466,7 +483,16 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
   $("viewCheckout").addEventListener("click", (e) => { e.preventDefault(); window.BBCheckout.show({ only, toast, D }); });
   $("viewAppr").addEventListener("click", (e) => { e.preventDefault(); window.BBAppr.show({ only, toast, D }); });
   const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView", "siteView", "rankView", "dashView", "checkoutView", "apprView", "setupView"];
-  function only(v) { for (const x of views) $(x).hidden = x !== v; window.scrollTo({ top: 0 }); }
+  // Which menu link belongs to which screen, so the menu shows where you are (and, on phones, scrolls it into view).
+  const NAV_FOR = { inbox: "viewReq", artistsView: "viewArt", calView: "viewCal", teamView: "viewTeam", acctView: "viewAcct", formView: "viewForm", clientsView: "viewClients",
+    dayView: "viewDay", siteView: "viewSite", dashView: "viewDash", checkoutView: "viewCheckout", apprView: "viewAppr" };
+  function only(v) {
+    for (const x of views) $(x).hidden = x !== v;
+    window.scrollTo({ top: 0 });
+    for (const a of document.querySelectorAll("#nav a")) a.removeAttribute("aria-current");
+    const cur = NAV_FOR[v] && $(NAV_FOR[v]);
+    if (cur) { cur.setAttribute("aria-current", "page"); try { cur.scrollIntoView({ block: "nearest", inline: "center" }); } catch (e) {} }
+  }
 
   // ---------- Requests ----------
   function showRequests() { only("inbox"); renderInbox(); }

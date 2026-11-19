@@ -164,7 +164,7 @@
     v.replaceChildren(
       el("h1", { style: "font-size:44px;margin:28px 0 6px" }, "Website"),
       el("p", { class: "muted", style: "margin-top:0" }, "Checklist answers go on your website right away. Want to change anything else? Send a change request and we'll take care of it."),
-      S.items.length ? setup(false) : null, google(), changes());
+      ...[S.items.length ? setup(false) : null, google(), changes()].filter(Boolean)); // replaceChildren would print a null as the word "null"
   }
 
   // ---------- Google reviews ----------
