@@ -373,7 +373,7 @@ async function apprApi(req, res, me, b) {
             people.push({ slug: s2, name: a.name, demo: Demo.isDemo(s2), approvedHours: v.approvedHours, pendingHours: v.pendingHours, practicalHours: v.practicalHours, theoryHours: v.theoryHours, pct: v.pct,
               checksDone: v.checksDone, checksTotal: v.checksTotal, tasksQualified: tasks.filter((c) => c.done).length, tasksTotal: tasks.length,
               repsPending: tasks.reduce((n, c) => n + c.repsPending, 0), modulesDone: v.checklist.filter((c) => !c.target && c.done).length, modulesTotal: v.checklist.filter((c) => !c.target).length,
-              permit: v.permit, startDate: v.startDate, paperwork: prof ? P.missing(prof) : null });
+              permit: v.permit, startDate: v.startDate, paperwork: prof ? P.missing(prof) : null, files: (await A.files(s2)).length });
             for (const d of (await store.getJSON(`appr:docs:${s2}`)) || []) docs.push({ ...d, slug: s2, name: a.name });
           }
           docs.sort((x, y) => y.at - x.at);
@@ -445,6 +445,53 @@ async function apprApi(req, res, me, b) {
           await store.setJSON(`appr:docs:${slug}`, log.slice(0, 40));
         }
         return send(res, 200, { ok: true, filename: fname, pdf: buf.toString("base64"), missing: P.missing(p) });
+      }
+      case "apprOnboard": { // Owner: bring on a new apprentice in one go. {first, last, email?, phone?, startDate?, permit?, appId?}
+        if (!needFull()) return;
+        const first = str(b.first, 40), last = str(b.last, 40), email = str(b.email, 120).toLowerCase(), phone = str(b.phone, 30);
+        if (first.length < 1) return send(res, 400, { error: "Enter their first name." });
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return send(res, 400, { error: "That email doesn't look right." });
+        const users = await auth.users();
+        if (email && users.some((x) => x.email === email)) return send(res, 400, { error: "Someone already logs in with that email. Use Make apprentice below for people already on the team." });
+        const name = `${first} ${last}`.trim();
+        const slug = await require("../../lib/artists").add(name); // unlisted: not on the booking page
+        await A.setApprentice(slug, true);
+        if (b.startDate) { try { await A.setStart(slug, b.startDate); } catch {} }
+        await A.setMeta(slug, { permit: b.permit || "", appId: b.appId || "", email, phone });
+        if (b.appId) { try { await A.setAppStatus(str(b.appId, 20), "accepted"); } catch {} }
+        let invite = null;
+        if (email) { // their own login, so they can log hours and fill in their paperwork details
+          const { baseUrl } = require("../../lib/http"), { sendEmail, emailReady } = require("../../lib/email"), config = require("../../config/studio");
+          const u = { id: require("crypto").randomBytes(6).toString("base64url"), name, email, role: "artist", artist: slug, hash: "", mustChange: false, ver: 0, active: true,
+            createdAt: new Date().toISOString(), createdBy: by };
+          users.push(u); await auth.saveUsers(users);
+          const link = await auth.makeResetLink(baseUrl(req), u, 72 * 4);
+          let emailed = false;
+          if (emailReady()) {
+            const r = await sendEmail({ to: email, subject: `Welcome to the ${config.studio.name} apprenticeship`, title: `Welcome aboard, ${first}`,
+              paragraphs: [`${by} set you up as an apprentice at ${config.studio.name}.`, "Choose a password, then log in to track your hours, your checkoffs and your course materials. You'll also fill in your paperwork details there.",
+                `Your login email is ${email}. The link works once and expires in 12 days.`], button: { label: "Choose a password", url: link } });
+            emailed = Boolean(r.ok);
+          }
+          invite = { link, emailed, email, phone };
+        }
+        return send(res, 200, { ok: true, slug, name, invite });
+      }
+      case "apprFiles": { // Owner: uploaded paperwork for one apprentice
+        if (!needFull()) return;
+        const slug = str(b.slug, 60); if (!(await artists.bySlug(slug))) return send(res, 404, { error: "That team member isn't here." });
+        return send(res, 200, { ok: true, files: await A.files(slug), kinds: A.DOC_KINDS });
+      }
+      case "apprFileAdd": { // Owner: {slug, kind, label?, filename, data: data URL}
+        if (!needFull()) return;
+        const slug = str(b.slug, 60); if (!(await artists.bySlug(slug))) return send(res, 404, { error: "That team member isn't here." });
+        if (Demo.isDemo(slug)) return send(res, 400, { error: "This is an example apprentice. Upload paperwork on a real apprentice's page." });
+        return send(res, 200, { ok: true, files: await A.addFile(slug, b, by), kinds: A.DOC_KINDS });
+      }
+      case "apprFileDel": {
+        if (!needFull()) return;
+        const slug = str(b.slug, 60);
+        return send(res, 200, { ok: true, files: await A.removeFile(slug, str(b.id, 20)), kinds: A.DOC_KINDS });
       }
       case "apprDemo": { // Owner: add (on) or remove the demo apprentices
         if (!needFull()) return;

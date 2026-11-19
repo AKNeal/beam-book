@@ -597,6 +597,35 @@ const valid = (o = {}) => ({
               await Demo.clear(); assert.equal((await A.list()).filter((x) => /^demo-/.test(x)).length, 0); assert.ok(!(await A.applications()).some((x) => x.demo));
             });
           }
+          { // Onboard an apprentice in one step, then upload paperwork that was already filled out
+            const appId = v.data.applications[0].id;
+            let o = await call("/api/admin/books", { body: { action: "apprOnboard", first: "", last: "X" } }); assert.equal(o.status, 400);
+            o = await call("/api/admin/books", { body: { action: "apprOnboard", first: "Kiley", last: "Test", email: "kiley@example.com", phone: "907-555-0101", startDate: "2026-11-02", permit: "BAHA-1", appId } });
+            assert.equal(o.status, 200, JSON.stringify(o.data)); assert.ok(o.data.invite && /\/admin\?reset=/.test(o.data.invite.link));
+            const ks = o.data.slug;
+            let lv = await call("/api/admin/books", { body: { action: "apprView" } });
+            const kr = lv.data.apprentices.find((x) => x.slug === ks); assert.ok(kr && !kr.demo && kr.permit === "BAHA-1" && kr.startDate === "2026-11-02", JSON.stringify(kr));
+            assert.equal(lv.data.applications.find((x) => x.id === appId).status, "accepted");
+            const pub = await fetch(BASE + "/api/artists", { headers: { "X-Forwarded-Host": SHOPHOST } }).then((r) => r.json());
+            assert.ok(!JSON.stringify(pub).includes(ks), "a new apprentice isn't on the booking page");
+            const dup = await call("/api/admin/books", { body: { action: "apprOnboard", first: "K", email: "kiley@example.com" } }); assert.equal(dup.status, 400, "email already has a login");
+            const pdf = "data:application/pdf;base64," + Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF").toString("base64");
+            let fu = await call("/api/admin/books", { body: { action: "apprFileAdd", slug: ks, kind: "ak4194", filename: "enrollment.pdf", data: pdf } });
+            assert.equal(fu.status, 200, JSON.stringify(fu.data)); assert.equal(fu.data.files.length, 1); assert.equal(fu.data.files[0].label, fu.data.kinds.ak4194);
+            assert.equal((await call("/api/admin/books", { body: { action: "apprFileAdd", slug: ks, kind: "w4", data: "data:text/plain;base64," + Buffer.from("hello").toString("base64") } })).status, 400, "only PDFs and images");
+            assert.equal((await call("/api/admin/books", { body: { action: "apprFileAdd", slug: "demo-maya-chen", kind: "w4", data: pdf } })).status, 404);
+            const fileUrl = "/api/admin/photo?p=" + encodeURIComponent(fu.data.files[0].name);
+            const got = await fetch(BASE + fileUrl, { headers: { Cookie: cookie, "X-Forwarded-Host": SHOPHOST } });
+            assert.equal(got.status, 200); assert.ok((await got.text()).startsWith("%PDF-"));
+            assert.equal((await fetch(BASE + fileUrl, { headers: { "X-Forwarded-Host": SHOPHOST } })).status, 401, "logged out can't open it");
+            lv = await call("/api/admin/books", { body: { action: "apprView" } }); assert.equal(lv.data.apprentices.find((x) => x.slug === ks).files, 1);
+            fu = await call("/api/admin/books", { body: { action: "apprFileDel", slug: ks, id: fu.data.files[0].id } }); assert.equal(fu.data.files.length, 0);
+            // tidy up so later checks see the same team
+            await call("/api/admin/books", { body: { action: "apprSet", slug: ks, on: false } });
+            const tm = await call("/api/admin/login", { body: { action: "team" } }); const ku = (tm.data.users || tm.data.team || []).find((x) => x.email === "kiley@example.com");
+            if (ku) await call("/api/admin/login", { body: { action: "remove", id: ku.id } });
+            await require("../lib/tenant").runAs("blackwolf", () => require("../lib/artists").remove(ks).catch(() => {}));
+          }
           v = await call("/api/admin/books", { body: { action: "apprApp", id: v.data.applications[0].id, status: "contacted" } }); assert.equal(v.data.applications[0].status, "contacted");
           v = await call("/api/admin/books", { body: { action: "apprApp", id: v.data.applications[0].id, status: "delete" } }); assert.equal(v.data.applications.length, 0);
           cookie = "";
