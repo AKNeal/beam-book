@@ -16,6 +16,12 @@ const organic = { rankings: { last_page: 1, data: [
   row("Barbershop near me", { "2026-11-19": 2, "2026-11-20": 4 }),
 ] } };
 let calls = 0; const fetchFn = async (u) => { calls++; assert.match(u, /localdata\.tools\/v2\/campaigns\/52783\/rankings\?type=google-(maps|organic)/); return { ok: true, json: async () => (/organic/.test(u) ? organic : feed) }; };
+const evening = async () => { // an Alaska-evening check: the report has already dated it tomorrow (UTC)
+  let url = ""; const one = { rankings: { last_page: 1, data: [row("Barbershop Fairbanks", { "2026-11-20": 1 })] } };
+  const r = await rc.reportChecks({ now: Date.parse("2026-11-20T07:14:00Z"), fresh: true, fetchFn: async (u) => { url = u; return { ok: true, json: async () => one }; } });
+  assert.match(url, /end=2026-11-20/, "asks through the report's UTC date, not just the shop's today (Nov 19 in Alaska)");
+  assert.deepEqual(r.keywords, ["Barbershop Fairbanks"]); assert.equal(r.checks.at(-1).date, "2026-11-20");
+};
 (async () => {
   await tenant.saveRecord({ slug: "rt", name: "Report Test", hosts: [], ranking: { searches: ["barber North Pole AK"] } }, { isNew: true });
   await tenant.runAs("rt", async () => {
@@ -25,6 +31,7 @@ let calls = 0; const fetchFn = async (u) => { calls++; assert.match(u, /localdat
     await rc.ingest({ date: "2026-11-18", searches: { "barber North Pole AK": { rank: 3 } }, reviews: 268, rating: 4.9 }, { now: Date.parse("2026-11-18T20:00:00Z") });
   });
   await tenant.runAs("rt", () => rc.saveReport("https://localdata.tools/results/52783"));
+  await tenant.runAs("rt", evening);
   await tenant.runAs("rt", async () => {
     const now = Date.parse("2026-11-20T22:00:00Z");
     await rc.reportChecks({ now, fetchFn, fresh: true });
