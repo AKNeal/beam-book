@@ -44,6 +44,7 @@ module.exports = async function handler(req, res) {
     switch (b.action) {
       case "create": return await create(req, res, b);
       case "update": return await update(req, res, b);
+      case "intake": return await intake(req, res, b); // Neal Media's client onboarding inbox (set up once)
       case "pricing": return send(res, 200, { pricing: await require("../lib/categories").savePricing(b) }); // base and add-on prices
       case "logo": return await logo(req, res, b);
       case "ownerLink": return await ownerLink(req, res, b);
@@ -99,7 +100,7 @@ async function get(req, res) {
     hosts: r.hosts || [], active: r.active !== false, createdAt: r.createdAt, url: urlFor(r), plan: require("../lib/plans").planOf(r) }));
   const T = require("../lib/templates"), C = require("../lib/categories");
   return send(res, 200, { loggedIn: true, shops, domain: tenant.mainDomain(), defaults: tenant.DEFAULTS,
-    categories: C.CATEGORIES, features: C.FEATURES, addons: C.ADDONS, pricing: await C.pricing(),
+    categories: C.CATEGORIES, features: C.FEATURES, addons: C.ADDONS, pricing: await C.pricing(), intake: await intakeInfo(),
     kinds: Object.fromEntries(Object.entries(T.KINDS).map(([k, v]) => [k, { label: v.label, words: v.words, form: v.form, negotiate: v.negotiate }])), types: T.TYPES });
 }
 
@@ -204,6 +205,33 @@ async function createWith(reply, b) {
     return auth.makeResetLink(urlFor(rec), u, 24 * 7);
   });
   return reply(null, 201, { shop: { ...rec, url: urlFor(rec) }, ownerLink: link });
+}
+
+// Neal Media's own client onboarding. New Beam clients fill a short questionnaire (the "onboarding" template) at
+// beam-book.com/start; it lands in this shop's inbox like any request. Approve sends them a link to book a
+// consultation call; Decline sends a polite no. Set up once from the control page.
+const intakeSlug = () => String(process.env.INTAKE_SHOP || "nealmedia").toLowerCase();
+async function intakeInfo() {
+  const rec = await tenant.getRecord(intakeSlug());
+  return { slug: intakeSlug(), ready: Boolean(rec && rec.active !== false), url: rec ? urlFor(rec) : "", start: tenant.mainDomain() ? `https://${tenant.mainDomain()}/start` : "/start" };
+}
+async function intake(req, res, b) {
+  const slug = intakeSlug();
+  let ownerLink = null;
+  if (!(await tenant.getRecord(slug))) {
+    let made;
+    await createWith((_, code, data) => { made = data; }, {
+      slug, kind: "onboarding", ownerName: str(b.ownerName, 60) || "Neal", ownerEmail: str(b.ownerEmail, 120) || "nealmedia@yahoo.com",
+      studio: { name: "Neal Media & Production", contactEmail: "nealmedia@yahoo.com", website: "https://nealmedia.app", city: "North Pole, Alaska", timeZone: "America/Anchorage" },
+      theme: { mode: "light", accent: "#1265b8" },
+      sessionLengths: [30, 60], askInstagram: false,
+    });
+    ownerLink = made && made.ownerLink;
+    const rec = await tenant.getRecord(slug);
+    // Not a paying shop: no add-ons, nothing billed, kept out of the daily ranking checks.
+    await tenant.saveRecord({ ...rec, category: "other", addons: [], internal: true });
+  }
+  return send(res, 200, { ok: true, intake: await intakeInfo(), ownerLink });
 }
 
 async function update(req, res, b) {

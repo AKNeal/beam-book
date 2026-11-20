@@ -400,6 +400,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     $("viewDay").hidden = !F.dayview; // request-style shops (gutters, tattoo) use Calendar; Day is for walk-in shops
     $("viewDash").hidden = !F.dashboard; $("viewCheckout").hidden = !F.checkout; $("viewCal").hidden = !F.calendar; $("viewArt").hidden = !F.books;
     if (F.requests && D.category === "cafe") $("viewReq").textContent = "Custom orders";
+    if (F.requests && D.kind === "onboarding") $("viewReq").textContent = "Applications"; // Neal Media's client onboarding
     if (q.get("ig")) { // back from connecting Instagram
       const ok = q.get("ig") === "connected";
       history.replaceState(null, "", "/admin");

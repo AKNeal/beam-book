@@ -98,6 +98,7 @@
         el("a", { class: "btn sign", href: "#new", onclick: (e) => { e.preventDefault(); showNew(); } }, "Add a shop")),
       D.shops.length ? el("table", { class: "shops" }, el("thead", {}, el("tr", {}, el("th", {}, "Shop"), el("th", { class: "hide-sm" }, "City"), el("th", {}, "Booking page"), el("th", {}, ""))), el("tbody", {}, rows))
         : el("p", { class: "muted" }, "No shops yet. Add the first one."),
+      el("div", { style: "margin-top:28px" }, intakeBox()),
       el("div", { style: "margin-top:28px" }, pricingBox()));
   }
 
@@ -209,6 +210,30 @@
   }
 
   // Pricing: each category's base price and each add-on's monthly price (applies to every shop).
+  // Neal Media's client onboarding: the questionnaire new Beam clients fill in, reviewed in its own inbox.
+  function intakeBox() {
+    const I = D.intake || {}, box = el("fieldset", { style: "max-width:560px" }, el("legend", {}, "Client onboarding"));
+    const draw = () => {
+      box.replaceChildren(el("legend", {}, "Client onboarding"));
+      if (!I.ready) {
+        box.append(el("p", { class: "note" }, "The questionnaire prospective Beam clients fill in at beam-book.com/start. Each application lands in Neal Media's onboarding inbox, where you approve it (they get a link to book a consultation call) or decline it. Until it's set up, /start opens the Request a call form."),
+          el("button", { class: "btn sm", type: "button", onclick: async (e) => {
+            e.target.disabled = true;
+            try {
+              const r = await api("/api/platform", { body: { action: "intake" } }); Object.assign(I, r.intake); draw();
+              if (r.ownerLink) box.append(el("p", { class: "note" }, "Choose the inbox password (link works for 7 days): ", el("a", { href: r.ownerLink, target: "_blank", rel: "noopener" }, "set password")));
+              toast("Client onboarding is live");
+            } catch (x) { e.target.disabled = false; toast(x.message); } } }, "Set up client onboarding"));
+        return;
+      }
+      box.append(el("p", { class: "note" }, "Live. New applications arrive in the onboarding inbox and by email to Nealmedia@yahoo.com."),
+        el("p", {}, el("a", { href: I.start, target: "_blank", rel: "noopener" }, "Questionnaire (" + I.start.replace(/^https?:\/\//, "") + ")"), " · ",
+          el("a", { href: I.url + "/admin", target: "_blank", rel: "noopener" }, "Onboarding inbox"), " · ",
+          el("a", { href: "?shop=" + encodeURIComponent(I.slug) }, "Edit questions")));
+    };
+    draw(); return box;
+  }
+
   function pricingBox() {
     const P = D.pricing, feats = D.features, inputs = {};
     const row = (group, k, label) => { const i = el("input", { type: "number", min: 0, step: 1, value: P[group][k] ?? "", placeholder: "not set", style: "max-width:120px" }); inputs[group + ":" + k] = i;

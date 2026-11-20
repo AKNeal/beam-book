@@ -126,6 +126,10 @@
   ],
   "rewrites": [
     {
+      "source": "/start",
+      "destination": "/api/callback?start=1"
+    },
+    {
       "source": "/instagram/callback",
       "destination": "/api/artists?ig=callback"
     },

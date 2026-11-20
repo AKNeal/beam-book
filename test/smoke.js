@@ -1147,6 +1147,28 @@ const valid = (o = {}) => ({
       SHOPHOST = "blackwolf.localhost"; cookie = "";
     }
 
+    { // Client onboarding: /start falls back to the call form, then Neal sets up the questionnaire shop once
+      const start = () => fetch(BASE + "/start", { redirect: "manual", headers: { "X-Forwarded-Host": "localhost" } });
+      assert.equal((await start()).headers.get("location"), "/#call", "no onboarding shop yet: the Request a call form");
+      assert.equal((await fetch(BASE + "/start", { redirect: "manual", headers: { "X-Forwarded-Host": "blackwolf.localhost" } })).headers.get("location"), "/", "a shop's own site keeps its home page");
+      const T = require("../lib/templates"), tpl = T.template("onboarding");
+      assert.deepEqual(T.cleanForm(tpl.form).map((q) => q.key), tpl.form.map((q) => q.key), "questionnaire keys survive cleaning (none reserved)");
+      let x = await control({ action: "intake" });
+      assert.equal(x.status, 200, JSON.stringify(x.data)); assert.ok(x.data.intake.ready); assert.match(x.data.ownerLink || "", /reset=/);
+      assert.equal((await control({ action: "intake" })).data.ownerLink, null, "set up once");
+      assert.match((await start()).headers.get("location"), /^http:\/\/nealmedia\.localhost(:\d+)?\/booking$/);
+      const rec = await require("../lib/tenant").getRecord("nealmedia");
+      assert.equal(rec.kind, "onboarding"); assert.deepEqual(rec.addons, []); assert.deepEqual(rec.sessionLengths, [30, 60]);
+      SHOPHOST = "nealmedia.localhost"; cookie = "";
+      const app = { name: "Rhonda Lee", email: "rhonda@example.com", phone: "907-555-0142", idea: "Clients call and text all day; I want them to book online.",
+        business: "Crave Coffee & Bakery", business_type: "Cafe or bakery", team_size: "2 to 5", current_booking: "Phone, text or social media messages",
+        interests: ["Social media connector", "Not sure yet"], launch: "Within a month" };
+      x = await call("/api/requests", { body: { ...app, business: "" } }); assert.equal(x.status, 400, "business name is required");
+      x = await call("/api/requests", { body: app }); assert.equal(x.status, 201, JSON.stringify(x.data));
+      SHOPHOST = "blackwolf.localhost"; cookie = "";
+      ok("client onboarding: questionnaire shop set up once from the control page, /start opens it, applications land in its inbox");
+    }
+
     cookie = ""; const statuses = [];
     for (let i = 0; i < 6; i++) statuses.push((await call("/api/requests", { body: valid() })).status);
     assert.ok(statuses.includes(429));

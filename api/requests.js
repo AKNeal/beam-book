@@ -111,8 +111,8 @@ module.exports = async function handler(req, res) {
     sendEmail({
       to: [config.studio.contactEmail, artist?.email, ...(artist ? artistLogins : [])],
       replyTo: f.email,
-      subject: `New ${W.job} request — ${f.name}${artist ? ` (${artist.name})` : ""}`,
-      title: `New ${W.job} request`,
+      subject: `New ${W.request || `${W.job} request`} — ${f.name}${artist ? ` (${artist.name})` : ""}`,
+      title: `New ${W.request || `${W.job} request`}`,
       paragraphs: [`${f.name} wants: ${f.idea}`, `For: ${who}`, facts, offerText, images.length ? `Photos: ${images.length}` : "",
         `Contact: ${f.email}${f.phone ? ` · ${f.phone}` : ""}${f.instagram ? ` · ${f.instagram}` : ""}`],
       button: { label: "Open the inbox", url: `${site}/admin#${reqId}` },
@@ -120,11 +120,11 @@ module.exports = async function handler(req, res) {
     sendEmail({
       to: f.email,
       replyTo: config.studio.contactEmail || undefined,
-      subject: `We got your request — ${config.studio.name}`,
-      title: `Thanks, ${f.name.split(" ")[0]}. Your request is in.`,
+      subject: `We got your ${W.request || "request"} — ${config.studio.name}`,
+      title: `Thanks, ${f.name.split(" ")[0]}. Your ${W.request || "request"} is in.`,
       paragraphs: [`${artist ? artist.name : config.studio.name} will review it and get back to you${draft.offers[0] ? " about your offer" : ""}.`,
-        "You can check where it stands, answer offers and send questions with the link below."],
-      button: { label: "View your request", url: statusUrl },
+        W.request ? "You can check where it stands and send us questions with the link below." : "You can check where it stands, answer offers and send questions with the link below."],
+      button: { label: `View your ${W.request || "request"}`, url: statusUrl },
     }),
   ]);
 
