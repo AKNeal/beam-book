@@ -62,6 +62,7 @@ module.exports = async function handler(req, res) {
     feed: { https: feedUrl, webcal: feedUrl.replace(/^https?:/, "webcal:"), live: process.env.VERCEL_ENV === "production" },
     sessionLengths: config.sessionLengths, today: T.dateKey(Date.now()), nowLocal: T.localInputValue(Date.now()), timeZone: T.zoneName(Date.now()),
     templates: config.templates, statuses: config.statuses, words: config.words, negotiate: config.negotiate, form: config.form || [], kind: config.kind, ageCheck: Boolean(config.ageCheck), policyCheck: Boolean(config.policyCheck), askInstagram: config.askInstagram !== false, depositPolicy: config.depositPolicy,
+    category: require("../../lib/categories").categoryOf(config), features: require("../../lib/categories").featuresOf(config),
     sizes: config.sizes, instant: Boolean(config.instant), services: config.services || [], changeCutoffHours: config.changeCutoffHours ?? 2, payAtBooking: config.payAtBooking !== false, atmOnSite: Boolean(config.atmOnSite), plan: require("../../lib/plans").features(config), rankings: await require("../../lib/rankcheck").summary().then((k) => (k && !auth.isFull(me) ? { ...k, fee: undefined, feeProjected: undefined } : k)).catch(() => null), storage: store.backend, emailReady: emailReady(), smsReady: require("../../lib/sms").smsReady(), shopName: config.studio.name, apprentices: config.instant ? await require("../../lib/apprentice").list() : [], instagram: auth.isFull(me) ? await require("../../lib/instagram").status().catch(() => null) : null,
   });
 };

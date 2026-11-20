@@ -32,9 +32,12 @@ module.exports = async function handler(req, res) {
   if (b.action === "bookingSettings") return bookingSettings(req, res, me, b);
   if (/^(client|squireHistory)/.test(String(b.action || ""))) return clientsApi(req, res, me, b);
   if (/^site/.test(String(b.action || ""))) return siteApi(req, res, me, b);
-  if (/^(dash|challenge|board)/.test(String(b.action || ""))) return dashApi(req, res, me, b);
-  if (/^pay/.test(String(b.action || ""))) return payApi(req, res, me, b);
-  if (/^appr/.test(String(b.action || ""))) return apprApi(req, res, me, b);
+  // Add-ons (lib/categories.js): only shops that have them can use them.
+  const F = require("../../lib/categories").featuresOf(require("../../config/studio"));
+  const addonOff = (name) => send(res, 403, { error: `${name} is an add-on this shop doesn't have. Ask Neal Media to switch it on.` });
+  if (/^(dash|challenge|board)/.test(String(b.action || ""))) return F.dashboard ? dashApi(req, res, me, b) : addonOff("The dashboard");
+  if (/^pay/.test(String(b.action || ""))) return F.checkout || ["paySetup", "payConnect"].includes(b.action) ? payApi(req, res, me, b) : addonOff("Checkout");
+  if (/^appr/.test(String(b.action || ""))) return F.apprenticeship ? apprApi(req, res, me, b) : addonOff("Apprenticeship");
   if (b.action === "testEmail") { // Owner: check that booking email works (sent to the address given, or the shop's email)
     if (!auth.isFull(me)) return send(res, 403, { error: "Only the Owner or an Administrator can send a test." });
     const { sendEmail, emailReady } = require("../../lib/email");
@@ -179,6 +182,8 @@ async function instagram(req, res, me, action) {
   const { baseUrl } = require("../../lib/http");
   try {
     const cb = `${(process.env.BEAMBOOK_URL || baseUrl(req)).replace(/\/$/, "")}/instagram/callback`; // one address for every shop
+    if (action !== "igDisconnect" && !require("../../lib/categories").featuresOf(require("../../config/studio")).social)
+      return send(res, 403, { error: "The social media connector is an add-on. Ask Neal Media to switch it on." });
     if (action === "igConnect") return send(res, 200, { url: await ig.startConnect(me, cb) });
     if (action === "igSync") { const f = await ig.syncFeed({ force: true }); if (f.error) return send(res, 502, { error: f.error, instagram: await ig.status() }); return send(res, 200, { instagram: await ig.status() }); }
     if (action === "igDisconnect") { await ig.disconnect(); return send(res, 200, { instagram: await ig.status() }); }
