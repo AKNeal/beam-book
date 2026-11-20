@@ -80,7 +80,7 @@
             </div>
             <div class="row">
               <div class="field" data-f="phone"><label for="phone">Phone <span class="opt">(optional)</span></label><input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="30">
-                <label class="check" style="margin-top:10px"><input type="checkbox" name="smsOk" id="smsOk"> <span>Text me updates about this request (offers, booking link, confirmation). Msg &amp; data rates may apply. Reply STOP to opt out.</span></label><div class="err"></div></div>
+                <label class="check" style="margin-top:10px"><input type="checkbox" name="smsOk" id="smsOk"> <span id="smsText">Text me updates about this request (offers, booking link, confirmation). Msg &amp; data rates may apply. Reply STOP to opt out.</span></label><div class="err"></div></div>
               <div class="field" data-f="instagram"><label for="instagram">Instagram <span class="opt">(optional)</span></label><input id="instagram" name="instagram" type="text" maxlength="60" placeholder="@yourhandle"></div>
             </div>
           </div>
@@ -109,7 +109,7 @@
             <li data-shop-if="address" hidden><a data-shop="address" href="#" rel="noopener"></a></li>
           </ul>
         </div>
-        <ul class="ticks small" style="margin-top:24px">
+        <ul class="ticks small" id="ticks" style="margin-top:24px">
           <li>You'll get a private link to follow your request</li>
           <li>Offers can go back and forth until it works for both of you</li>
           <li>Nothing is booked until you both agree</li>

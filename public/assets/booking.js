@@ -22,6 +22,12 @@
   $("summaryLabel").textContent = W.summary || "What do you need?";
   $("summaryHint").textContent = W.summaryHint || "";
   if (!data.policyCheck && !data.ageCheck) $("beforeHead").hidden = true;
+  const R = W.request || "request", btnLabel = W.submit || "Send request";
+  if (W.request) { // e.g. Neal Media's client onboarding: an application, approved before a call is booked
+    $("ticks")?.replaceChildren(...[`You'll get a private link to follow your ${R}`, "We review every one and reply with the next step", "Nothing is booked until you choose a time"].map((t) => el("li", {}, t)));
+    if ($("smsText")) $("smsText").textContent = `Text me updates about this ${R} (approval, booking link, confirmation). Msg & data rates may apply. Reply STOP to opt out.`;
+    $("submit").textContent = btnLabel;
+  }
   if (data.askInstagram === false) document.querySelectorAll('[data-f="instagram"]').forEach((f) => f.remove());
   if (data.summaryOptional) { const i = $("idea"); i.required = false; i.rows = 2; $("custom").after(document.querySelector('[data-f="idea"]')); $("summaryLabel").after(" ", Object.assign(document.createElement("span"), { className: "opt", textContent: "(optional)" })); }
   if (data.policyCheck) { $("policyPart").hidden = false; $("policy").textContent = data.depositPolicy; }
@@ -162,9 +168,9 @@
       form.hidden = true;
       const done = document.getElementById("done"); done.hidden = false;
       done.append(el("div", { class: "panel", tabindex: "-1", id: "doneBox" },
-        el("h2", {}, "Request sent"),
+        el("h2", {}, W.request ? `${cap(R)} received` : "Request sent"),
         el("p", {}, `Thanks, ${payload.name.trim().split(" ")[0]}. A confirmation is on its way to ${payload.email}. You'll hear back there.`),
-        el("p", { style: "margin:0" }, el("a", { href: `/request?id=${encodeURIComponent(r.id)}&t=${encodeURIComponent(r.token)}` }, "Check your request status"))));
+        el("p", { style: "margin:0" }, el("a", { href: `/request?id=${encodeURIComponent(r.id)}&t=${encodeURIComponent(r.token)}` }, `Check your ${R} status`))));
       (BW.toTop || (() => window.scrollTo({ top: 0 })))();
       document.getElementById("doneBox").focus({ preventScroll: true });
     } catch (err) {
@@ -176,6 +182,6 @@
       const firstBad = form.querySelector(".field.invalid");
       (firstBad || fe).scrollIntoView({ behavior: "smooth", block: "center" });
       if (err.data?.booksClosed) location.reload();
-    } finally { btn.disabled = false; btn.textContent = "Send request"; }
+    } finally { btn.disabled = false; btn.textContent = btnLabel; }
   });
 })();

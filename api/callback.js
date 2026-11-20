@@ -13,7 +13,23 @@ const recipients = () => {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+// GET /start (rewritten here): the client onboarding questionnaire, a request form on Neal Media's own Beam shop
+// (INTAKE_SHOP, default "nealmedia"; set up from the control page). Until that shop exists, the Request a call form.
+async function start(req, res) {
+  const tenant = require("../lib/tenant");
+  let to = "/#call";
+  const main = tenant.mainDomain(), h = String(req.headers["x-forwarded-host"] || req.headers.host || "").split(":")[0].toLowerCase();
+  if (main && h.endsWith(`.${main}`) && h !== `www.${main}`) { res.statusCode = 302; res.setHeader("Location", "/"); return res.end(); } // a shop's own site
+  try {
+    const rec = await tenant.getRecord(String(process.env.INTAKE_SHOP || "nealmedia").toLowerCase());
+    const host = rec && rec.active !== false && ((rec.hosts || [])[0] || (tenant.mainDomain() ? `${rec.slug}.${tenant.mainDomain()}` : ""));
+    if (host) to = `${host.endsWith(".localhost") ? "http" : "https"}://${host}${host.endsWith(".localhost") && req.headers.host?.includes(":") ? ":" + req.headers.host.split(":")[1] : ""}/booking`;
+  } catch { /* storage hiccup: fall back to the call form */ }
+  res.statusCode = 302; res.setHeader("Location", to); res.setHeader("Cache-Control", "no-store"); res.end();
+}
+
 module.exports = async function handler(req, res) {
+  if (req.method === "GET") return start(req, res);
   if (!method(req, res, "POST")) return;
   const b = body(req);
   if (str(b.website)) return send(res, 200, { ok: true }); // honeypot: bots fill the hidden field
