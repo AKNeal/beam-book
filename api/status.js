@@ -140,6 +140,7 @@ async function post(req, res) {
   if (/^onboard/.test(String(b.action || ""))) return onboard(req, res, b);
   if ((await store.hit(`rl:status:${ip(req)}`, 3600)) > 30) return send(res, 429, { error: "Too many tries. Please call the shop." });
   if (b.action === "apprApply") { // public apprenticeship application (apply.html)
+    if (!require("../lib/categories").featuresOf(config).apprenticeship) return send(res, 404, { error: "This shop isn't taking apprenticeship applications online." });
     if (b.website) return send(res, 200, { ok: true }); // honeypot
     const A = require("../lib/apprentice");
     try {

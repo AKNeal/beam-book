@@ -44,6 +44,7 @@ module.exports = async function handler(req, res) {
     switch (b.action) {
       case "create": return await create(req, res, b);
       case "update": return await update(req, res, b);
+      case "pricing": return send(res, 200, { pricing: await require("../lib/categories").savePricing(b) }); // base and add-on prices
       case "logo": return await logo(req, res, b);
       case "ownerLink": return await ownerLink(req, res, b);
       case "active": return await active(req, res, b);
@@ -90,12 +91,15 @@ async function get(req, res) {
     })).catch(() => ({}));
     const P = require("../lib/plans");
     const plan = P.planOf(rec);
-    return send(res, 200, { shop: { ...rec, plan, url: urlFor(rec), ...counts, bill: P.bill(plan, counts.usage?.texts || 0, counts.usage?.emails || 0) }, plans: P.PLANS });
+    const C = require("../lib/categories");
+    const PR = await C.pricing();
+    return send(res, 200, { shop: { ...rec, plan, category: C.categoryOf(rec), addons: C.addonsOf(rec), monthly: C.monthly(rec, PR), url: urlFor(rec), ...counts, bill: P.bill(plan, counts.usage?.texts || 0, counts.usage?.emails || 0) }, plans: P.PLANS });
   }
   const shops = (await tenant.listShops()).map((r) => ({ slug: r.slug, name: r.studio?.name || r.slug, city: r.studio?.city || "",
     hosts: r.hosts || [], active: r.active !== false, createdAt: r.createdAt, url: urlFor(r), plan: require("../lib/plans").planOf(r) }));
-  const T = require("../lib/templates");
+  const T = require("../lib/templates"), C = require("../lib/categories");
   return send(res, 200, { loggedIn: true, shops, domain: tenant.mainDomain(), defaults: tenant.DEFAULTS,
+    categories: C.CATEGORIES, features: C.FEATURES, addons: C.ADDONS, pricing: await C.pricing(),
     kinds: Object.fromEntries(Object.entries(T.KINDS).map(([k, v]) => [k, { label: v.label, words: v.words, form: v.form, negotiate: v.negotiate }])), types: T.TYPES });
 }
 
@@ -181,11 +185,12 @@ async function createWith(reply, b) {
   if (!tenant.mainDomain() && !(set.hosts || []).length) throw new Error("Add the shop's web address (or set BEAMBOOK_DOMAIN in Vercel for automatic ones).");
   if (!set.studio?.name) throw new Error("Enter the shop's name.");
   const artistSlug = artistName.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "artist";
-  const T = require("../lib/templates");
-  const kind = T.KINDS[b.kind] ? b.kind : "blank";
+  const T = require("../lib/templates"), C = require("../lib/categories");
+  const category = C.CATEGORIES[b.category] ? b.category : null;
+  const kind = category ? C.CATEGORIES[category].kind : T.KINDS[b.kind] ? b.kind : "blank";
   const tpl = T.template(kind);
   const rec = await tenant.saveRecord({
-    slug, active: true, kind, words: tpl.words, form: tpl.form, negotiate: tpl.negotiate, ageCheck: tpl.ageCheck, policyCheck: tpl.policyCheck,
+    slug, active: true, kind, ...(category ? { category, addons: C.cleanAddons(b.addons) } : {}), words: tpl.words, form: tpl.form, negotiate: tpl.negotiate, ageCheck: tpl.ageCheck, policyCheck: tpl.policyCheck,
     instant: Boolean(tpl.instant), services: T.cleanServices(tpl.services || []), ...set,
     calendarDefaults: { ...tenantDefaultsCal(), ...(tpl.calendar || {}), ...(set.calendarDefaults || {}) },
     artists: [{ slug: artistSlug, name: artistName, styles: [], bio: "", photo: "", sample: "", instagram: set.studio.instagram || "", email: "", booksOpenDefault: true }],
@@ -205,6 +210,13 @@ async function update(req, res, b) {
   const rec = await tenant.getRecord(b.slug);
   if (!rec) return send(res, 404, { error: "No such shop." });
   const set = settingsFrom(b);
+  const C = require("../lib/categories");
+  if (b.category !== undefined) { // business category: which parts of Beam this shop gets
+    if (!C.CATEGORIES[b.category]) throw new Error("Unknown business category.");
+    set.category = b.category;
+    if (b.applyCategoryTemplate) b.applyKind = C.CATEGORIES[b.category].kind;
+  }
+  if (b.addons !== undefined) set.addons = C.cleanAddons(b.addons); // the add-ons this shop pays for
   if (b.applyKind) { // start over from a template: words, questions and negotiation rules
     const T = require("../lib/templates");
     if (!T.KINDS[b.applyKind]) throw new Error("Unknown business type.");
@@ -215,7 +227,7 @@ async function update(req, res, b) {
   const next = { ...rec, ...set, studio: { ...rec.studio, ...(set.studio || {}) }, theme: { ...rec.theme, ...(set.theme || {}) },
     calendarDefaults: { ...rec.calendarDefaults, ...(set.calendarDefaults || {}) }, messaging: { ...(rec.messaging || {}), ...(set.messaging || {}) } };
   const saved = await tenant.saveRecord(next);
-  return send(res, 200, { shop: { ...saved, url: urlFor(saved) } });
+  return send(res, 200, { shop: { ...saved, category: C.categoryOf(saved), addons: C.addonsOf(saved), monthly: C.monthly(saved, await C.pricing()), url: urlFor(saved) } });
 }
 
 async function logo(req, res, b) {

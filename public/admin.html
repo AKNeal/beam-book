@@ -331,6 +331,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
   <div id="checkoutView" hidden></div>
   <div id="setupView" hidden></div>
   <div id="apprView" hidden></div>
+
 </main>
 
 <script>
@@ -358,6 +359,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
 <script src="/assets/checkout.js"></script>
 <script src="/assets/apprentice.js"></script>
 <script src="/assets/setup.js"></script>
+
 <script>
 (() => {
   const { api, el, datetime, date } = BW;
@@ -390,10 +392,14 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
     await load();
     rankBadge();
     if (["owner", "admin"].includes(ME.role)) window.BBSite.nudge("siteNudge", showSite, { calendar: () => { showCalendar(); let n = 0; const t = setInterval(() => { const f = $("calFeed"); if (f || ++n > 40) { clearInterval(t); if (f) f.scrollIntoView({ behavior: "smooth", block: "start" }); } }, 100); }, team: showTeam, account: showAccount });
-    $("viewAppr").hidden = !(D.instant && (["owner", "admin"].includes(ME.role) || ME.instructor || (D.apprentices || []).includes(ME.artist)));
+    // The business category decides which parts of Beam this shop sees (lib/categories.js).
+    const F = D.features || {};
+    $("viewAppr").hidden = !(F.apprenticeship && (["owner", "admin"].includes(ME.role) || ME.instructor || (D.apprentices || []).includes(ME.artist)));
     window.BBSetup.refreshBadge();
-    $("viewReq").hidden = Boolean(D.instant); // barbershops book straight onto the calendar: no request / approval list
-    $("viewDay").hidden = !D.instant; // request-style shops (gutters, tattoo) use Calendar; Day is for walk-in shops
+    $("viewReq").hidden = !F.requests; // barbershops book straight onto the calendar: no request / approval list
+    $("viewDay").hidden = !F.dayview; // request-style shops (gutters, tattoo) use Calendar; Day is for walk-in shops
+    $("viewDash").hidden = !F.dashboard; $("viewCheckout").hidden = !F.checkout; $("viewCal").hidden = !F.calendar; $("viewArt").hidden = !F.books;
+    if (F.requests && D.category === "cafe") $("viewReq").textContent = "Custom orders";
     if (q.get("ig")) { // back from connecting Instagram
       const ok = q.get("ig") === "connected";
       history.replaceState(null, "", "/admin");
@@ -481,6 +487,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
   $("viewSetup").addEventListener("click", (e) => { e.preventDefault(); window.BBSetup.show({ only, toast, D }); });
   $("setupBannerGo").addEventListener("click", (e) => { e.preventDefault(); window.BBSetup.show({ only, toast, D }); });
   $("viewCheckout").addEventListener("click", (e) => { e.preventDefault(); window.BBCheckout.show({ only, toast, D }); });
+
   $("viewAppr").addEventListener("click", (e) => { e.preventDefault(); window.BBAppr.show({ only, toast, D }); });
   const views = ["inbox", "artistsView", "calView", "teamView", "acctView", "formView", "clientsView", "dayView", "siteView", "rankView", "dashView", "checkoutView", "apprView", "setupView"];
   // Which menu link belongs to which screen, so the menu shows where you are (and, on phones, scrolls it into view).
@@ -926,7 +933,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
   function closeRankFly() { const w = document.getElementById("rankFloat"); if (w) { w.classList.remove("open"); w.querySelector(".rank-badge").setAttribute("aria-expanded", "false"); } }
   function rankBadge() {
     document.getElementById("rankFloat")?.remove();
-    const k = D.rankings; if (!k || k.pending) return;
+    const k = D.rankings; if (!k || k.pending || !(D.features || {}).rankings) return;
     const o = rkOverall(k);
     const btn = el("button", { class: "rank-badge", type: "button", "aria-expanded": "false", "aria-controls": "rankFly", "aria-label": `Google ranking: #${o.exact ?? "–"}. Show details` },
       medal(o.n, 3, o.exact == null ? null : o.exact > 10 ? "10+" : String(o.exact)),
@@ -1253,7 +1260,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
       el("dl", { class: "facts" }, el("dt", {}, "Name"), el("dd", {}, ME.name), el("dt", {}, "Login email"), el("dd", {}, ME.email || "—"),
         el("dt", {}, "Access"), el("dd", {}, ME.shopKey ? "Shared shop password (full access)" : ME.roleName)));
     v.append(info);
-    if (D.instagram) v.append(instagramPanel());
+    if (D.instagram && (D.features || {}).social) v.append(instagramPanel());
     if (ME.shopKey) { info.append(el("p", { class: "small" }, "The shared shop password is changed in Vercel (Settings → Environment Variables → ADMIN_PASSWORD). Give everyone their own login on the Team screen first.")); return; }
     const err = el("p", { class: "form-error", role: "alert", hidden: true });
     const f = el("form", { class: "panel", style: "max-width:560px;margin:24px 0 48px" }, el("h2", { style: "font-size:1.75rem" }, "Change password"),

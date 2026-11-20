@@ -97,7 +97,8 @@
         el("h1", { style: "font-size:2.75rem;margin:0" }, "Shops"),
         el("a", { class: "btn sign", href: "#new", onclick: (e) => { e.preventDefault(); showNew(); } }, "Add a shop")),
       D.shops.length ? el("table", { class: "shops" }, el("thead", {}, el("tr", {}, el("th", {}, "Shop"), el("th", { class: "hide-sm" }, "City"), el("th", {}, "Booking page"), el("th", {}, ""))), el("tbody", {}, rows))
-        : el("p", { class: "muted" }, "No shops yet. Add the first one."));
+        : el("p", { class: "muted" }, "No shops yet. Add the first one."),
+      el("div", { style: "margin-top:28px" }, pricingBox()));
   }
 
   // ---------- add a shop ----------
@@ -117,8 +118,8 @@
       el("h1", { style: "font-size:2.75rem;margin-bottom:6px" }, "Add a shop"),
       el("p", { class: "muted", style: "margin-top:0" }, "Takes a minute. The owner gets a link to set their password, then adds their own artists and front desk."),
       el("fieldset", {}, el("legend", {}, "Business"),
-        field("Type of business", el("select", { name: "kind" }, Object.entries(D.kinds).map(([k, v]) => el("option", { value: k, selected: k === "blank" }, v.label))),
-          "Sets the starting questions, words and negotiation rules. Everything can be changed after."),
+        field("Business category", el("select", { name: "category" }, Object.entries(D.categories).map(([k, v]) => el("option", { value: k, selected: k === "other" }, v.label))),
+          "Sets the shop's basic booking type (barbershop: instant booking; tattoo: tattoo requests; cafe: custom & catering orders) and its starting questions and words. Add-ons are picked on the shop's page after."),
         field("Business name", nameIn),
         field("Short name", slugIn, ""), urlHint,
         el("div", { class: "grid2" }, field("City", inp("city", "", { placeholder: "Fairbanks, Alaska" })), field("Phone", inp("phone", "", { type: "tel" }))),
@@ -137,7 +138,7 @@
     f.addEventListener("submit", async (e) => {
       e.preventDefault(); err.hidden = true; const fd = new FormData(f); const btn = f.querySelector("button[type=submit]"); btn.disabled = true;
       try {
-        const r = await api("/api/platform", { body: { action: "create", kind: fd.get("kind"), slug: fd.get("slug").trim(), ownerName: fd.get("ownerName"), ownerEmail: fd.get("ownerEmail"), artistName: fd.get("artistName"),
+        const r = await api("/api/platform", { body: { action: "create", category: fd.get("category"), slug: fd.get("slug").trim(), ownerName: fd.get("ownerName"), ownerEmail: fd.get("ownerEmail"), artistName: fd.get("artistName"),
           hosts: fd.get("hosts") ? [fd.get("hosts")] : [],
           studio: { name: fd.get("name"), city: fd.get("city"), phone: fd.get("phone"), address: fd.get("address"), instagram: fd.get("instagram"), timeZone: fd.get("timeZone") },
           theme: { mode: fd.get("mode"), accent: fd.get("accent"), deco: fd.has("deco") } } });
@@ -178,6 +179,51 @@
       el("p", { class: "small" }, "Or just link to it: ", el("a", { href: base, target: "_blank", rel: "noopener" }, base)));
   }
   // ---------- one shop ----------
+  // Business category (its basic booking type, included) and the paid add-ons this shop has.
+  const money = (n) => (n === null || n === undefined ? "price not set" : `$${Number(n) % 1 ? Number(n).toFixed(2) : Number(n)}/mo`);
+  function categoryBox(S) {
+    const cats = D.categories, feats = D.features, P = D.pricing, cur = S.category || "other";
+    const catSel = el("select", {}, Object.entries(cats).map(([k, v]) => el("option", { value: k, selected: k === cur }, v.label)));
+    const on = new Set(S.addons || []);
+    const basic = el("p", { class: "note" }), list = el("div", { style: "margin-top:8px" }), total = el("p", { style: "margin:10px 0 0;font-weight:600" });
+    const paint = () => {
+      const c = cats[catSel.value];
+      basic.textContent = `Included: ${c.booking}. (${c.basic.map((k) => feats[k].label).join(", ")}) · ${money(P.base[catSel.value])}`;
+      list.replaceChildren(...D.addons.map((k) => {
+        const box = el("input", { type: "checkbox", checked: on.has(k), onchange: () => { box.checked ? on.add(k) : on.delete(k); paint(); } });
+        return el("label", { class: "check", title: feats[k].hint }, box, el("span", {}, el("strong", {}, feats[k].label), ` · ${money(P.addons[k])}`, el("br"), el("span", { class: "note" }, feats[k].hint)));
+      }));
+      const sum = (Number(P.base[catSel.value]) || 0) + [...on].reduce((n, k) => n + (Number(P.addons[k]) || 0), 0);
+      total.textContent = `Monthly: $${Math.round(sum * 100) / 100}${[...on].some((k) => P.addons[k] === null) ? " (some add-on prices aren't set yet: Pricing on the shop list)" : ""}`;
+    };
+    catSel.addEventListener("change", paint); paint();
+    return el("fieldset", {}, el("legend", {}, "Business category and add-ons"),
+      el("p", { class: "note" }, "The category is the shop's basic booking type, included in the base price. Add-ons cost extra; tick the ones this shop pays for. The shop only sees what it has."),
+      catSel, basic, el("h3", { style: "margin:14px 0 4px;font-size:1rem" }, "Add-ons"), list, total,
+      el("div", { style: "display:flex;gap:10px;flex-wrap:wrap;margin-top:10px" },
+        el("button", { class: "btn sm", type: "button", onclick: async () => {
+          try { await api("/api/platform", { body: { action: "update", slug: S.slug, category: catSel.value, addons: [...on] } }); toast("Saved"); showShop(S.slug); } catch (x) { toast(x.message); } } }, "Save"),
+        el("button", { class: "btn sm line", type: "button", onclick: async () => {
+          if (!confirm("Also replace this shop's booking questions, words and negotiation rules with the category's starting ones?")) return;
+          try { await api("/api/platform", { body: { action: "update", slug: S.slug, category: catSel.value, addons: [...on], applyCategoryTemplate: true } }); toast("Saved, starting setup applied"); showShop(S.slug); } catch (x) { toast(x.message); } } }, "Save and use its starting setup")));
+  }
+
+  // Pricing: each category's base price and each add-on's monthly price (applies to every shop).
+  function pricingBox() {
+    const P = D.pricing, feats = D.features, inputs = {};
+    const row = (group, k, label) => { const i = el("input", { type: "number", min: 0, step: 1, value: P[group][k] ?? "", placeholder: "not set", style: "max-width:120px" }); inputs[group + ":" + k] = i;
+      return el("label", { style: "display:flex;justify-content:space-between;gap:12px;align-items:center;margin:6px 0" }, el("span", {}, label), el("span", {}, "$ ", i, " /mo")); };
+    return el("fieldset", { style: "max-width:560px" }, el("legend", {}, "Pricing"),
+      el("p", { class: "note" }, "Base price per category (basic booking included), and what each add-on costs per month. Applies to every shop."),
+      ...Object.entries(D.categories).map(([k, v]) => row("base", k, v.label)),
+      el("h3", { style: "margin:12px 0 4px;font-size:1rem" }, "Add-ons"),
+      ...D.addons.map((k) => row("addons", k, feats[k].label)),
+      el("button", { class: "btn sm", type: "button", style: "margin-top:10px", onclick: async () => {
+        const base = {}, addons = {};
+        for (const [key, i] of Object.entries(inputs)) { const [g, k] = key.split(":"); (g === "base" ? base : addons)[k] = i.value; }
+        try { D.pricing = (await api("/api/platform", { body: { action: "pricing", base, addons } })).pricing; toast("Prices saved"); } catch (x) { toast(x.message); } } }, "Save prices"));
+  }
+
   async function showShop(slug) {
     let S;
     try { const r = await api(`/api/platform?shop=${encodeURIComponent(slug)}`); S = r.shop; D.plans = r.plans; } catch (x) { app.replaceChildren(el("p", {}, x.message)); return; }
@@ -241,6 +287,7 @@
         el("div", { style: "display:flex;gap:14px;align-items:center;margin:8px 0 14px" }, logoPrev,
           el("label", { class: "btn sm line", for: "logoFile" }, th.logo ? "Change logo" : "Upload logo"), logoIn,
           th.logo ? el("button", { class: "linkbtn", type: "button", onclick: async () => { await api("/api/platform", { body: { action: "logo", slug: S.slug, remove: true } }); toast("Logo removed"); showShop(S.slug); } }, "Remove") : null)),
+      categoryBox(S),
       el("fieldset", {}, el("legend", {}, "Business type"),
         el("p", { class: "note" }, `Now: ${(D.kinds[S.kind] || D.kinds.blank).label}. Starting over replaces the words, questions and negotiation rules below with that type's.`),
         el("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" }, kindSel,

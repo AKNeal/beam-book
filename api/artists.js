@@ -66,7 +66,7 @@ module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*"); // public shop info: the shop's own website reads it too (Meet the Team, socials)
   if (q.get("rank") === "public") { // the shop's latest Google ranks, for a badge on its own website (no fees, no competitors)
     const rc = require("../lib/rankcheck");
-    const sm = rc.enabled() ? await rc.summary() : null;
+    const sm = rc.enabled() && require("../lib/categories").featuresOf(config).rankings ? await rc.summary() : null;
     res.setHeader("Cache-Control", "public, max-age=600");
     return send(res, 200, sm && !sm.pending ? { date: sm.date, rating: sm.rating ?? null, reviews: sm.reviews ?? null,
       searches: sm.searches.map((x) => ({ q: x.q, rank: Number.isFinite(x.rank) && x.rank <= 10 ? Math.round(x.rank) : null })) } : { searches: [] });

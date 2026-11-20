@@ -63,6 +63,23 @@ const valid = (o = {}) => ({
       const r = await fetch(BASE + "/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json", "X-Forwarded-Host": SHOPHOST }, body: JSON.stringify({ action: "reset", token: tok, password: "owner password 123" }) });
       assert.equal(r.status, 200);
     }
+    { // Categories and add-ons: an older shop keeps what it had; Neal picks a category and the add-ons it pays for
+      const C = require("../lib/categories");
+      assert.deepEqual(C.addonsOf({ kind: "tattoo" }).sort(), ["checkout", "dashboard", "rankings", "social"].sort(), "older shops keep what they had");
+      assert.equal(C.categoryOf({ instant: true }), "barbershop"); assert.equal(C.categoryOf({ kind: "cafe" }), "cafe");
+      let pr = await control({ action: "pricing", base: { cafe: 99 }, addons: { social: 25, apprenticeship: "" } });
+      assert.equal(pr.status, 200, JSON.stringify(pr.data)); assert.equal(pr.data.pricing.base.cafe, 99); assert.equal(pr.data.pricing.addons.social, 25); assert.equal(pr.data.pricing.addons.apprenticeship, null);
+      let up = await control({ action: "update", slug: "blackwolf", category: "tattoo", addons: ["social", "nope"] });
+      assert.equal(up.status, 200, JSON.stringify(up.data)); assert.deepEqual(up.data.shop.addons, ["social"]);
+      assert.deepEqual(up.data.shop.monthly.lines.map((l) => l.key), ["base", "social"]); assert.equal(up.data.shop.monthly.total, 175);
+      const cafeTpl = require("../lib/templates").template(C.CATEGORIES.cafe.kind);
+      assert.ok(cafeTpl.form.some((q) => q.key === "pickupDate" && q.required), "cafe starts with custom & catering order questions");
+      assert.deepEqual(Object.entries(C.featuresOf({ category: "cafe", addons: [] })).filter(([, v]) => v).map(([k]) => k), ["requests", "calendar"], "a cafe gets custom orders and a calendar, no add-ons");
+      assert.ok(C.featuresOf({ category: "barbershop", addons: ["apprenticeship"] }).booking && !C.featuresOf({ category: "barbershop", addons: [] }).checkout);
+      // Black Wolf keeps everything for the rest of these checks
+      up = await control({ action: "update", slug: "blackwolf", addons: C.ADDONS }); assert.equal(up.status, 200);
+      await control({ action: "pricing", base: { cafe: 150 }, addons: { social: "" } });
+    }
     ok("control page: locked, makes a shop with an Owner and a one-time password link");
 
     // Pages
