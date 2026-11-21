@@ -58,6 +58,7 @@ module.exports = async function handler(req, res) {
 
   return send(res, 200, {
     me: { ...auth.publicUser(me), shopKey: me.id === "shop", full: auth.isFull(me), seesAll: auth.seesAll(me) },
+    neal: (({ status, label, day, daysLeft, addons }) => ({ status, label, day: day || null, daysLeft: daysLeft ?? null, addons }))(require("../../lib/starter").nealOf(config)),
     requests, olderFrom, artists: roster, waitlists, calendar,
     feed: { https: feedUrl, webcal: feedUrl.replace(/^https?:/, "webcal:"), live: process.env.VERCEL_ENV === "production" },
     sessionLengths: config.sessionLengths, today: T.dateKey(Date.now()), nowLocal: T.localInputValue(Date.now()), timeZone: T.zoneName(Date.now()),

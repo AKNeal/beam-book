@@ -36,7 +36,7 @@
     var open = !collapsible; if (collapsible) { try { open = localStorage.getItem("beam.setupOpen") === "1"; } catch (e) {} }
     var d = el("details", { class: "panel setup", open: open, ontoggle: function (e) { if (collapsible) try { localStorage.setItem("beam.setupOpen", e.target.open ? "1" : "0"); } catch (x) {} } },
       el("summary", {},
-        el("h2", {}, "Setup checklist"),
+        el("h2", {}, "Website checklist"),
         el("span", { class: "count" }, done + " of " + total + " done" + (left ? " · " + left + " to go" : "")),
         el("span", { class: "bar", role: "img", "aria-label": done + " of " + total + " done" }, el("i", { style: "width:" + Math.round(100 * done / Math.max(total, 1)) + "%" })),
         collapsible ? el("span", { class: "btn sm line toggle" }, el("span", { class: "o" }, "Show list"), el("span", { class: "c" }, "Hide list"), el("span", { class: "chev", "aria-hidden": "true" })) : null));
@@ -49,7 +49,7 @@
       list.append(el("p", { class: "ck-group" }, "Optional extras ", el("span", { class: "small muted" }, "Not needed to launch. They make the site stronger whenever you get to them.")));
       opt.forEach(function (it) { list.append(row(it)); });
     }
-    d.append(el("div", { class: "setup-body" }, el("p", { class: "small muted" }, "Your answers to the first questions come privately to Neal Media. Your license number and any photos go on your website right away."), list));
+    d.append(el("div", { class: "setup-body" }, el("p", { class: "small muted" }, "Private answers come only to Neal Media. Everything else, photos included, goes on your website right away."), list));
     return d;
   }
   function redraw() { drawNudge(); var v = document.getElementById("siteView"); if (v && !v.hidden) render(); }
@@ -162,7 +162,7 @@
     var v = document.getElementById("siteView");
     var nb = document.getElementById(nudgeBox || "siteNudge"); if (nb) nb.hidden = true;
     v.replaceChildren(
-      el("h1", { style: "font-size:44px;margin:28px 0 6px" }, "Website"),
+      el("h1", { style: "font-size:44px;margin:28px 0 6px" }, "Website", window.BB_NEAL && window.BB_NEAL.status === "building" ? el("span", { class: "pill", style: "font-size:12px;margin-left:12px;vertical-align:middle;background:#fff1d6;color:#8a5a00" }, "Being built by Neal Media") : null),
       el("p", { class: "muted", style: "margin-top:0" }, "Checklist answers go on your website right away. Want to change anything else? Send a change request and we'll take care of it."),
       ...[S.items.length ? setup(false) : null, google(), changes()].filter(Boolean)); // replaceChildren would print a null as the word "null"
   }

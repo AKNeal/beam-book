@@ -404,7 +404,7 @@
         <span class="kicker">Concierge web building</span>
         <h2>Don't have a website? We'll build it for you.</h2>
         <p>Neal Media designs and builds your business a complete website with Beam booking built in. You tell us about the business; we handle the design, the writing, the setup and the launch. Then we keep it running.</p>
-        <p style="margin-top:22px"><button class="btn btn-primary" type="button" data-call data-need="Concierge website build">Talk to us about a website</button></p>
+        <p style="margin-top:22px;display:flex;gap:12px;flex-wrap:wrap"><a class="btn btn-primary" href="/start">Start your free example site</a><button class="btn btn-ghost" type="button" data-call data-need="Concierge website build">Talk to us first</button></p>
       </div>
       <ol class="steps">
         <li><b>A quick call</b>We learn about your business, your clients and the look you want.</li>
@@ -438,6 +438,7 @@
         <ul>
           <li><a href="https://beam.nealmedia.app">Beam digital business cards</a></li>
           <li><a href="#" data-call>Request a call</a></li>
+          <li><a href="/start">Start your free example site</a></li>
           <li><a href="mailto:Nealmedia@yahoo.com">Nealmedia@yahoo.com</a></li>
         </ul>
       </div>
@@ -552,7 +553,9 @@
       const r = await fetch("/api/callback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "Something went wrong. Please try again.");
-      form.reset(); form.hidden = true; done.hidden = false;
+      try { sessionStorage.setItem("beamCallRequest", JSON.stringify({ name: data.name, business: data.business, need: data.need })); } catch {}
+      location.href = "/thank-you";
+      return;
     } catch (ex) {
       err.textContent = ex.message;
     } finally {
