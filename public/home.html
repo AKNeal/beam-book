@@ -149,10 +149,6 @@
   .card p { margin: 0; color: var(--muted); }
 
   .band { background: var(--bg-2); border-block: 1px solid var(--line); }
-  /* Date picker (assets/datepicker.js) in Beam's colors: same shapes as the shops' pickers */
-  .bdp, .bdp-trigger, .bdp-scrim { --white: #ffffff; --ink: #0D2236; --graphite: #5b6b7b; --line: #e3e8ee; --field: #d5dce4; --sign: #1265B8; --on-sign: #ffffff; --radius: 12px; --body: inherit; }
-  .bdp .bdp-d.on button, .bdp .bdp-chip.on { background: linear-gradient(135deg, #2BB0FF, #1265B8); }
-  .bdp .bdp-done { background: linear-gradient(135deg, #2BB0FF, #1265B8); }
   .concierge { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
   .concierge .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: s; }
   .concierge .steps li { position: relative; padding: 16px 18px 16px 58px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); color: var(--muted); counter-increment: s; }
@@ -418,7 +414,7 @@
     <div class="wrap">
       <div class="final-box">
         <h2>Want to see it with your business in it?</h2>
-        <p>Tell us a little about your business and when to call. We'll walk you through Beam and get your page set up.</p>
+        <p>Tell us a little about your business and we'll give you a call to walk you through Beam and get your page set up.</p>
         <button class="btn btn-primary" type="button" data-call>Request a call</button>
       </div>
     </div>
@@ -492,7 +488,6 @@
             <option>Something else</option>
           </select>
         </label>
-        <label><span>Best day to call <em>(optional)</em></span><input name="day" type="date" data-min="today" placeholder="Pick a day"></label>
         <label>Best time to call
           <select name="when">
             <option value="">Any time</option>
@@ -561,6 +556,5 @@
   });
 })();
 </script>
-<script src="/assets/datepicker.js"></script>
 </body>
 </html>
