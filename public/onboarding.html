@@ -120,7 +120,9 @@ function draw() {
       el("div", { class: "two" }, f("Title", "title", t.title, { ph: "Owner / Master Barber" }), f("Years cutting", "years", t.years, { mode: "numeric" })),
       f("Specialties", "styles", t.styles, { ph: "Fades, beards, kids cuts, designs" }),
       f("Short bio", "bio", t.bio, { long: true, rows: 3 }),
-      f("Instagram", "instagram", t.instagram, { ph: "@handle" })));
+      el("div", { class: "two" }, f("Instagram", "instagram", t.instagram, { ph: "@handle" }),
+        ...Object.keys(V.barberSocials || {}).map((k) => f(V.barberSocials[k], "bs_" + k, (t.socials || {})[k] || "",
+          { ph: ["tiktok", "snapchat", "x"].includes(k) ? "@handle" : k === "website" ? "yoursite.com" : `${V.barberSocials[k]} link` })))));
   }
   m.append(team);
 
@@ -139,7 +141,7 @@ async function save() {
     shop: Object.fromEntries(["phone", "email", "address", "about", "founded", "walkIns", "hoursNote", "parking", "payments", "website"].map((k) => [k, v(k)])),
     socials: Object.fromEntries(Object.keys(V.socialLabels).map((k) => [k, v("so_" + k)])),
     team: [...document.querySelectorAll(".member")].map((n) => ({ slug: n.dataset.slug, listed: n.querySelector('[name="listed"]').checked,
-      title: v("title", n), years: v("years", n), styles: v("styles", n), bio: v("bio", n), instagram: v("instagram", n), photo: photos[n.dataset.slug] || undefined })),
+      title: v("title", n), years: v("years", n), styles: v("styles", n), bio: v("bio", n), instagram: v("instagram", n), socials: Object.fromEntries(Object.keys(V.barberSocials || {}).map((k) => [k, v("bs_" + k, n)])), photo: photos[n.dataset.slug] || undefined })),
     extra: Object.fromEntries(["promote", "policy", "prizes", "photos", "notes"].map((k) => [k, v("x_" + k)])) };
   try {
     const r = await fetch("/api/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });

@@ -132,6 +132,7 @@ module.exports = async function handler(req, res) {
         let ig = str(b.instagram, 40).replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/[/?#].*$/, "").replace(/^@?/, "");
         if (ig && !/^[A-Za-z0-9._]{1,30}$/.test(ig)) return send(res, 400, { error: "That Instagram handle doesn't look right." });
         const patch = { styles, bio: str(b.bio, 800), instagram: ig ? `@${ig}` : "" };
+        if (b.socials) patch.socials = artists.cleanSocials(b.socials);
         if (b.name !== undefined) { const n = str(b.name, 60); if (n.length < 2) return send(res, 400, { error: "Enter a name." }); patch.name = n; }
         if (b.removePhoto) patch.photo = "";
         if (b.photo) {

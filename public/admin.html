@@ -1041,6 +1041,9 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
       el("div", { class: "row" },
         el("div", { class: "field" }, el("label", {}, "Name (as clients see it)"), el("input", { type: "text", name: "name", value: a.name, maxlength: 60, required: true })),
         el("div", { class: "field" }, el("label", {}, "Instagram ", el("span", { class: "opt" }, "(optional)")), el("input", { type: "text", name: "instagram", value: a.instagram || "", placeholder: "@handle", autocapitalize: "off", spellcheck: "false" }))),
+      el("div", { class: "row", style: "flex-wrap:wrap" }, ...[["tiktok", "TikTok", "@handle"], ["facebook", "Facebook", "Facebook link"], ["snapchat", "Snapchat", "@handle"], ["youtube", "YouTube", "YouTube link"], ["x", "X", "@handle"], ["website", "Website", "yoursite.com"]]
+        .map(([k, l, ph]) => el("div", { class: "field", style: "min-width:160px" }, el("label", {}, l, " ", el("span", { class: "opt" }, "(optional)")),
+          el("input", { type: "text", name: "so_" + k, value: (a.socials || {})[k] || "", placeholder: ph, autocapitalize: "off", spellcheck: "false" })))),
       el("div", { class: "field" }, el("label", {}, "Styles"), el("input", { type: "text", name: "styles", value: a.styles.join(", "), placeholder: "e.g. Fine line, Black and grey, Lettering" }), el("p", { class: "hint" }, "Separate with commas.")),
       el("div", { class: "field" }, el("label", {}, "About ", el("span", { class: "opt" }, "(a few sentences)")), el("textarea", { name: "bio", rows: 4, maxlength: 800 }, a.bio || "")),
       err,
@@ -1050,6 +1053,7 @@ sel.addEventListener("change",function(){var v=sel.value;if(v)document.documentE
       e.preventDefault(); err.hidden = true; const fd = new FormData(f);
       try {
         await api("/api/admin/books", { body: { action: "profile", slug: a.slug, name: fd.get("name"), instagram: fd.get("instagram"), styles: fd.get("styles"), bio: fd.get("bio"),
+          socials: Object.fromEntries(["tiktok", "facebook", "snapchat", "youtube", "x", "website"].map((k) => [k, fd.get("so_" + k) || ""])),
           ...(newPhoto ? { photo: newPhoto } : {}), ...(removePhoto ? { removePhoto: true } : {}) } });
         await load(); toast("Profile saved"); showArtists();
       } catch (x) { err.textContent = x.message; err.hidden = false; }

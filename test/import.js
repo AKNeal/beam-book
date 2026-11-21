@@ -100,7 +100,7 @@ const TOKEN = "t".repeat(32);
     assert.equal(r.status, 200, await r.text());
     k = await fetch(BASE + "/api/artists?rank=due", { headers: RH }).then((q) => q.json()); assert.equal(k.due, false); assert.equal(k.searches.length, 3);
     let inbox = await fetch(BASE + "/api/admin/inbox", { headers: { ...H, Cookie: cookie } }).then((q) => q.json());
-    assert.equal(inbox.rankings.searches[0].rank, 2); assert.equal(inbox.rankings.latestAvg, 4.7); assert.equal(inbox.rankings.fee, 50, "avg 4.7 rounds to #5: +$50"); assert.ok(inbox.rankings.feeProjected);
+    assert.equal(inbox.rankings.searches[0].rank, 2); assert.equal(inbox.rankings.latestAvg, 4.7); assert.equal(inbox.rankings.fee, 50, "avg 4.7 rounds to #5: +$50"); assert.equal(typeof inbox.rankings.feeProjected, "boolean"); // projected unless today is a Friday (then it is the Friday average)
     r = await fetch(BASE + "/api/admin/books", { method: "POST", headers: { ...H, Cookie: cookie }, body: JSON.stringify({ action: "rankSearches", searches: [...Object.keys(S3), "fade North Pole", "beard trim North Pole", "sixth"] }) });
     assert.equal(r.status, 400, "up to 5");
     r = await fetch(BASE + "/api/admin/books", { method: "POST", headers: { ...H, Cookie: cookie }, body: JSON.stringify({ action: "rankSearches", searches: [...Object.keys(S3), "fade North Pole"] }) });
