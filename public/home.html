@@ -180,6 +180,11 @@
   .foot-bottom { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding-top: 20px; border-top: 1px solid var(--line); }
   .credit { color: var(--muted); text-decoration: none; font-weight: 600; }
   .credit:hover { color: var(--blue); }
+  .credits { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .credits img { display: inline-block; vertical-align: middle; height: 18px; width: auto; margin-right: 7px; }
+  .by-beam { display: inline-flex; align-items: center; font-weight: 600; color: var(--text); }
+  .credit { display: inline-flex; align-items: center; }
+  .credits .sep { opacity: .5; }
 
   /* Dialog */
   dialog { width: min(560px, 100% - 24px); border: 0; padding: 0; border-radius: 24px; box-shadow: 0 30px 80px rgba(13,34,54,.25); color: var(--text); }
@@ -448,7 +453,7 @@
       </div>
     </div>
     <div class="foot-bottom">
-      <a class="credit" href="https://nealmedia.app">Site by NealMedia</a>
+      <span class="credits"><span class="by-beam"><img src="/assets/brand/beam-icon-32.png" alt="" width="18" height="18">Powered by Beam</span><span class="sep" aria-hidden="true">·</span><a class="credit" href="https://nealmedia.app" target="_blank" rel="noopener"><img src="/assets/nealmedia-mark.webp" alt="" width="9" height="18">Website by Neal Media &amp; Production</a></span>
       <span>© <span id="yr"></span> Neal Media &amp; Production · <a href="/privacy" style="color:inherit">Privacy</a> · <a href="/terms" style="color:inherit">Terms</a></span>
     </div>
   </div>
