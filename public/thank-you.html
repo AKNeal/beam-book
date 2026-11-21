@@ -107,6 +107,15 @@
   if (first) { document.getElementById("sep").textContent = ", "; document.getElementById("who").textContent = first.slice(0, 30); }
   if (r.business) document.getElementById("lead").textContent = `We got your request for ${String(r.business).slice(0, 80)}, and a real person from our team in North Pole, Alaska will give you a call soon.`;
   if (/website/i.test(r.need || "")) document.getElementById("step2").textContent = "We talk through the website you want, with your booking built right in.";
+  if (r.kind === "application") { // from /start: the new-client application
+    document.querySelector(".kicker").textContent = "Application received";
+    document.getElementById("lead").textContent = `We got your application${r.business ? ` for ${String(r.business).slice(0, 80)}` : ""}. Here's what happens next.`;
+    const steps = document.querySelectorAll(".steps li");
+    const set = (li, b, t) => { li.querySelector("b").textContent = b; li.querySelector("span").textContent = t; };
+    set(steps[0], "We build your example site", "Your look and words, with online booking built in, at yourbusiness.nealmedia.app.");
+    set(steps[1], "One email with your links", "Your example site, your password link and a short setup page, all in one email.");
+    set(steps[2], "Try it on real clients", "Use it for up to 90 days. There's nothing to sign until you're 100% happy.");
+  }
 })();
 </script>
 </body>

@@ -7,6 +7,10 @@
 //   POST {action:"logo", slug, image (data URL) | remove:true}
 //   POST {action:"ownerLink", slug}          -> fresh setup link for the shop's Owner
 //   POST {action:"active", slug, active}
+//   POST {action:"welcome", slug}            -> one welcome email to the Owner (example site, password link, setup page)
+//   POST {action:"appDismiss", id}           -> hide an application from the list
+// New-client onboarding (lib/starter.js): each shop's Neal Media status (booking only / building / signed / current client),
+// its add-ons, and the applications sent from beam-book.com/start (stored as "beambook:apps", newest first).
 // A shop's own people (artists, front desk) are added by the shop's Owner in their inbox, not here.
 
 const crypto = require("crypto");
@@ -47,6 +51,13 @@ module.exports = async function handler(req, res) {
       case "logo": return await logo(req, res, b);
       case "ownerLink": return await ownerLink(req, res, b);
       case "active": return await active(req, res, b);
+      case "welcome": return await welcome(req, res, b);
+      case "appDismiss": {
+        const apps = (await G.getJSON("apps")) || [], a = apps.find((x) => x.id === str(b.id, 20));
+        if (!a) return send(res, 404, { error: "That application isn't there any more." });
+        a.status = "dismissed"; await G.setJSON("apps", apps);
+        return send(res, 200, { ok: true });
+      }
       case "demo": case "clearDemo": {
         const rec = await tenant.getRecord(b.slug);
         if (!rec) return send(res, 404, { error: "No such shop." });
@@ -90,12 +101,17 @@ async function get(req, res) {
     })).catch(() => ({}));
     const P = require("../lib/plans");
     const plan = P.planOf(rec);
-    return send(res, 200, { shop: { ...rec, plan, url: urlFor(rec), ...counts, bill: P.bill(plan, counts.usage?.texts || 0, counts.usage?.emails || 0) }, plans: P.PLANS });
+    const ST = require("../lib/starter");
+    return send(res, 200, { shop: { ...rec, plan, url: urlFor(rec), ...counts, bill: P.bill(plan, counts.usage?.texts || 0, counts.usage?.emails || 0), nealView: ST.nealOf(rec) },
+      plans: P.PLANS, statuses: ST.STATUSES, addons: ST.ADDONS, trialDays: ST.TRIAL_DAYS });
   }
   const shops = (await tenant.listShops()).map((r) => ({ slug: r.slug, name: r.studio?.name || r.slug, city: r.studio?.city || "",
-    hosts: r.hosts || [], active: r.active !== false, createdAt: r.createdAt, url: urlFor(r), plan: require("../lib/plans").planOf(r) }));
-  const T = require("../lib/templates");
-  return send(res, 200, { loggedIn: true, shops, domain: tenant.mainDomain(), defaults: tenant.DEFAULTS,
+    hosts: r.hosts || [], active: r.active !== false, createdAt: r.createdAt, url: urlFor(r), plan: require("../lib/plans").planOf(r),
+    neal: require("../lib/starter").nealOf(r) }));
+  const T = require("../lib/templates"), ST = require("../lib/starter");
+  const apps = ((await G.getJSON("apps")) || []).filter((a) => a.status === "new");
+  return send(res, 200, { loggedIn: true, shops, apps, appTypes: ST.APP_TYPES, statuses: ST.STATUSES, addons: ST.ADDONS, trialDays: ST.TRIAL_DAYS,
+    domain: tenant.mainDomain(), defaults: tenant.DEFAULTS,
     kinds: Object.fromEntries(Object.entries(T.KINDS).map(([k, v]) => [k, { label: v.label, words: v.words, form: v.form, negotiate: v.negotiate }])), types: T.TYPES });
 }
 
@@ -184,9 +200,13 @@ async function createWith(reply, b) {
   const T = require("../lib/templates");
   const kind = T.KINDS[b.kind] ? b.kind : "blank";
   const tpl = T.template(kind);
+  const ST = require("../lib/starter");
+  const neal = ST.cleanNeal(b.neal || { status: "building" }, {});
+  // Shops we're building a site for start with the Phase 5 website checklist for their type (lib/starter.js).
+  const siteChecklist = set.siteChecklist || (["building", "signed"].includes(neal.status) ? require("../lib/site").cleanChecklist(ST.siteChecklistFor(kind)) : undefined);
   const rec = await tenant.saveRecord({
     slug, active: true, kind, words: tpl.words, form: tpl.form, negotiate: tpl.negotiate, ageCheck: tpl.ageCheck, policyCheck: tpl.policyCheck,
-    instant: Boolean(tpl.instant), services: T.cleanServices(tpl.services || []), ...set,
+    instant: Boolean(tpl.instant), services: T.cleanServices(tpl.services || []), ...set, neal, ...(siteChecklist ? { siteChecklist } : {}),
     calendarDefaults: { ...tenantDefaultsCal(), ...(tpl.calendar || {}), ...(set.calendarDefaults || {}) },
     artists: [{ slug: artistSlug, name: artistName, styles: [], bio: "", photo: "", sample: "", instagram: set.studio.instagram || "", email: "", booksOpenDefault: true }],
   }, { isNew: true });
@@ -198,13 +218,20 @@ async function createWith(reply, b) {
     await auth.saveUsers([u]);
     return auth.makeResetLink(urlFor(rec), u, 24 * 7);
   });
-  return reply(null, 201, { shop: { ...rec, url: urlFor(rec) }, ownerLink: link });
+  if (neal.appId) { // the application this shop came from: no longer waiting on the control page
+    const apps = (await G.getJSON("apps")) || [], a = apps.find((x) => x.id === neal.appId);
+    if (a) { a.status = "started"; a.shop = slug; await G.setJSON("apps", apps); }
+  }
+  let welcomed = null;
+  if (b.sendWelcome) welcomed = await sendWelcome(rec, link).catch((e) => { console.error("[welcome]", e.message); return { ok: false }; });
+  return reply(null, 201, { shop: { ...rec, url: urlFor(rec) }, ownerLink: link, welcomed });
 }
 
 async function update(req, res, b) {
   const rec = await tenant.getRecord(b.slug);
   if (!rec) return send(res, 404, { error: "No such shop." });
   const set = settingsFrom(b);
+  if (b.neal) set.neal = require("../lib/starter").cleanNeal(b.neal, rec);
   if (b.applyKind) { // start over from a template: words, questions and negotiation rules
     const T = require("../lib/templates");
     if (!T.KINDS[b.applyKind]) throw new Error("Unknown business type.");
@@ -245,6 +272,29 @@ async function ownerLink(req, res, b) {
     return { link: await auth.makeResetLink(urlFor(rec), owner, 24 * 7), name: owner.name, email: owner.email };
   });
   return send(res, 200, link);
+}
+
+// One welcome email: example site, password link, setup page, booking page. Records when it went out (auto-ticks Neal's item).
+async function sendWelcome(rec, passwordLink) {
+  const fresh = await tenant.getRecord(rec.slug), neal = require("../lib/starter").nealOf(fresh);
+  const out = await tenant.runAs(rec.slug, async () => {
+    const auth = require("../lib/auth");
+    const owner = (await auth.users()).find((u) => u.role === "owner" && u.active !== false);
+    if (!owner) throw new Error("This shop has no active Owner login.");
+    const link = passwordLink || (owner.hash ? "" : await auth.makeResetLink(urlFor(fresh), owner, 24 * 7)); // already has a password: no password step
+    const setupLink = await require("../lib/onboarding").makeLink(urlFor(fresh), { keep: true });
+    const r = await require("../lib/welcome").send({ to: owner.email, shopName: fresh.studio?.name || fresh.slug, ownerName: owner.name, bookingUrl: urlFor(fresh),
+      shellUrl: neal.shellUrl, passwordLink: link, setupLink, building: neal.status === "building" });
+    return { ...r, to: owner.email };
+  });
+  if (out.ok) { const cur = await tenant.getRecord(rec.slug); await tenant.saveRecord({ ...cur, neal: { ...(cur.neal || {}), welcomeSentAt: new Date().toISOString() } }); }
+  return out;
+}
+async function welcome(req, res, b) {
+  const rec = await tenant.getRecord(b.slug);
+  if (!rec) return send(res, 404, { error: "No such shop." });
+  const r = await sendWelcome(rec);
+  return send(res, r.ok ? 200 : 502, r.ok ? r : { ...r, error: "The email didn't go out. Check RESEND_API_KEY and EMAIL_FROM." });
 }
 
 async function active(req, res, b) {

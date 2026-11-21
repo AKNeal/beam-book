@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Start your free example site · Beam</title>
+<meta name="description" content="Five minutes, on your phone. We build an example website for your business with Beam booking built in. Try it on real clients for up to 90 days, with nothing to sign until you're happy.">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/assets/brand/beam-icon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --sky: #2BB0FF; --blue: #1265B8; --navy: #0D2236; --grad: linear-gradient(135deg, var(--sky), var(--blue));
+    --bg: #ffffff; --bg-2: #f5f7fa; --line: #e3e8ee; --text: #0D2236; --muted: #5b6b7b; --soft: #8a97a5; --radius: 18px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--text); background: var(--bg-2); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  a { color: var(--blue); }
+  .wrap { width: min(720px, 100% - 32px); margin-inline: auto; }
+  header { padding: 22px 0; } header img { height: 32px; width: auto; display: block; }
+  .hero { padding: 8px 0 22px; }
+  .kicker { font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--blue); margin: 0 0 8px; }
+  h1 { font-size: clamp(2rem, 5.5vw, 2.8rem); line-height: 1.08; letter-spacing: -.03em; margin: 0 0 12px; font-weight: 800; }
+  .lead { color: var(--muted); font-size: 1.08rem; margin: 0; }
+  .promise { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 0; padding: 0; list-style: none; }
+  .promise li { background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-size: 14px; font-weight: 600; }
+  form { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; box-shadow: 0 12px 32px rgba(13,34,54,.06); margin-bottom: 30px; }
+  fieldset { border: 0; margin: 0 0 22px; padding: 0; }
+  legend { font-size: 1.15rem; font-weight: 800; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; }
+  legend b { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--grad); color: #fff; font-size: 14px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .full { grid-column: 1 / -1; }
+  label { display: grid; gap: 6px; align-content: start; font-size: 14px; font-weight: 600; }
+  label em { font-style: normal; font-weight: 500; color: var(--soft); }
+  .hint { font-weight: 500; color: var(--muted); font-size: 13px; }
+  input, select, textarea { font: inherit; font-size: 16px; color: var(--text); background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; width: 100%; }
+  input:focus, select:focus, textarea:focus { background: #fff; border-color: var(--sky); outline: 3px solid rgba(43,176,255,.3); outline-offset: 1px; }
+  .check { display: flex; gap: 10px; align-items: center; font-weight: 500; }
+  .check input { width: auto; }
+  .photo { display: flex; gap: 14px; align-items: center; }
+  .photo img { width: 64px; height: 64px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); }
+  .err { color: #b42318; font-size: 14px; margin: 0 0 12px; min-height: 1em; }
+  button { font: inherit; font-weight: 700; font-size: 17px; border: 0; border-radius: 999px; padding: 16px 28px; cursor: pointer; background: var(--grad); color: #fff; box-shadow: 0 8px 22px rgba(18,101,184,.28); width: 100%; }
+  button:disabled { opacity: .6; cursor: wait; }
+  .small { font-size: 13px; color: var(--muted); text-align: center; margin: 12px 0 0; }
+  .hp { position: absolute; left: -5000px; width: 1px; height: 1px; overflow: hidden; }
+  footer { padding: 10px 0 34px; font-size: 14px; color: var(--soft); text-align: center; }
+  footer a { color: inherit; }
+  @media (max-width: 600px) { .fields { grid-template-columns: 1fr; } form { padding: 20px; } }
+</style>
+</head>
+<body>
+<header><div class="wrap"><a href="/" aria-label="Beam home"><img src="/assets/brand/beam-logo-dark-text.svg" alt="Beam"></a></div></header>
+<main class="wrap">
+  <section class="hero">
+    <p class="kicker">Free example site</p>
+    <h1>Let's build your example site</h1>
+    <p class="lead">Five minutes, on your phone. We build an example of your website with online booking built in, at <b>yourbusiness.nealmedia.app</b>. Try it on real clients. Just the basics now; we'll ask for the rest later.</p>
+    <ul class="promise"><li>Up to 90 days to try it</li><li>Nothing to sign until you're happy</li><li>Built by real people in Alaska</li></ul>
+  </section>
+
+  <form id="app" novalidate>
+    <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+    <fieldset>
+      <legend><b>1</b>You and your business</legend>
+      <div class="fields">
+        <label class="full">Business name <input name="business" autocomplete="organization" maxlength="120" required></label>
+        <label>Your name <input name="name" autocomplete="name" maxlength="80" required></label>
+        <label>Your cell <input name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="40" required></label>
+        <label class="full">Your email <span class="hint">It becomes your login.</span><input name="email" type="email" autocomplete="email" maxlength="120" required></label>
+        <label class="full">Type of business
+          <select name="type" required>
+            <option value="">Choose one</option>
+            <option value="tattoo">Tattoo shop</option>
+            <option value="barbershop">Barbershop or salon</option>
+            <option value="food">Food, cafe, bakery or catering</option>
+            <option value="trades">Trades and services</option>
+            <option value="performer">DJ, band or performer</option>
+            <option value="creative">Photo, video or design</option>
+            <option value="other">Something else</option>
+          </select>
+        </label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend><b>2</b>Where we can see your work</legend>
+      <div class="fields">
+        <label class="full">Your current website <span class="hint">We copy its look and words for your example.</span><input name="site" inputmode="url" autocapitalize="off" placeholder="yourbusiness.com" maxlength="300"></label>
+        <label class="check full"><input type="checkbox" name="noSite"> I don't have a website</label>
+        <label class="full"><span>Instagram or Facebook link <em id="socialOpt">(optional)</em></span><input name="social" inputmode="url" autocapitalize="off" placeholder="instagram.com/yourbusiness" maxlength="300"></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend><b>3</b>The basics for your page</legend>
+      <div class="fields">
+        <label class="full">Address, or the area you serve <input name="address" autocomplete="street-address" maxlength="200" required></label>
+        <label><span>Phone for your website <em>(optional)</em></span><input name="publicPhone" type="tel" inputmode="tel" maxlength="40" placeholder="If it's not your cell"></label>
+        <label>Your hours <input name="hours" maxlength="200" placeholder="Tue–Sat 9 to 6" required></label>
+        <label class="full">What do people book or order from you? <span class="hint">One line, like "haircuts", "custom tattoos" or "catering for events".</span><input name="offering" maxlength="200" required></label>
+        <div class="full">
+          <label for="photo"><span>Your logo, or one good photo <em>(optional)</em></span></label>
+          <div class="photo"><img id="prev" alt="" hidden><input id="photo" type="file" accept="image/*"></div>
+        </div>
+      </div>
+    </fieldset>
+    <p class="err" id="err" role="alert"></p>
+    <button type="submit" id="send">Send my application</button>
+    <p class="small">No cost and no commitment. We'll be in touch soon.</p>
+  </form>
+</main>
+<footer>Powered by Beam · <a href="https://nealmedia.app">Website by Neal Media &amp; Production</a></footer>
+
+<script>
+(() => {
+  const f = document.getElementById("app"), err = document.getElementById("err"), btn = document.getElementById("send");
+  const KEY = "beamApplication";
+  let photo = "";
+  // Keep answers in this browser until sent, so a reload or a dropped connection loses nothing.
+  try { const d = JSON.parse(localStorage.getItem(KEY) || "{}"); for (const [k, v] of Object.entries(d)) { const el = f.elements[k]; if (!el) continue; if (el.type === "checkbox") el.checked = Boolean(v); else el.value = v; } } catch {}
+  const save = () => { try { const d = {}; for (const el of f.elements) if (el.name && el.name !== "website" && el.type !== "file") d[el.name] = el.type === "checkbox" ? el.checked : el.value; localStorage.setItem(KEY, JSON.stringify(d)); } catch {} };
+  const sync = () => { f.site.disabled = f.noSite.checked; document.getElementById("socialOpt").textContent = f.noSite.checked ? "(needed, so we can see your work)" : "(optional)"; };
+  f.addEventListener("input", () => { sync(); save(); }); sync();
+
+  document.getElementById("photo").addEventListener("change", (e) => {
+    const file = e.target.files[0]; photo = ""; const prev = document.getElementById("prev"); prev.hidden = true; if (!file) return;
+    const r = new FileReader();
+    r.onload = () => { const img = new Image(); img.onload = () => {
+      const s = Math.min(1, 1200 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      photo = c.toDataURL("image/jpeg", 0.85); prev.src = photo; prev.hidden = false; }; img.src = r.result; };
+    r.readAsDataURL(file);
+  });
+
+  f.addEventListener("submit", async (e) => {
+    e.preventDefault(); err.textContent = "";
+    const data = Object.fromEntries(new FormData(f)); data.noSite = f.noSite.checked; data.kind = "application"; if (photo) data.photo = photo;
+    const need = [["business", "Please enter your business name."], ["name", "Please enter your name."], ["phone", "Please enter a cell number we can reach you on."], ["email", "Please enter your email. It becomes your login."], ["type", "Pick the kind of business."]];
+    for (const [k, m] of need) if (!String(data[k] || "").trim()) { err.textContent = m; f.elements[k].focus(); return; }
+    if (!data.noSite && !String(data.site || "").trim()) { err.textContent = "Add your current website, or tick \"I don't have a website\"."; f.site.focus(); return; }
+    if (data.noSite && !String(data.social || "").trim()) { err.textContent = "With no website, add your Instagram or Facebook link so we can see your work."; f.social.focus(); return; }
+    for (const [k, m] of [["address", "Add your address or the area you serve."], ["hours", "Add your hours (one line is fine)."], ["offering", "Tell us what people book or order from you."]])
+      if (!String(data[k] || "").trim()) { err.textContent = m; f.elements[k].focus(); return; }
+    btn.disabled = true; btn.textContent = "Sending…";
+    try {
+      const r = await fetch("/api/callback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "Something went wrong. Please try again.");
+      try { localStorage.removeItem(KEY); sessionStorage.setItem("beamCallRequest", JSON.stringify({ name: data.name, business: data.business, kind: "application" })); } catch {}
+      location.href = "/thank-you";
+    } catch (x) { err.textContent = x.message; btn.disabled = false; btn.textContent = "Send my application"; }
+  });
+})();
+</script>
+</body>
+</html>
