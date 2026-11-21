@@ -552,7 +552,9 @@
       const r = await fetch("/api/callback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "Something went wrong. Please try again.");
-      form.reset(); form.hidden = true; done.hidden = false;
+      try { sessionStorage.setItem("beamCallRequest", JSON.stringify({ name: data.name, business: data.business, need: data.need })); } catch {}
+      location.href = "/thank-you";
+      return;
     } catch (ex) {
       err.textContent = ex.message;
     } finally {
