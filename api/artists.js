@@ -105,7 +105,7 @@ async function instagram(req, res, q) {
   const what = q.get("ig");
   if (what === "feed") {
     let feed = { username: "", items: [] };
-    try { feed = await ig.publicFeed(Math.min(24, Number(q.get("n")) || 12)); } catch (e) { console.error("[instagram]", e.message); }
+    try { feed = await ig.publicFeed(Math.min(50, Number(q.get("n")) || 12)); } catch (e) { console.error("[instagram]", e.message); }
     res.setHeader("Cache-Control", "public, s-maxage=600, stale-while-revalidate=3600");
     res.statusCode = 200; res.setHeader("Content-Type", "application/json; charset=utf-8");
     return res.end(JSON.stringify(feed));
